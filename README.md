@@ -1,2 +1,2 @@
 # tinmeg
-Tinitus MEG project
+Tinnitus MEG project
