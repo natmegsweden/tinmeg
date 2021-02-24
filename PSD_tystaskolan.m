@@ -62,6 +62,8 @@ pow = ft_freqanalysis(cfg, epo);
 
 %Plot power spectrum
 cfg = [];
+cfg.linewidth = 2;
 ft_singleplotER(cfg, pow)
 %xlim([0 40])
 ylim([0 15*10^-26])
+title('Whole brain PSD')
