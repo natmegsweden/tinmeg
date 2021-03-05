@@ -1,5 +1,9 @@
 %% Read and arrange fif-files for TinMEG1
-%
+% [!!!]Change this part to match your paths
+addpath('~/NatMEG_wiki/example_scripts')
+addpath('~/fieldtrip/fieldtrip/')
+addpath('~/fieldtrip/fieldtrip/external/mne')
+ft_defaults
 %
 %
 
@@ -9,28 +13,39 @@
 meg_data_path = '/archive/20061_tinnitus/MEG/';
 
 %Readtable of subjects (as string)
-sub_date = readtable('../sub_date.txt', 'Format', '%s%s');
+% sub_date = readtable('../sub_date.txt', 'Format', '%s%s');
+% sub_date = 'NatMEG_0750/210217';
+sub_date = 'NatMEG_0697/210208';
+% sub_date = 'NatMEG_0756/210224';
 
-n_subjects = height(sub_date);
+n_subjects = 1 % height(sub_date);
 disp(['Number of subjects in table is ' num2str(n_subjects)])
 
 %% Find relevant files for subject and create cell-array of file paths
 
 % Find files in subjects path with keywords specified for find_files(folder, inc_str, exc_str)
-subpath = [meg_data_path 'NatMEG_' char(sub_date.ID{1}) '/' char(sub_date.date{1}) '/'];
+subpath = fullfile(meg_data_path, sub_date)  %'NatMEG_' char(sub_date.ID{1}) '/' char(sub_date.date{1}) '/'];
 fnames = find_files(subpath, {'tinmeg1', 'tsss'});
 
-%is exc_str for find-files working?
+%is exc_str for find-files working? No, it was not. I blame the developer!
 %order matters?
+% [!!!] This fix assumes there are 12 files order is always the same. Is
+% not true for all!
+tmp = fnames;
+fnames(1) = tmp(12);
+fnames(2:10) = tmp(3:11);
+fnames(11:12) = tmp(1:2);
 
 % Create cell array for subjects files
-fpaths = cell(1, length(fnames));
+fpaths = fullfile(subpath, fnames)
 
-for fileindex = 1:length(fnames);
-    
-    fpaths{1,fileindex} = [subpath char(fnames(fileindex))];
-    
-end
+% fpaths = cell(1, length(fnames));
+% 
+% for fileindex = 1:length(fnames);
+%     
+%     fpaths{1,fileindex} = [subpath char(fnames(fileindex))];
+%     
+% end
 
 % Implement write to log file here i.e. n of files for subject
 
@@ -87,10 +102,10 @@ cfg.trialfun            = 'ft_trialfun_neuromagSTI016fix';
 cfg = ft_definetrial(cfg);
 
 %Remove trials from cfg.trl that have negative sample index for trial start
-cfg.trl = cfg.trl(cfg.trl(:,1) >= 0,:);
+% cfg.trl = cfg.trl(cfg.trl(:,1) >= 0,:);
   
 %Remove trials from cfg.trl that have higher sample index than exist in file
-cfg.trl = cfg.trl(cfg.trl(:,2) < max([cfg.event.sample]),:);
+% cfg.trl = cfg.trl(cfg.trl(:,2) < max([cfg.event.sample]),:);
 
 % preprocessing
 cfg.demean     = 'no';
@@ -102,7 +117,7 @@ cfg.channel    = {'MEG', 'ECG', 'EOG'};
 epochs = ft_preprocessing(cfg);
 
 %expect 50
-for i = 1:length(events)
-    disp(events(i))
-    tottrig(i) = sum(epochs.trialinfo == events(i))
+for i = 1:length(events60PO)
+    disp(events60PO(i))
+    tottrig(i) = sum(epochs.trialinfo == events60PO(i));
 end
