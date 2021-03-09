@@ -81,7 +81,7 @@ cfg = [];
 cfg.dataset             = fpaths;      % Cell array of subjects files
 cfg.trialdef.prestim    = 0.35;        % seconds before trigger
 cfg.trialdef.poststim   = 0.30;        % seconds after trigger
-cfg.trialdef.eventvalue = events60PO;
+cfg.trialdef.eventvalue = events60PO(1);
 cfg.trialfun            = 'ft_trialfun_neuromagSTI016fix';
 
 cfg = ft_definetrial(cfg);
@@ -102,7 +102,7 @@ cfg.channel    = {'MEG', 'ECG', 'EOG'};
 epochs = ft_preprocessing(cfg);
 
 %expect 50
-for i = 1:length(events)
-    disp(events(i))
-    tottrig(i) = sum(epochs.trialinfo == events(i))
+for i = 1:length(events60PO(1))
+    disp(events60PO(i))
+    tottrig(i) = sum(epochs.trialinfo == events60PO(i))
 end
