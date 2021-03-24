@@ -16,31 +16,32 @@ disp(['Number of subjects in table is ' num2str(n_subjects)])
 
 %% Find relevant files for subject and create cell-array of file paths
 
-% Find files in subjects path with keywords specified for find_files(folder, inc_str, exc_str)
-subpath = [meg_data_path 'NatMEG_' char(sub_date.ID{1}) '/' char(sub_date.date{1}) '/'];
-fnames = find_files(subpath, {'tinmeg1', 'tsss'});
-
-%is exc_str for find-files working?
-%order matters?
-
 % Create cell array for subjects files
-fpaths = cell(1, length(fnames));
+fpaths = cell(1);
 
-for fileindex = 1:length(fnames);
-    
-    fpaths{1,fileindex} = [subpath char(fnames(fileindex))];
-    
+for i = 1:n_subjects
+
+% Find files in subjects path with keywords specified for find_files(folder, inc_str, exc_str)
+subpath = [meg_data_path 'NatMEG_' char(sub_date.ID{i}) '/' char(sub_date.date{i}) '/'];
+fnames = find_files(subpath, {'tinmeg1', 'tsss'}, 'ds');
+
+fpaths{i,1} = char(sub_date.ID{i}); %Include ID for book keeping
+
+    for fileindex = 1:length(fnames);
+        fpaths{i,1+fileindex} = [subpath char(fnames(fileindex))]; % NB! n of files differ between rows, some subjects have empty columns
+    end
+   
 end
 
-% Implement write to log file here i.e. n of files for subject
+writetable(cell2table(fpaths), '../Analysis Output/included_filepaths.csv') %Write log
 
 %% Specify event triggers
 
 %Trigger value (STI101) at pulse onset
-events60PO = [40968 36872 34824 33800 33288 33032];
-events70PO = [36876 34828 33804 33292 33036];
-events60GP = [49800 49736 49704 49688];
-events70GP = [49804 49740 49708 49692];
+eventsPO60 = [40968 36872 34824 33800 33288 33032];
+eventsPO70 = [36876 34828 33804 33292 33036];
+eventsGP60 = [49800 49736 49704 49688];
+eventsGP70 = [49804 49740 49708 49692];
 
 %Trigger value (STI101) at gap onset
 eventsGO   = [16386 16390];
@@ -74,14 +75,43 @@ eventsGO   = [16386 16390];
 % A_GO_60: 16386
 % A_GO_70: 16390
 
-%% Define trials and preprocess
+%% Create structure to write output to
+
+res = struct();
+
+vararray = {'PO60', 'PO70', 'GP60', 'GP70', 'GO'};
+
+for i = 1:n_subjects
+    for ii = 1:length(vararray)
+        res.(['ID_' fpaths{i,1}]).(vararray{ii}) = 0 + ii; %Concatenate 'ID_' as int in struct not allowed
+    end
+end
+
+clear('i', 'ii', 'vararray')
+
+% Tutorial snippets:
+%
+% for i = 1:n_subjects
+%     epochs = struct('PO60', 1, 'PO70', 2, 'GP60', 3, 'GP70', 4, 'GO', 5)
+% end
+% 
+% a = {'see','why'};
+% KPI = {'L','L2','L3'};
+% S.(a{1}).(KPI{1}) = 5;
+% S.see.L
+
+%% Define trials and preprocess PO60
+
+for i = 1:n_subjects
 
 % Define trials
 cfg = [];
-cfg.dataset             = fpaths;      % Cell array of subjects files
+
+% NB! cellfun for cfg.dataset defines 2:highes populated column
+cfg.dataset             = fpaths(i,2:max(find(~cellfun(@isempty,fpaths(i,:)))));
 cfg.trialdef.prestim    = 0.35;        % seconds before trigger
 cfg.trialdef.poststim   = 0.30;        % seconds after trigger
-cfg.trialdef.eventvalue = events60PO(1);
+cfg.trialdef.eventvalue = eventsPO60(1);
 cfg.trialfun            = 'ft_trialfun_neuromagSTI016fix';
 
 cfg = ft_definetrial(cfg);
@@ -99,10 +129,10 @@ cfg.hpfilter   = 'no';
 cfg.dftfilter  = 'no';
 cfg.channel    = {'MEG', 'ECG', 'EOG'};
 
-epochs = ft_preprocessing(cfg);
+res.(['ID_' fpaths{i,1}]).PO60 = ft_preprocessing(cfg);
+end
 
-%expect 50
-for i = 1:length(events60PO(1))
-    disp(events60PO(i))
-    tottrig(i) = sum(epochs.trialinfo == events60PO(i))
+%n trials - wip
+for i = 1:n_subjects
+    tottrig(i) = sum(res.(['ID_' fpaths{i,1}]).PO60.trialinfo == eventsPO60(1))
 end
