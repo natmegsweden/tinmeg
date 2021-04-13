@@ -11,15 +11,14 @@ meg_data_path = '/archive/20061_tinnitus/MEG/';
 %Readtable of subjects (as string)
 sub_date = readtable('../sub_date.txt', 'Format', '%s%s');
 
-n_subjects = height(sub_date);
-disp(['Number of subjects in table is ' num2str(n_subjects)])
+disp(['Number of subjects in table is ' num2str(height(sub_date))])
 
 %% Find relevant files for subject and create cell-array of file paths
 
 % Create cell array for subjects files
 fpaths = cell(1);
 
-for i = 1:n_subjects
+for i = 1:height(sub_date);
 
 % Find files in subjects path with keywords specified for find_files(folder, inc_str, exc_str)
 subpath = [meg_data_path 'NatMEG_' char(sub_date.ID{i}) '/' char(sub_date.date{i}) '/'];
@@ -30,7 +29,7 @@ fpaths{i,1} = char(sub_date.ID{i}); %Include ID for book keeping
     for fileindex = 1:length(fnames);
         fpaths{i,1+fileindex} = [subpath char(fnames(fileindex))]; % NB! n of files differ between rows, some subjects have empty columns
     end
-   
+clear fnames subpath
 end
 
 writetable(cell2table(fpaths), '../Analysis Output/included_filepaths.csv') %Write log
@@ -75,43 +74,28 @@ eventsGO   = [16386 16390];
 % A_GO_60: 16386
 % A_GO_70: 16390
 
-%% Create structure to write output to
-
-res = struct();
-
-vararray = {'PO60', 'PO70', 'GP60', 'GP70', 'GO'};
-
-for i = 1:n_subjects
-    for ii = 1:length(vararray)
-        res.(['ID_' fpaths{i,1}]).(vararray{ii}) = 0 + ii; %Concatenate 'ID_' as int in struct not allowed
-    end
-end
-
-clear('i', 'ii', 'vararray')
-
-% Tutorial snippets:
-%
-% for i = 1:n_subjects
-%     epochs = struct('PO60', 1, 'PO70', 2, 'GP60', 3, 'GP70', 4, 'GO', 5)
-% end
-% 
-% a = {'see','why'};
-% KPI = {'L','L2','L3'};
-% S.(a{1}).(KPI{1}) = 5;
-% S.see.L
-
 %% Define trials and preprocess PO60
 
-for i = 1:n_subjects
+for i = 1:height(sub_date)
 
+%Create filename
+fname = ['ID' char(fpaths(i,1)) '_60PO_raw' '.mat']
+fpath = ['../mat_data/' fname]
+
+%check if file exist
+if exist(fpath, 'file')
+    warning(['Output exist for subject ' char(fpaths(i,1))])
+    continue
+end
+    
 % Define trials
 cfg = [];
 
-% NB! cellfun for cfg.dataset defines 2:highes populated column
+% NB! cellfun for cfg.dataset defines 2:highest populated column
 cfg.dataset             = fpaths(i,2:max(find(~cellfun(@isempty,fpaths(i,:)))));
 cfg.trialdef.prestim    = 0.35;        % seconds before trigger
 cfg.trialdef.poststim   = 0.30;        % seconds after trigger
-cfg.trialdef.eventvalue = eventsPO60(1);
+cfg.trialdef.eventvalue = eventsPO60;
 cfg.trialfun            = 'ft_trialfun_neuromagSTI016fix';
 
 cfg = ft_definetrial(cfg);
@@ -129,10 +113,57 @@ cfg.hpfilter   = 'no';
 cfg.dftfilter  = 'no';
 cfg.channel    = {'MEG', 'ECG', 'EOG'};
 
-res.(['ID_' fpaths{i,1}]).PO60 = ft_preprocessing(cfg);
+res4mat = ft_preprocessing(cfg);
+
+%log n of trials per subject
+%res4mat.trialinfo
+
+save(fpath, 'res4mat')
+
+%downsample and save
+cfg = [];
+cfg.resamplefs = 200;
+
+res4mat_ds = ft_resampledata(cfg, res4mat);
+
+fname = ['ID' char(fpaths(i,1)) '_60PO_ds' '.mat'];
+fpath = ['../mat_data/' fname];
+save(fpath, 'res4mat_ds')
+
+%clear temp variables
+clear res4mat res4mat_ds
+
 end
 
+%%
 %n trials - wip
 for i = 1:n_subjects
     tottrig(i) = sum(res.(['ID_' fpaths{i,1}]).PO60.trialinfo == eventsPO60(1))
 end
+
+%% Create structure to read mat-files to
+
+res = struct();
+
+vararray = {'PO60', 'PO70', 'GP60', 'GP70', 'GO'};
+
+for i = 1:n_subjects
+    for ii = 1:length(vararray)
+        res.(['ID_' fpaths{i,1}]).(vararray{ii}) = 0 + ii; %Concatenate 'ID_' as int in struct not allowed
+    end
+end
+
+clear('i', 'ii', 'vararray')
+
+%res.(['ID_' fpaths{i,1}]).PO60
+
+% Tutorial snippets:
+%
+% for i = 1:n_subjects
+%     epochs = struct('PO60', 1, 'PO70', 2, 'GP60', 3, 'GP70', 4, 'GO', 5)
+% end
+% 
+% a = {'see','why'};
+% KPI = {'L','L2','L3'};
+% S.(a{1}).(KPI{1}) = 5;
+% S.see.L
