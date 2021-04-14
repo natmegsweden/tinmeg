@@ -24,7 +24,7 @@ for i = 1:height(sub_date);
 subpath = [meg_data_path 'NatMEG_' char(sub_date.ID{i}) '/' char(sub_date.date{i}) '/'];
 fnames = find_files(subpath, {'tinmeg1', 'tsss'}, 'ds');
 
-fpaths{i,1} = char(sub_date.ID{i}); %Include ID for book keeping
+fpaths{i,1} = char(sub_date.ID{i}); %Include ID for tracking
 
     for fileindex = 1:length(fnames);
         fpaths{i,1+fileindex} = [subpath char(fnames(fileindex))]; % NB! n of files differ between rows, some subjects have empty columns
@@ -128,6 +128,7 @@ res4mat_ds = ft_resampledata(cfg, res4mat);
 
 fname = ['ID' char(fpaths(i,1)) '_60PO_ds' '.mat'];
 fpath = ['../mat_data/' fname];
+
 save(fpath, 'res4mat_ds')
 
 %clear temp variables
