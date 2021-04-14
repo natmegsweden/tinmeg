@@ -15,6 +15,8 @@ disp(['Number of subjects in table is ' num2str(height(sub_date))])
 
 %% Find relevant files for subject and create cell-array of file paths
 
+%To do, append to csv log - currently overwrites
+
 % Create cell array for subjects files
 fpaths = cell(1);
 
@@ -76,6 +78,12 @@ eventsGO   = [16386 16390];
 
 %% Define trials and preprocess PO60
 
+%To do: Loop conditions
+
+%create log for n of trials in raw data
+%first row are labels
+rawcondlog = {'ID' '70' '75' '80' '85' '90' '95'};
+
 for i = 1:height(sub_date)
 
 %Create filename
@@ -115,10 +123,15 @@ cfg.channel    = {'MEG', 'ECG', 'EOG'};
 
 res4mat = ft_preprocessing(cfg);
 
-%log n of trials per subject
-%res4mat.trialinfo
+save(fpath, 'res4mat', '-v7.3')
 
-save(fpath, 'res4mat')
+%Write to log, ID
+rawcondlog{i+1,1} = fpaths{i,1};
+
+%Write to log, n of trials
+for ii = 1:length(eventsPO60)
+rawcondlog{i+1, ii+1} = sum(res4mat.trialinfo == eventsPO60(ii))
+end
 
 %downsample and save
 cfg = [];
@@ -136,35 +149,5 @@ clear res4mat res4mat_ds
 
 end
 
-%%
-%n trials - wip
-for i = 1:n_subjects
-    tottrig(i) = sum(res.(['ID_' fpaths{i,1}]).PO60.trialinfo == eventsPO60(1))
-end
+writetable(cell2table(rawcondlog), '../Analysis Output/n_cond_raw.csv') %Write log
 
-%% Create structure to read mat-files to
-
-res = struct();
-
-vararray = {'PO60', 'PO70', 'GP60', 'GP70', 'GO'};
-
-for i = 1:n_subjects
-    for ii = 1:length(vararray)
-        res.(['ID_' fpaths{i,1}]).(vararray{ii}) = 0 + ii; %Concatenate 'ID_' as int in struct not allowed
-    end
-end
-
-clear('i', 'ii', 'vararray')
-
-%res.(['ID_' fpaths{i,1}]).PO60
-
-% Tutorial snippets:
-%
-% for i = 1:n_subjects
-%     epochs = struct('PO60', 1, 'PO70', 2, 'GP60', 3, 'GP70', 4, 'GO', 5)
-% end
-% 
-% a = {'see','why'};
-% KPI = {'L','L2','L3'};
-% S.(a{1}).(KPI{1}) = 5;
-% S.see.L
