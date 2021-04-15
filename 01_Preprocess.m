@@ -9,7 +9,7 @@
 meg_data_path = '/archive/20061_tinnitus/MEG/';
 
 %Readtable of subjects (as string)
-sub_date = readtable('../sub_date.txt', 'Format', '%s%s');
+sub_date = readtable('../sub_date_test.txt', 'Format', '%s%s');
 
 disp(['Number of subjects in table is ' num2str(height(sub_date))])
 
@@ -17,8 +17,8 @@ disp(['Number of subjects in table is ' num2str(height(sub_date))])
 
 %To do, append to csv log - currently overwrites
 
-% Create cell array for subjects files
-fpaths = cell(1);
+% Create cell array for subjects filepaths
+subpaths = cell(1);
 
 for i = 1:height(sub_date);
 
@@ -26,40 +26,37 @@ for i = 1:height(sub_date);
 subpath = [meg_data_path 'NatMEG_' char(sub_date.ID{i}) '/' char(sub_date.date{i}) '/'];
 fnames = find_files(subpath, {'tinmeg1', 'tsss'}, 'ds');
 
-fpaths{i,1} = char(sub_date.ID{i}); %Include ID for tracking
+subpaths{i,1} = char(sub_date.ID{i}); %Include ID for tracking
 
     for fileindex = 1:length(fnames);
-        fpaths{i,1+fileindex} = [subpath char(fnames(fileindex))]; % NB! n of files differ between rows, some subjects have empty columns
+        subpaths{i,1+fileindex} = [subpath char(fnames(fileindex))]; % NB! n of files differ between rows, some subjects have empty columns
     end
-clear fnames subpath
+clear fnames subpath meg_data_path i fileindex
 end
 
-writetable(cell2table(fpaths), '../Analysis Output/included_filepaths.csv') %Write log
+writetable(cell2table(subpaths), '../Analysis Output/included_filepaths.csv') %Write log
 
-%% Specify event triggers
+%% Specify conditions and event triggers
 
-%Trigger value (STI101) at pulse onset
-eventsPO60 = [40968 36872 34824 33800 33288 33032];
-eventsPO70 = [36876 34828 33804 33292 33036];
-eventsGP60 = [49800 49736 49704 49688];
-eventsGP70 = [49804 49740 49708 49692];
+%all conditions
+conditions = ({'PO60', 'PO70', 'GP60', 'GP70', 'GO'});
 
-%Trigger value (STI101) at gap onset
-eventsGO   = [16386 16390];
+%Structure for triggers and labels
+cond = struct();
 
-% Pulse trigger:
-% B_C60_P70: 40968
-% B_C60_P75: 36872
-% B_C60_P80: 34824
-% B_C60_P85: 33800
-% B_C60_P90: 33288
-% B_C60_P95: 33032
+%trigger at pulse onset
+cond.PO60trig   = [40968 36872 34824 33800 33288 33032];
+cond.PO60label  = ({'PO60_70', 'PO60_75', 'PO60_80', 'PO60_85', 'PO60_90', 'PO60_95'});
+cond.PO70trig   = [36876 34828 33804 33292 33036];
+cond.PO70label  = ({'PO70_75', 'PO70_80', 'PO70_85', 'PO70_90', 'PO70_95'});
+cond.GP60trig   = [49800 49736 49704 49688];
+cond.GP60label  = ({'GP60_i0', 'GP60_i60', 'GP60_i120', 'GP60_i240'});
+cond.GP70trig   = [49804 49740 49708 49692];
+cond.GP70label  = ({'GP70_i0', 'GP70_i60', 'GP70_i120', 'GP70_i240'});
 
-% B_C70_P75: 36876
-% B_C70_P80: 34828
-% B_C70_P85: 33804
-% B_C70_P90: 33292
-% B_C70_P95: 33036
+%trigger at gap onset (gap only)
+cond.GOtrig     = [16386 16390];
+cond.GOlabel    = ({'GO_60', 'GO_70'});
 
 %ISI pulse trigger (gaptrig = pulsetrig - 6)
 % A_C60_i0: 49800
@@ -72,82 +69,83 @@ eventsGO   = [16386 16390];
 % A_70_i120: 49708
 % A_70_i240: 49692
 
-%GO gap-trig:
-% A_GO_60: 16386
-% A_GO_70: 16390
-
-%% Define trials and preprocess PO60
-
-%To do: Loop conditions
+%% Define trials and preprocess conditions
 
 %create log for n of trials in raw data
-%first row are labels
-rawcondlog = {'ID' '70' '75' '80' '85' '90' '95'};
+%first row are labels, first column IDs
+if exist('../Analysis Output/n_cond_raw.csv', 'file');
+    rawcondlog = readtable('../Analysis Output/n_cond_raw.csv');
+    rawcondlog = table2cell(rawcondlog);
+else 
+    %NB 22 columns hardcoded
+    rawcondlog = ['ID' cond.PO60label cond.PO70label cond.GP60label cond.GP70label cond.GOlabel];
+end
 
+%find(strcmp(rawcondlog, 'hejsan') == 1)
+
+%For each subject in sub_date table
 for i = 1:height(sub_date)
 
-%Create filename
-fname = ['ID' char(fpaths(i,1)) '_60PO_raw' '.mat']
-fpath = ['../mat_data/' fname]
-
-%check if file exist
-if exist(fpath, 'file')
-    warning(['Output exist for subject ' char(fpaths(i,1))])
-    continue
-end
+%For each event in condevents
+for ii = 1:length(conditions)
     
-% Define trials
-cfg = [];
+    %Create filename and check if raw file for condition exist
+    fname = ['ID' char(subpaths(i,1)) '_' char(conditions(ii)) '_raw' '.mat']
+    fpath = ['../mat_data/' fname]
+    
+    if exist(fpath, 'file')
+    warning(['Output (raw) exist for subject ' char(subpaths(i,1))])
+    continue
+    end
+    
+    % Define trials
+    cfg = [];
 
-% NB! cellfun for cfg.dataset defines 2:highest populated column
-cfg.dataset             = fpaths(i,2:max(find(~cellfun(@isempty,fpaths(i,:)))));
-cfg.trialdef.prestim    = 0.35;        % seconds before trigger
-cfg.trialdef.poststim   = 0.30;        % seconds after trigger
-cfg.trialdef.eventvalue = eventsPO60;
-cfg.trialfun            = 'ft_trialfun_neuromagSTI016fix';
+    % NB! cellfun for cfg.dataset defines 2:highest populated column
+    cfg.dataset             = subpaths(i,2:max(find(~cellfun(@isempty,subpaths(i,:)))));
+    cfg.trialdef.prestim    = 0.35;        % seconds before trigger
+    cfg.trialdef.poststim   = 0.30;        % seconds after trigger
+    cfg.trialdef.eventvalue = eval(['cond.' char(conditions(ii)) 'trig']); % :/
+    cfg.trialfun            = 'ft_trialfun_neuromagSTI016fix';
 
-cfg = ft_definetrial(cfg);
+    cfg = ft_definetrial(cfg);
 
-%Remove trials from cfg.trl that have negative sample index for trial start
-cfg.trl = cfg.trl(cfg.trl(:,1) >= 0,:);
-  
-%Remove trials from cfg.trl that have higher sample index than exist in file
-cfg.trl = cfg.trl(cfg.trl(:,2) < max([cfg.event.sample]),:);
+    %Remove trials from cfg.trl that have negative sample index for trial start
+    cfg.trl = cfg.trl(cfg.trl(:,1) >= 0,:);
 
-% preprocessing
-cfg.demean     = 'no';
-cfg.lpfilter   = 'no';
-cfg.hpfilter   = 'no';
-cfg.dftfilter  = 'no';
-cfg.channel    = {'MEG', 'ECG', 'EOG'};
+    %Remove trials from cfg.trl that have higher sample index than exist in file
+    cfg.trl = cfg.trl(cfg.trl(:,2) < max([cfg.event.sample]),:);
 
-res4mat = ft_preprocessing(cfg);
+    % preprocessing
+    cfg.demean     = 'no';
+    cfg.lpfilter   = 'no';
+    cfg.hpfilter   = 'no';
+    cfg.dftfilter  = 'no';
+    cfg.channel    = {'MEG', 'ECG', 'EOG'};
 
-save(fpath, 'res4mat', '-v7.3')
+    res4mat = ft_preprocessing(cfg);
 
-%Write to log, ID
-rawcondlog{i+1,1} = fpaths{i,1};
+    save(fpath, 'res4mat', '-v7.3')
 
-%Write to log, n of trials
-for ii = 1:length(eventsPO60)
-rawcondlog{i+1, ii+1} = sum(res4mat.trialinfo == eventsPO60(ii))
+    %write n of trials log WIP here:
+    %if cellfun(@(x) strcmp(x, char(subpaths(i,1))), rawcondlog)
+
+    %downsample and save
+    cfg = [];
+    cfg.resamplefs = 200;
+
+    res4mat_ds = ft_resampledata(cfg, res4mat);
+
+    fname = ['ID' char(subpaths(i,1)) '_' char(conditions(ii)) '_ds' '.mat'];
+    fpath = ['../mat_data/' fname];
+
+    save(fpath, 'res4mat_ds')
+
+    %clear temp variables
+    clear res4mat res4mat_ds
+
+    end
+    
 end
 
-%downsample and save
-cfg = [];
-cfg.resamplefs = 200;
-
-res4mat_ds = ft_resampledata(cfg, res4mat);
-
-fname = ['ID' char(fpaths(i,1)) '_60PO_ds' '.mat'];
-fpath = ['../mat_data/' fname];
-
-save(fpath, 'res4mat_ds')
-
-%clear temp variables
-clear res4mat res4mat_ds
-
-end
-
-writetable(cell2table(rawcondlog), '../Analysis Output/n_cond_raw.csv') %Write log
-
+%writetable(cell2table(rawcondlog), '../Analysis Output/n_cond_raw.xls', 'WriteVariableNames', false) %Write log
