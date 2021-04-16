@@ -127,8 +127,43 @@ for ii = 1:length(conditions)
 
     save(fpath, 'res4mat', '-v7.3')
 
-    %write n of trials log WIP here:
-    %if cellfun(@(x) strcmp(x, char(subpaths(i,1))), rawcondlog)
+    %write n of trials log    
+    %Find height of trial-log
+    logheight = size(rawcondlog);
+    logheight = logheight(1);
+    
+    %See if contain ID - WIP
+    isequal(rawcondlog(2,1), subpaths(i,1))
+    
+    %Write ID to new row, column 1
+    rawcondlog(logheight+1,1) = subpaths(i,1);
+    
+    %find row containing ID
+    [logrow, logcol] = find(strcmp(subpaths(i,1), rawcondlog))
+    
+    %How many stimtypes for cond and what trigger values
+    nstim = length(eval(['cond.' char(conditions(ii)) 'trig']));
+    trigs = eval(['cond.' char(conditions(ii)) 'trig']);
+    
+    %omg this gets ugly..
+    %Write stim to rawcondlog cell-array
+    for iii = 1:length(eval(['cond.' char(conditions(ii)) 'trig']))
+    if strcmp(conditions(ii), 'PO60')
+    rawcondlog(logheight+1,iii+1) = num2cell(sum(res4mat.trialinfo(:) == trigs(iii)));
+    elseif strcmp(conditions(ii), 'PO70')
+    rawcondlog(logheight+1,iii+7) = num2cell(sum(res4mat.trialinfo(:) == trigs(iii)));
+    elseif strcmp(conditions(ii), 'GP60')
+    rawcondlog(logheight+1,iii+12) = num2cell(sum(res4mat.trialinfo(:) == trigs(iii)));
+    elseif strcmp(conditions(ii), 'GP70')
+    rawcondlog(logheight+1,iii+16) = num2cell(sum(res4mat.trialinfo(:) == trigs(iii)));
+    elseif strcmp(conditions(ii), 'GO')
+    rawcondlog(logheight+1,iii+20) = num2cell(sum(res4mat.trialinfo(:) == trigs(iii)));
+    end
+    end
+    
+    %Write log to csv
+    writetable(cell2table(rawcondlog), '../Analysis Output/n_cond_raw.csv', 'WriteVariableNames', false) %Write log
+    
 
     %downsample and save
     cfg = [];
@@ -147,5 +182,3 @@ for ii = 1:length(conditions)
     end
     
 end
-
-%writetable(cell2table(rawcondlog), '../Analysis Output/n_cond_raw.xls', 'WriteVariableNames', false) %Write log
