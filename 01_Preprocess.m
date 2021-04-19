@@ -9,7 +9,7 @@
 meg_data_path = '/archive/20061_tinnitus/MEG/';
 
 %Readtable of subjects (as string)
-sub_date = readtable('../sub_date_test.txt', 'Format', '%s%s');
+sub_date = readtable('../sub_date.txt', 'Format', '%s%s');
 
 disp(['Number of subjects in table is ' num2str(height(sub_date))])
 
@@ -31,7 +31,7 @@ subpaths{i,1} = char(sub_date.ID{i}); %Include ID for tracking
     for fileindex = 1:length(fnames);
         subpaths{i,1+fileindex} = [subpath char(fnames(fileindex))]; % NB! n of files differ between rows, some subjects have empty columns
     end
-clear fnames subpath meg_data_path i fileindex
+clear fnames subpath i fileindex
 end
 
 writetable(cell2table(subpaths), '../Analysis Output/included_filepaths.csv') %Write log
@@ -133,12 +133,13 @@ for ii = 1:length(conditions)
     logheight = logheight(1);
     
     %See if contain ID - WIP
-    isequal(rawcondlog(2,1), subpaths(i,1))
+    %isequal(rawcondlog(2,1), subpaths(i,1))
     
     %Write ID to new row, column 1
-    rawcondlog(logheight+1,1) = subpaths(i,1);
+    %rawcondlog(logheight+1,1) = subpaths(i,1);
     
     %find row containing ID
+    %comes back as matrix, eventually replace logheight with logrow
     [logrow, logcol] = find(strcmp(subpaths(i,1), rawcondlog))
     
     %How many stimtypes for cond and what trigger values
