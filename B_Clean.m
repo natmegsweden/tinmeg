@@ -24,7 +24,7 @@ else
 end
 
 %For each subject in subject table
-for i = 1%:length(sub_date.ID);
+for i = 1:length(sub_date.ID);
 
     %Check if ID is in trial-log and determine row in log to write to
     if find(strcmp(['ID' char(sub_date.ID(i))], cleancondlog)) > 0;
