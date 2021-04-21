@@ -1,5 +1,8 @@
 %% Read and arrange fif-files for TinMEG1
 %
+% To do or consider:
+% Append filenames to included_filepaths.csv - currently overwrites (include date?)
+% Modify cfg.trialdef.pre/poststim for PO/GP trials
 %
 %
 
@@ -14,8 +17,6 @@ sub_date = readtable('../sub_date.txt', 'Format', '%s%s');
 disp(['Number of subjects in table is ' num2str(height(sub_date))])
 
 %% Find relevant files for subject and create cell-array of file paths
-
-%To do, append to csv log - currently overwrites
 
 % Create cell array for subjects filepaths
 subpaths = cell(1);
@@ -74,27 +75,37 @@ cond.GOlabel    = ({'GO_60', 'GO_70'});
 %create log for n of trials in raw data
 %first row are labels, first column IDs
 if exist('../Analysis Output/n_cond_raw.csv', 'file');
-    rawcondlog = readtable('../Analysis Output/n_cond_raw.csv');
+    rawcondlog = readtable('../Analysis Output/n_cond_raw.csv', 'ReadVariableNames', false);
     rawcondlog = table2cell(rawcondlog);
 else 
     %NB 22 columns hardcoded
-    rawcondlog = ['ID' cond.PO60label cond.PO70label cond.GP60label cond.GP70label cond.GOlabel];
+    rawcondlogl = ['ID' cond.PO60label cond.PO70label cond.GP60label cond.GP70label cond.GOlabel];
 end
-
-%find(strcmp(rawcondlog, 'hejsan') == 1)
 
 %For each subject in sub_date table
 for i = 1:height(sub_date)
-
+    
+    %Check if ID is in trial-log and determine row in log to write to
+    if find(strcmp(['ID' char(subpaths(i,1))], rawcondlog)) > 0;
+        logheight = find(strcmp(['ID' char(subpaths(i,1))], rawcondlog));
+    else
+        %Find height of trial-log and +1 for new row
+        logheight = size(rawcondlog);
+        logheight = logheight(1) + 1;
+  
+        %Write ID to new row, column 1
+        rawcondlog{logheight,1} = ['ID' char(subpaths(i,1))];
+    end
+    
 %For each event in condevents
 for ii = 1:length(conditions)
     
     %Create filename and check if raw file for condition exist
-    fname = ['ID' char(subpaths(i,1)) '_' char(conditions(ii)) '_raw' '.mat']
-    fpath = ['../mat_data/' fname]
+    fname = ['ID' char(subpaths(i,1)) '_' char(conditions(ii)) '_raw' '.mat'];
+    fpath = ['../mat_data/' fname];
     
     if exist(fpath, 'file')
-    warning(['Output (raw) exist for subject ' char(subpaths(i,1))])
+    warning(['Output' fname ' exist for subject ' char(subpaths(i,1))])
     continue
     end
     
@@ -127,21 +138,7 @@ for ii = 1:length(conditions)
 
     save(fpath, 'res4mat', '-v7.3')
 
-    %write n of trials log    
-    %Find height of trial-log
-    logheight = size(rawcondlog);
-    logheight = logheight(1);
-    
-    %See if contain ID - WIP
-    %isequal(rawcondlog(2,1), subpaths(i,1))
-    
-    %Write ID to new row, column 1
-    %rawcondlog(logheight+1,1) = subpaths(i,1);
-    
-    %find row containing ID
-    %comes back as matrix, eventually replace logheight with logrow
-    [logrow, logcol] = find(strcmp(subpaths(i,1), rawcondlog))
-    
+    %write n of trials log        
     %How many stimtypes for cond and what trigger values
     nstim = length(eval(['cond.' char(conditions(ii)) 'trig']));
     trigs = eval(['cond.' char(conditions(ii)) 'trig']);
@@ -150,22 +147,21 @@ for ii = 1:length(conditions)
     %Write stim to rawcondlog cell-array
     for iii = 1:length(eval(['cond.' char(conditions(ii)) 'trig']))
     if strcmp(conditions(ii), 'PO60')
-    rawcondlog(logheight+1,iii+1) = num2cell(sum(res4mat.trialinfo(:) == trigs(iii)));
+    rawcondlog(logheight,iii+1) = num2cell(sum(res4mat.trialinfo(:) == trigs(iii)));
     elseif strcmp(conditions(ii), 'PO70')
-    rawcondlog(logheight+1,iii+7) = num2cell(sum(res4mat.trialinfo(:) == trigs(iii)));
+    rawcondlog(logheight,iii+7) = num2cell(sum(res4mat.trialinfo(:) == trigs(iii)));
     elseif strcmp(conditions(ii), 'GP60')
-    rawcondlog(logheight+1,iii+12) = num2cell(sum(res4mat.trialinfo(:) == trigs(iii)));
+    rawcondlog(logheight,iii+12) = num2cell(sum(res4mat.trialinfo(:) == trigs(iii)));
     elseif strcmp(conditions(ii), 'GP70')
-    rawcondlog(logheight+1,iii+16) = num2cell(sum(res4mat.trialinfo(:) == trigs(iii)));
+    rawcondlog(logheight,iii+16) = num2cell(sum(res4mat.trialinfo(:) == trigs(iii)));
     elseif strcmp(conditions(ii), 'GO')
-    rawcondlog(logheight+1,iii+20) = num2cell(sum(res4mat.trialinfo(:) == trigs(iii)));
+    rawcondlog(logheight,iii+20) = num2cell(sum(res4mat.trialinfo(:) == trigs(iii)));
     end
     end
     
     %Write log to csv
     writetable(cell2table(rawcondlog), '../Analysis Output/n_cond_raw.csv', 'WriteVariableNames', false) %Write log
     
-
     %downsample and save
     cfg = [];
     cfg.resamplefs = 200;
