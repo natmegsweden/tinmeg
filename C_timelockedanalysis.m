@@ -72,5 +72,26 @@ end
 
 clear('trigs', 'trigger', 'i', 'ii', 'nstim', 'stim_index', 'fname', 'cleaned4mat', 'temptrials');
 
+%Large file size, save with caution
+%save('../mat_data/epochs.mat', 'epochs', '-v7.3')
+
 %find ID:
-%find(contains(epochs.ID, 'texthere'))
+%find(contains(epochs.ID, 'text_here'))
+
+%% Plot for sanity check
+
+% Sensor selection based on pilot only
+
+%Timelockeds for left side MEGMAG of interest
+MAGoiL = {'MEG1621', 'MEG1631', 'MEG1811', 'MEG1821', 'MEG1841'};
+MAGoiR = {'MEG2221', 'MEG2411', 'MEG2421', 'MEG2431', 'MEG2441'};
+
+%Timelockeds for right side MEGGRAD of interest
+GRADoiL = {'MEG0232', 'MEG0233', 'MEG0242', 'MEG0243', 'MEG1612', 'MEG1613'};
+GRADoiR = {'MEG1332', 'MEG1333', 'MEG1342', 'MEG1343', 'MEG2422', 'MEG2423'};
+
+cfg = [];
+cfg.layout = 'neuromag306mag.lay';
+cfg.linecolor = 'brgkym'
+cfg.channel = MAGoiL
+ft_singleplotER(cfg, epochs.PO60{1,1:6});
