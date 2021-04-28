@@ -16,7 +16,7 @@ sub_date = readtable('../sub_date.txt', 'Format', '%s%s');
 %Add title of subject ID in figure for checks
 
 %Check for dicoms, read, coordinate, realign and save for all participants
-for i = 1:2%:length(sub_date.ID);
+for i = 1:length(sub_date.ID);
     
     sub_mri_path = ['../MRI/' 'NatMEG_' char(sub_date{i,1})];
     fname = ['../mat_data/MRI_mat/' 'ID' char(sub_date{i,1}) '_MEG_headmodel.mat'];
