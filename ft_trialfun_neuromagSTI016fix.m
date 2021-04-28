@@ -78,7 +78,7 @@ trl = [];
 for j = 1:length(value)
     if strcmp(cfg.trialdef.eventtype, event(j).type)
         trg = value(j);
-        if any(cfg.trialdef.eventvalue, trg)
+        if any(cfg.trialdef.eventvalue == trg)
             trlbegin = sample(j) + pretrig;       
             trlend   = sample(j) + posttrig;       
             offset   = pretrig;
