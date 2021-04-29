@@ -72,11 +72,11 @@ cfg.latency = [-0.200 0.200];
 data_all = ft_selectdata(cfg, cleaned4mat);
 
 %baseline window
-cfg.latency = [-0.200 -0.100];
+cfg.latency = [-0.200 -0.050];
 
 data_base = ft_selectdata(cfg, cleaned4mat);
 
-cfg.latency = [0.100 0.200];
+cfg.latency = [0.0 0.150];
 
 data_stim = ft_selectdata(cfg, cleaned4mat);
 
