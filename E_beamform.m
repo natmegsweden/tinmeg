@@ -1,4 +1,6 @@
+%% https://github.com/natmegsweden/meeg_course/blob/master/tutorial_05_beamformer.md
 
+%%
 sub_date = readtable('../sub_date.txt', 'Format', '%s%s');
 
 load(['../mat_data/MRI_mat/ID' sub_date.ID{2} '_MEG_headmodel.mat'])
@@ -21,7 +23,7 @@ leadfield_meg = ft_prepare_leadfield(cfg);
 %% Select data
 cfg = [];
 cfg.trials = cleaned4mat.trialinfo == 33032;
-cfg.latency = [0.100 0.200];
+cfg.latency = [0.0 0.150];
 
 data = ft_selectdata(cfg, cleaned4mat);
 
@@ -30,6 +32,7 @@ cfg = [];
 cfg.covariance              = 'yes';
 cfg.covariancewindow        = 'all';
 cfg.preproc.demean          = 'yes';
+cfg.keeptrials              = 'yes'; %as R/L AC is highly correlated
 
 evoked = ft_timelockanalysis(cfg, data);
 
@@ -46,15 +49,94 @@ source_lcmv = ft_sourceanalysis(cfg, evoked);
 %% Load MRI
 load(['../mat_data/MRI_mat/ID' sub_date.ID{2} '_mri_resliced.mat']);
 
-%% Interpolate
+%% Interpolate (middle of head bias (?))
 cfg = [];
 cfg.parameter    = 'pow';
 cfg.interpmethod = 'nearest';
 source_int  = ft_sourceinterpolate(cfg, source_lcmv, mri_resliced);
 
-%% Plot
+% Plot
 cfg = [];
 cfg.method        = 'ortho';
 cfg.funparameter  = 'pow';
 ft_sourceplot(cfg,source_int);
+
+
+%% Select full window, baseline and TOI
+
+%full window
+cfg = [];
+cfg.trials = cleaned4mat.trialinfo == 33032;
+cfg.latency = [-0.200 0.200];
+
+data_all = ft_selectdata(cfg, cleaned4mat);
+
+%baseline window
+cfg.latency = [-0.200 -0.100];
+
+data_base = ft_selectdata(cfg, cleaned4mat);
+
+cfg.latency = [0.100 0.200];
+
+data_stim = ft_selectdata(cfg, cleaned4mat);
+
+%% Evoked for TOI
+% Combined
+cfg = [];
+cfg.covariance         = 'yes';
+cfg.covariancewindow   = 'all';
+cfg.preproc.demean     = 'yes';
+evo_all = ft_timelockanalysis(cfg, data_all);
+
+% Baseline and stimulation
+cfg = [];
+cfg.covariance         = 'yes';
+cfg.covariancewindow   = 'all';
+evo_base = ft_timelockanalysis(cfg, data_base);
+evo_stim = ft_timelockanalysis(cfg, data_stim);
+
+%% Calculate beamformer filter - average for TOI
+
+cfg=[];
+cfg.method          = 'lcmv';
+cfg.grid            = leadfield_meg;
+cfg.headmodel       = headmodel_meg;
+cfg.lcmv.keepfilter = 'yes';        % save the filter in the output data
+cfg.lcmv.lambda     = '5%';
+cfg.channel         = 'meggrad';
+cfg.senstype        = 'MEG';
+
+source_all = ft_sourceanalysis(cfg, evo_all);
+
+%% Source analysis on baseline and stim data
+cfg=[];
+cfg.method              = 'lcmv';
+cfg.grid                = leadfield_meg;
+cfg.sourcemodel.filter  = source_all.avg.filter;  % Reuse avg filter
+cfg.headmodel           = headmodel_meg;
+cfg.channel             = 'meggrad';
+cfg.senstype            = 'MEG';
+
+source_base = ft_sourceanalysis(cfg, evo_base);
+source_stim = ft_sourceanalysis(cfg, evo_stim);
+
+%% Create contrast - baseline and stim
+
+contrast_lcmv = source_stim;       % Copy
+contrast_lcmv.avg.pow = (source_stim.avg.pow-source_base.avg.pow)./source_base.avg.pow;
+
+%Save here
+
+%% Interpolate and plot contrasted source
+cfg = [];
+cfg.parameter    = 'pow';
+cfg.interpmethod = 'nearest';
+source_int  = ft_sourceinterpolate(cfg, contrast_lcmv, mri_resliced);
+
+%Plot
+cfg = [];
+cfg.method          = 'ortho';
+cfg.funparameter    = 'pow';
+cfg.funcolormap     = 'jet';
+ft_sourceplot(cfg, source_int);
 
