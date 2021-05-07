@@ -9,6 +9,9 @@ load(['../mat_data/ID' sub_date.ID{2} '_PO60_ds_clean.mat'])
 
 %put loaded data in structure?
 
+%ladda in headmodels + mr_resliced: skapa normaliserad source_model
+
+%spara sourcemodels
 
 %% Make leadfields for MEG: magnetometers
 cfg.senstype        = 'meg';
