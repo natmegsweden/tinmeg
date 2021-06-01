@@ -6,34 +6,22 @@ Created on Tue May 25 11:30:57 2021
 """
 #%% PATHS
 raw_path = '/archive/20061_tinnitus/MEG'
-out_path = '/home/mikkel/tinmeg/MEG'               #### ! CHANGE THIS !
+out_path = '/home/nikedv/TinMEG1/headpos_output'        #### ! CHANGE THIS !
 
 # ADD SUBJECTS/DATES HERE
 subj_dates = [
-    #     'NatMEG_0756/210224',
-        
-    # 'NatMEG_0538'
-    # 'NatMEG_0539
-    # 'NatMEG_0697
-    # 'NatMEG_0750
-    # 'NatMEG_0756
-    # 'NatMEG_0832
-    # 'NatMEG_0835
-    # 'NatMEG_0836
-    # 'NatMEG_0838
-    # 'NatMEG_0839
-    
-    'NatMEG_0839/210511'
-    # NatMEG_0840/210512
-    # NatMEG_0841/210512
-    # 'NatMEG_0842/210513'
-    # 'NatMEG_0844/210517'
-    # 'NatMEG_0845/210517'
-    # 'NatMEG_0847/210519'
-    ]
+	'NatMEG_0832/210504',
+	'NatMEG_0835/210505',
+	'NatMEG_0836/210506',
+	'NatMEG_0839/210511',
+	'NatMEG_0841/210512',
+	'NatMEG_0842/210513',
+	'NatMEG_0845/210517',
+	'NatMEG_0847/210519'
+]
 
 # ADD FILENAME
-condition = 'tinmeg'
+condition = 'tinmeg1'
 
 #%% IMPORT STUFF
 import os.path as op
@@ -84,26 +72,33 @@ for ii, subj_date in enumerate(subj_dates):
     if not files2combine:
         raise RuntimeError('No files called \"%s\" found in %s' % (condition, quatdir))
         
-    allfiles = []
-    for ff in files2combine:
-        fl = ff.split('_')[0]
-        tmplist = [f for f in listdir(quatdir) if fl in f and '_quat' in f]
-        
-        #Fix order
-        if len(tmplist) > 1:
-            tmplist.sort()
-            if any("-" in f for f in tmplist):
-                firstfile = tmplist[-1]  # The file without a number will always be last!  
-                tmpfs = sorted(tmplist[:-1], key=lambda a: int(re.split('-|.fif', a)[-2]) )  # Assuming consistent naming!!!
-                tmplist[0] = firstfile
-                tmplist[1:] = tmpfs
-                allfiles = allfiles + tmplist
-        
+    allquats = [f for f in listdir(quatdir) if 'quat' in f]
+    allquats_beg = []
+    for fl in [f.split('quat') for f in allquats]:
+        allquats_beg.append(fl[0])
+
+    # loop through unique files and add to list in correct order
+    allquats_sorted = []
     
-    if len(allfiles) > 1:
+    files2combine_beg = [f.split('quat')[0] for f in files2combine]
+        
+    for file in files2combine_beg:
+        tmplist = [f for f in allquats if file in f] 
+        tmplist.sort()
+        firstquat = tmplist[-1]
+        otherquats = tmplist[:-1]
+        
+        allquats_sorted.append(firstquat)
+        
+        try:
+            allquats_sorted.extend(sorted(otherquats, key=lambda a: int(re.split('-|.fif', a)[1])))
+        except(ValueError):
+            print('Check file naming ' + otherquats)
+    
+    if len(allquats_sorted) > 1:
         print('Files used for average head pos:')    
-        for ib in range(len(allfiles)):
-            print('{:d}: {:s}'.format(ib + 1, allfiles[ib]))
+        for ib in range(len(allquats_sorted)):
+            print('{:d}: {:s}'.format(ib + 1, allquats_sorted[ib]))
     else:
         print('Will find average head pos in %s' % files2combine)    
     
