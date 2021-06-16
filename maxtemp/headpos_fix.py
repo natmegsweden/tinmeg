@@ -10,12 +10,12 @@ out_path = '/home/nikedv/TinMEG1/headpos_output'        #### ! CHANGE THIS !
 
 # ADD SUBJECTS/DATES HERE
 subj_dates = [
-	#'NatMEG_0849/210525',
-    'NatMEG_0850/210526',
-    'NatMEG_0852/210531',
-    'NatMEG_0853/210602',
-    'NatMEG_0856/210608',
-	'NatMEG_0857/210609'
+	'NatMEG_0849/210525'#,
+    #'NatMEG_0850/210526',
+   # 'NatMEG_0852/210531',
+   # 'NatMEG_0853/210602',
+   # 'NatMEG_0856/210608',
+	#'NatMEG_0857/210609'
 ]
 
 # ADD FILENAME
@@ -50,7 +50,7 @@ for ii, subj_date in enumerate(subj_dates):
     print(rawdir)
     quatdir = op.join(rawdir,'quat_files')
     
-    mean_trans_folder = op.join(out_path, subj, 'trans_files')
+    mean_trans_folder = op.join(out_path, subj_date, 'trans_files')
     if not op.exists(op.join(out_path, subj)):
         mkdir(op.join(out_path, subj))
     if not op.exists(op.join(out_path, subj_date)):
