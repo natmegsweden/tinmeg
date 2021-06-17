@@ -1,12 +1,29 @@
 %% Read subjects and dates
 
+%To do: 
+%implement "run for who" to re-run single subject/testing purposes - stop
+%if invalid ID
+
+% Run for who?
+runwho = input('Who are we analysing today? specify all (default) or specific ID \n', 's');
+if isempty(runwho)
+    runwho = 'all'
+end
+
 % Specify MEG data path
 meg_data_path = '/archive/20061_tinnitus/MEG/';
+
+%MRI data path
+mri_data_path = '../MRI/';
 
 %Readtable of subjects (as string)
 sub_date = readtable('../sub_date.txt', 'Format', '%s%s');
 
 disp(['Number of subjects in table is ' num2str(height(sub_date))])
+
+%% Specify conditions and event triggers
+
+run('Conditions_triggers.m');
 
 %% Find relevant files for subject and create cell-array of file paths
 
@@ -29,10 +46,6 @@ end
 
 writetable(cell2table(subpaths), '../Analysis Output/included_filepaths.csv') %Write log
 
-%% Specify conditions and event triggers
-
-run('Conditions_triggers.m');
-
 %% Read or create log file of conditions
 
 %create log for n of trials in raw data
@@ -42,7 +55,7 @@ if exist('../Analysis Output/n_cond_raw.csv', 'file');
     rawcondlog = table2cell(rawcondlog);
 else 
     %NB 22 columns hardcoded
-    rawcondlogl = ['ID' cond.PO60label cond.PO70label cond.GP60label cond.GP70label cond.GOlabel];
+    rawcondlog = ['ID' cond.PO60label cond.PO70label cond.GP60label cond.GP70label cond.GOlabel];
 end
 
 %%  Loop over A_Preprocess.m for subjects without output files
@@ -78,3 +91,62 @@ for i = 1:length(sub_date.ID);
 end
 
 clear('i', 'ii', 'iii', 'logheight');
+
+%% Timelockedanalysis
+
+%% MR step 1
+%  Require some manual input for fiducials and coordsys
+
+for i = 1:length(sub_date.ID);
+    
+    sub_mri_path = ['../MRI/' 'NatMEG_' char(sub_date{i,1})];
+    fname = ['../mat_data/MRI_mat/' 'ID' char(sub_date{i,1}) '_mri_realigned.mat'];
+
+    %Check if realigned mri exist for subject
+    if exist(fname, 'file')
+    warning(['Output' fname ' exist for subject ' char(sub_date{i,1})])
+    continue
+    end
+    
+    run('D_MR_prep.m');
+    
+end
+
+%% MR Step 2
+%  Re-slice and segment, time-conusming (5 min per subject) not requiring manual inputs
+
+for i = 1:length(sub_date.ID);
+    
+    sub_mri_path = ['../MRI/' 'NatMEG_' char(sub_date{i,1})];
+    fname = ['../mat_data/MRI_mat/' 'ID' char(sub_date{i,1}) '_MEG_headmodel.mat'];
+
+    %Check if headmodel exist for subject
+    if exist(fname, 'file')
+    warning(['Output' fname ' exist for subject ' char(sub_date{i,1})])
+    continue
+    end
+    
+    run('D_MR_prep2.m');
+    
+end
+
+%% MR Step 3
+%  Loop through plots to check for errors
+
+for i = 1:length(sub_date.ID);
+    
+    load(['../mat_data/MRI_mat/' 'ID' char(sub_date{i,1}) '_headshape']);
+    load(['../mat_data/MRI_mat/' 'ID' char(sub_date{i,1}) '_sensshape']);
+    load(['../mat_data/MRI_mat/' 'ID' char(sub_date{i,1}) '_MEG_headmodel']);
+    
+    %Final plot - aligned MEG   
+    fig = figure;
+    hold on;
+    ft_plot_sens(sensshape)
+    ft_plot_headshape(headshape)
+    ft_plot_headmodel(headmodel_meg)
+    ft_plot_axes([], 'unit', 'cm');
+    
+    uiwait(fig);
+    
+end
