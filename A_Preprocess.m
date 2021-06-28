@@ -46,6 +46,34 @@ cfg.trl = cfg.trl(cfg.trl(:,1) >= 0,:);
 %Remove trials from cfg.trl that have higher sample index than exist in file
 cfg.trl = cfg.trl(cfg.trl(:,2) < max([cfg.event.sample]),:);
 
+trl = cfg.trl;
+
+%Artifact rejection!
+cfg = [];
+cfg.trl = trl;
+cfg.datafile = subpaths(i,2:max(find(~cellfun(@isempty,subpaths(i,:)))));
+cfg.headerfile = subpaths(i,2:max(find(~cellfun(@isempty,subpaths(i,:)))));
+cfg.continuous = 'yes';
+
+% channel selection, cutoff and padding
+cfg.artfctdef.zvalue.channel = 'MEG';
+cfg.artfctdef.zvalue.cutoff = 20;
+cfg.artfctdef.zvalue.trlpadding = 0;
+cfg.artfctdef.zvalue.artpadding = 0;
+cfg.artfctdef.zvalue.fltpadding = 0;
+
+% algorithmic parameters
+cfg.artfctdef.zvalue.cumulative = 'yes';
+cfg.artfctdef.zvalue.medianfilter = 'yes';
+cfg.artfctdef.zvalue.medianfiltord = 9;
+cfg.artfctdef.zvalue.absdiff = 'yes';
+
+% make the process interactive
+cfg.artfctdef.zvalue.interactive = 'yes';
+
+[cfg, artifact_jump] = ft_artifact_zvalue(cfg);
+
+
 % preprocessing
 cfg.demean     = 'no';
 cfg.lpfilter   = 'no';

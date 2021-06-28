@@ -72,3 +72,16 @@ headmodel_meg = ft_prepare_headmodel(cfg, mesh_brain);
 
 save(['../mat_data/MRI_mat/' 'ID' char(sub_date{i,1}) '_MEG_headmodel'], 'headmodel_meg');
 
+%% Create subject specific grid based on MNI template
+
+cfg           = [];
+cfg.method    = 'basedonmni';
+cfg.template  = template_grid;
+cfg.nonlinear = 'yes';
+cfg.mri       = mri_resliced;
+cfg.unit      = 'mm';
+
+subject_grid = ft_prepare_sourcemodel(cfg);
+
+save(['../mat_data/MRI_mat/' 'ID' char(sub_date{i,1}) '_sub_grid'], 'subject_grid');
+

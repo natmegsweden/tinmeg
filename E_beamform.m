@@ -1,17 +1,40 @@
 %% https://github.com/natmegsweden/meeg_course/blob/master/tutorial_05_beamformer.md
 
-%%
-sub_date = readtable('../sub_date.txt', 'Format', '%s%s');
 
-load(['../mat_data/MRI_mat/ID' sub_date.ID{2} '_MEG_headmodel.mat'])
+%% Load template grid
 
-load(['../mat_data/ID' sub_date.ID{2} '_PO60_ds_clean.mat'])
+load('/../../fieldtrip-20210311/template/sourcemodel/standard_sourcemodel3d10mm');
+template_grid = sourcemodel;
+clear sourcemodel
+
+%% Load subject data
+load(['../mat_data/MRI_mat/ID' sub_date.ID{2} '_MEG_headmodel.mat']);  
+load(['../mat_data/MRI_mat/ID' sub_date.ID{2} '_mri_resliced.mat']);
+
+%load(['../mat_data/ID' sub_date.ID{2} '_PO60_ds_clean.mat']);
 
 %put loaded data in structure?
-
 %ladda in headmodels + mr_resliced: skapa normaliserad source_model
-
 %spara sourcemodels
+
+%% Create the subject specific grid
+
+cfg           = [];
+cfg.method    = 'basedonmni';
+cfg.template  = template_grid;
+cfg.nonlinear = 'yes';
+cfg.mri       = mri_resliced;
+cfg.unit      = 'mm';
+
+subject_grid = ft_prepare_sourcemodel(cfg);
+
+save(['../mat_data/MRI_mat/' 'ID' char(sub_date{i,1}) 'sub_grid'], 'subject_grid');
+
+% make a figure of the single subject headmodel, and grid positions
+% figure; hold on;
+% ft_plot_headmodel(headmodel_meg, 'edgecolor', 'none', 'facealpha', 0.4);
+% ft_plot_mesh(grid.pos(grid.inside,:));
+
 
 %% Make leadfields for MEG: magnetometers
 cfg.senstype        = 'meg';

@@ -16,6 +16,11 @@ meg_data_path = '/archive/20061_tinnitus/MEG/';
 %MRI data path
 mri_data_path = '../MRI/';
 
+%Sourcemodel template
+load('/../../fieldtrip-20210311/template/sourcemodel/standard_sourcemodel3d6mm');
+template_grid = sourcemodel;
+clear sourcemodel
+
 %Readtable of subjects (as string)
 sub_date = readtable('../sub_date.txt', 'Format', '%s%s');
 
@@ -112,6 +117,8 @@ for i = 1:length(sub_date.ID);
     
 end
 
+clear('');
+
 %% MR Step 2
 %  Re-slice and segment, time-conusming (5 min per subject) not requiring manual inputs
 
@@ -131,7 +138,7 @@ for i = 1:length(sub_date.ID);
 end
 
 %% MR Step 3
-%  Loop through plots to check for errors
+%  Loop through plots for ALL[!] subjects to check for errors
 
 for i = 1:length(sub_date.ID);
     
@@ -147,6 +154,11 @@ for i = 1:length(sub_date.ID);
     ft_plot_headmodel(headmodel_meg)
     ft_plot_axes([], 'unit', 'cm');
     
+    %Pause loop until figure is closed
     uiwait(fig);
     
 end
+
+%% Source reconstruction Beamformer
+
+
