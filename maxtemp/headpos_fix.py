@@ -10,12 +10,11 @@ out_path = '/home/nikedv/TinMEG1/headpos_output'        #### ! CHANGE THIS !
 
 # ADD SUBJECTS/DATES HERE
 subj_dates = [
-	'NatMEG_0849/210525'#,
-    #'NatMEG_0850/210526',
-   # 'NatMEG_0852/210531',
-   # 'NatMEG_0853/210602',
-   # 'NatMEG_0856/210608',
-	#'NatMEG_0857/210609'
+	'NatMEG_0858/210609',
+    'NatMEG_0859/210609',
+    'NatMEG_0861/210614',
+    'NatMEG_0862/210615',
+    'NatMEG_0863/210615'
 ]
 
 # ADD FILENAME
