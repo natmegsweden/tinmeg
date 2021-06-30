@@ -26,7 +26,7 @@ sub_date = readtable('../sub_date.txt', 'Format', '%s%s');
 
 disp(['Number of subjects in table is ' num2str(height(sub_date))])
 
-%% Specify conditions and event triggers
+%Specify conditions and event triggers
 
 run('Conditions_triggers.m');
 
@@ -51,7 +51,7 @@ end
 
 writetable(cell2table(subpaths), '../Analysis Output/included_filepaths.csv') %Write log
 
-%% Read or create log file of conditions
+%% Read or create log file of conditions and artifacts
 
 %create log for n of trials in raw data
 %first row are labels, first column IDs
@@ -61,6 +61,16 @@ if exist('../Analysis Output/n_cond_raw.csv', 'file');
 else 
     %NB 22 columns hardcoded
     rawcondlog = ['ID' cond.PO60label cond.PO70label cond.GP60label cond.GP70label cond.GOlabel];
+end
+
+%create log for n of artifacts rejected
+%first row are labels, first column IDs
+if exist('../Analysis Output/n_cond_artifact.csv', 'file');
+    artcondlog = readtable('../Analysis Output/n_cond_artifact.csv', 'ReadVariableNames', false);
+    artcondlog = table2cell(artcondlog);
+else 
+    %NB columns hardcoded
+    artcondlog = ['ID', strcat(conditions, '_jmp'), strcat(conditions, '_mus'), strcat(conditions, '_eog')];
 end
 
 %%  Loop over A_Preprocess.m for subjects without output files
@@ -98,6 +108,8 @@ end
 clear('i', 'ii', 'iii', 'logheight');
 
 %% Timelockedanalysis
+
+
 
 %% MR step 1
 %  Require some manual input for fiducials and coordsys

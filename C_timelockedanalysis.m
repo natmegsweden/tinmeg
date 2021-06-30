@@ -4,24 +4,96 @@
 % Check if exist and skip
 % Plot
 
-%% Find and load variables and files
+%% Create timelockeds for EOG
 
-load('../mat_data/conditions.mat');
-load('../mat_data/cond.mat');
+%implement: if exist load
 
-%Readtable of subjects (as string)
-sub_date = readtable('../sub_date.txt', 'Format', '%s%s');
+%for each condition
+for ii = 1:length(conditions)
 
-disp(['Number of subjects in table is ' num2str(height(sub_date))])
+%NB reading in EOG data from file BEFORE ft_rejectvisual
+fname = ['ID' char(subpaths(i,1)) '_' char(conditions(ii)) '_ds' '.mat'];
+fpath = ['../mat_data/' fname];
 
-%Only one condition here so far
-datapath = '../mat_data/';
+%loads as 'res4mat_ds'
+load(fpath);
 
-%Create structure to write ouput
+%Different TOI for PO and GP
+if ismember(conditions{ii}, {'PO60', 'PO70', 'GO'})
+    toilow = -0.100
+    toihigh = 0.300
+elseif ismember(conditions{ii}, {'GP60', 'GP70'})
+    toilow = -0.100
+    toihigh = 0.300
+end
 
-epochs = struct;
+%Define toi for trial in file
+cfg = [];
+cfg.toilim = [toilow toihigh];
 
-%% Create timelockeds
+temptrials = ft_redefinetrial(cfg, res4mat_ds);
+
+%Find triggers and stims in condition
+nstim = length(eval(['cond.' char(conditions(ii)) 'trig']));
+trigs = eval(['cond.' char(conditions(ii)) 'trig']);
+
+%Extract EOG-timelockeds for all stim types
+    for stim_index = 1:nstim
+
+    trigger = trigs(stim_index);
+    label = eval(['cond.' char(conditions(ii)) 'label']);
+
+    cfg = [];
+
+    cfg.channel = {'EOG001', 'EOG002'};
+
+    cfg.covariance = 'yes';
+    cfg.covariancewindow = 'prestim';
+    cfg.keeptrials = 'no' %if yes, no avg in output variable "timelockeds"?
+    cfg.preproc.demean = 'yes';
+    cfg.preproc.baselinewindow = [toilow-0.100 toilow]; %check this
+    cfg.preproc.lpfilter = 'yes';
+    cfg.preproc.lpfreq = 70;
+    cfg.trials = temptrials.trialinfo == trigger;
+    
+    eog_timelockeds = ft_timelockanalysis(cfg, temptrials);
+    
+    destdirectory = ['../mat_data/timelockeds/' 'ID' char(subpaths(i,1)) '/'];
+    
+    if ~exist(destdirectory, 'file');
+    mkdir(destdirectory);
+    continue
+    end
+    
+    save([destdirectory char(label(stim_index)) '_eog' '.mat'], 'eog_timelockeds');
+    
+    %epochs_eog.(conditions{ii}){i, stim_index} = ft_timelockanalysis(cfg, temptrials);
+    
+    %end all stimtypes
+    end
+
+%end all conditions
+end
+
+%%
+
+
+figure
+hold on
+plot(epochs_eog.PO60{1,1}.avg(2,:))
+plot(epochs_eog.PO60{1,2}.avg(2,:))
+plot(epochs_eog.PO60{1,3}.avg(2,:))
+plot(epochs_eog.PO60{1,4}.avg(2,:))
+plot(epochs_eog.PO60{1,5}.avg(2,:))
+plot(epochs_eog.PO60{1,6}.avg(2,:))
+hold off
+
+
+
+
+
+
+
 
 %For subject
 for i = 1:length(sub_date.ID)

@@ -4,16 +4,28 @@
 % Append filenames to included_filepaths.csv - currently overwrites (include date?)
 % Modify cfg.trialdef.pre/poststim for PO/GP trials
 
-%Check if ID is in trial-log and determine row in log to write to
+%Check if ID is in TRIAL-log and determine row in log to write to
 if find(strcmp(['ID' char(subpaths(i,1))], rawcondlog)) > 0;
-    logheight = find(strcmp(['ID' char(subpaths(i,1))], rawcondlog));
+    rawlogheight = find(strcmp(['ID' char(subpaths(i,1))], rawcondlog));
 else
     %Find height of trial-log and +1 for new row
-    logheight = size(rawcondlog);
-    logheight = logheight(1) + 1;
+    rawlogheight = size(rawcondlog);
+    rawlogheight = rawlogheight(1) + 1;
 
     %Write ID to new row, column 1
-    rawcondlog{logheight,1} = ['ID' char(subpaths(i,1))];
+    rawcondlog{rawlogheight,1} = ['ID' char(subpaths(i,1))];
+end
+
+%Check if ID is in ARTIFACT-log and determine row in log to write to
+if find(strcmp(['ID' char(subpaths(i,1))], artcondlog)) > 0;
+    artlogheight = find(strcmp(['ID' char(subpaths(i,1))], artcondlog));
+else
+    %Find height of trial-log and +1 for new row
+    artlogheight = size(artcondlog);
+    artlogheight = artlogheight(1) + 1;
+
+    %Write ID to new row, column 1
+    artcondlog{artlogheight,1} = ['ID' char(subpaths(i,1))];
 end
 
 %For each event in condevents
@@ -23,16 +35,18 @@ for ii = 1:length(conditions)
 fname = ['ID' char(subpaths(i,1)) '_' char(conditions(ii)) '_raw' '.mat'];
 fpath = ['../mat_data/' fname];
 
-if exist(fpath, 'file')
-warning(['Output' fname ' exist for subject ' char(subpaths(i,1))])
-continue
-end
+    if exist(fpath, 'file')
+    warning(['Output' fname ' exist for subject ' char(subpaths(i,1))])
+    continue
+    end
 
 % Define trials
 cfg = [];
 
+sub_data = subpaths(i,2:max(find(~cellfun(@isempty,subpaths(i,:)))));
+
 % NB! cellfun for cfg.dataset defines 2:highest populated column
-cfg.dataset             = subpaths(i,2:max(find(~cellfun(@isempty,subpaths(i,:)))));
+cfg.dataset             = sub_data;
 cfg.trialdef.prestim    = 0.35;        % seconds before trigger
 cfg.trialdef.poststim   = 0.30;        % seconds after trigger
 cfg.trialdef.eventvalue = eval(['cond.' char(conditions(ii)) 'trig']); % :/
@@ -46,33 +60,9 @@ cfg.trl = cfg.trl(cfg.trl(:,1) >= 0,:);
 %Remove trials from cfg.trl that have higher sample index than exist in file
 cfg.trl = cfg.trl(cfg.trl(:,2) < max([cfg.event.sample]),:);
 
-trl = cfg.trl;
 
-%Artifact rejection!
-cfg = [];
-cfg.trl = trl;
-cfg.datafile = subpaths(i,2:max(find(~cellfun(@isempty,subpaths(i,:)))));
-cfg.headerfile = subpaths(i,2:max(find(~cellfun(@isempty,subpaths(i,:)))));
-cfg.continuous = 'yes';
 
-% channel selection, cutoff and padding
-cfg.artfctdef.zvalue.channel = 'MEG';
-cfg.artfctdef.zvalue.cutoff = 20;
-cfg.artfctdef.zvalue.trlpadding = 0;
-cfg.artfctdef.zvalue.artpadding = 0;
-cfg.artfctdef.zvalue.fltpadding = 0;
-
-% algorithmic parameters
-cfg.artfctdef.zvalue.cumulative = 'yes';
-cfg.artfctdef.zvalue.medianfilter = 'yes';
-cfg.artfctdef.zvalue.medianfiltord = 9;
-cfg.artfctdef.zvalue.absdiff = 'yes';
-
-% make the process interactive
-cfg.artfctdef.zvalue.interactive = 'yes';
-
-[cfg, artifact_jump] = ft_artifact_zvalue(cfg);
-
+%Removed artifact script here
 
 % preprocessing
 cfg.demean     = 'no';
@@ -94,15 +84,15 @@ trigs = eval(['cond.' char(conditions(ii)) 'trig']);
     %Write stim to rawcondlog cell-array
     for iii = 1:length(eval(['cond.' char(conditions(ii)) 'trig']))
     if strcmp(conditions(ii), 'PO60')
-    rawcondlog(logheight,iii+1) = num2cell(sum(res4mat.trialinfo(:) == trigs(iii)));
+    rawcondlog(rawlogheight,iii+1) = num2cell(sum(res4mat.trialinfo(:) == trigs(iii)));
     elseif strcmp(conditions(ii), 'PO70')
-    rawcondlog(logheight,iii+7) = num2cell(sum(res4mat.trialinfo(:) == trigs(iii)));
+    rawcondlog(rawlogheight,iii+7) = num2cell(sum(res4mat.trialinfo(:) == trigs(iii)));
     elseif strcmp(conditions(ii), 'GP60')
-    rawcondlog(logheight,iii+12) = num2cell(sum(res4mat.trialinfo(:) == trigs(iii)));
+    rawcondlog(rawlogheight,iii+12) = num2cell(sum(res4mat.trialinfo(:) == trigs(iii)));
     elseif strcmp(conditions(ii), 'GP70')
-    rawcondlog(logheight,iii+16) = num2cell(sum(res4mat.trialinfo(:) == trigs(iii)));
+    rawcondlog(rawlogheight,iii+16) = num2cell(sum(res4mat.trialinfo(:) == trigs(iii)));
     elseif strcmp(conditions(ii), 'GO')
-    rawcondlog(logheight,iii+20) = num2cell(sum(res4mat.trialinfo(:) == trigs(iii)));
+    rawcondlog(rawlogheight,iii+20) = num2cell(sum(res4mat.trialinfo(:) == trigs(iii)));
     end
     end
 
