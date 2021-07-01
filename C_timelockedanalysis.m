@@ -8,11 +8,13 @@
 
 %implement: if exist load
 
+for i = 1:length(sub_date.ID)
+
 %for each condition
 for ii = 1:length(conditions)
 
 %NB reading in EOG data from file BEFORE ft_rejectvisual
-fname = ['ID' char(subpaths(i,1)) '_' char(conditions(ii)) '_ds' '.mat'];
+fname = ['ID' sub_date.ID{i} '_' conditions{ii} '_ds' '.mat'];
 fpath = ['../mat_data/' fname];
 
 %loads as 'res4mat_ds'
@@ -34,14 +36,14 @@ cfg.toilim = [toilow toihigh];
 temptrials = ft_redefinetrial(cfg, res4mat_ds);
 
 %Find triggers and stims in condition
-nstim = length(eval(['cond.' char(conditions(ii)) 'trig']));
-trigs = eval(['cond.' char(conditions(ii)) 'trig']);
+nstim = length(eval(['cond.' conditions{ii} 'trig']));
+trigs = eval(['cond.' conditions{ii} 'trig']);
 
 %Extract EOG-timelockeds for all stim types
     for stim_index = 1:nstim
 
     trigger = trigs(stim_index);
-    label = eval(['cond.' char(conditions(ii)) 'label']);
+    label = eval(['cond.' conditions{ii} 'label']);
 
     cfg = [];
 
@@ -58,21 +60,26 @@ trigs = eval(['cond.' char(conditions(ii)) 'trig']);
     
     eog_timelockeds = ft_timelockanalysis(cfg, temptrials);
     
-    destdirectory = ['../mat_data/timelockeds/' 'ID' char(subpaths(i,1)) '/'];
+    destdirectory = ['../mat_data/timelockeds/' 'ID' sub_date.ID{i} '/'];
     
     if ~exist(destdirectory, 'file');
     mkdir(destdirectory);
+    
+    %??
+    save([destdirectory label{stim_index} '_eog' '.mat'], 'eog_timelockeds');
+    
     continue
     end
     
-    save([destdirectory char(label(stim_index)) '_eog' '.mat'], 'eog_timelockeds');
-    
-    %epochs_eog.(conditions{ii}){i, stim_index} = ft_timelockanalysis(cfg, temptrials);
+    save([destdirectory label{stim_index} '_eog' '.mat'], 'eog_timelockeds');
     
     %end all stimtypes
     end
 
 %end all conditions
+end
+
+%end for subject in sub_date
 end
 
 %%
