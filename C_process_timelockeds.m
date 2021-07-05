@@ -20,11 +20,11 @@ fpath = ['../mat_data/' fname];
 %loads as 'res4mat_ds'
 load(fpath);
 
-%Different TOI for PO and GP
-if ismember(conditions{ii}, {'PO60', 'PO70', 'GO'})
-    toilow = -0.100
-    toihigh = 0.300
-elseif ismember(conditions{ii}, {'GP60', 'GP70'})
+%Different TOI for PO and GP compensating 50ms (gap length) for PO-trials
+if ismember(conditions{ii}, {'PO60', 'PO70'})
+    toilow = -0.150
+    toihigh = 0.250
+elseif ismember(conditions{ii}, {'GP60', 'GP70', 'GO'})
     toilow = -0.100
     toihigh = 0.300
 end
