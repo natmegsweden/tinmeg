@@ -35,7 +35,7 @@ for i = 1:length(sub_date.ID)
 end
 
 %save(['../mat_data/epochs_eog.mat'], 'epochs_eog');
-%load('../mat_data/epochs_eog.mat');
+load('../mat_data/epochs_eog.mat');
 
 
 epochs_eog_resp = struct;
@@ -97,7 +97,7 @@ plot([35 35], [ax.YLim(1), ax.YLim(2)], '--r');
 plot([50 50], [ax.YLim(1), ax.YLim(2)], '--r');
 
 legend('70', '75', '80', '85', '90', '95');
-title('Average EOG amplitude after pulse only (n = 5)');
+title({'Average EOG amplitude', 'after pulse only (n = 5)'});
 
 times = [-20:1:60]/200*1000;
 

@@ -17,26 +17,32 @@ else
 end
 
 %Check if ID is in ARTIFACT-log and determine row in log to write to
-if find(strcmp(['ID' char(subpaths(i,1))], artcondlog)) > 0;
-    artlogheight = find(strcmp(['ID' char(subpaths(i,1))], artcondlog));
-else
-    %Find height of trial-log and +1 for new row
-    artlogheight = size(artcondlog);
-    artlogheight = artlogheight(1) + 1;
+% if find(strcmp(['ID' char(subpaths(i,1))], artcondlog)) > 0;
+%     artlogheight = find(strcmp(['ID' char(subpaths(i,1))], artcondlog));
+% else
+%     %Find height of trial-log and +1 for new row
+%     artlogheight = size(artcondlog);
+%     artlogheight = artlogheight(1) + 1;
+% 
+%     %Write ID to new row, column 1
+%     artcondlog{artlogheight,1} = ['ID' char(subpaths(i,1))];
+% end
 
-    %Write ID to new row, column 1
-    artcondlog{artlogheight,1} = ['ID' char(subpaths(i,1))];
+outdir = ['../mat_data/preprocessing/' 'ID' sub_date.ID{i} '/']
+
+%Check if subject dir exist, create/define
+if ~exist(outdir, 'file');
+mkdir(outdir);
 end
 
-%For each event in condevents
+%For each condition
 for ii = 1:length(conditions)
 
 %Create filename and check if raw file for condition exist
-fname = ['ID' char(subpaths(i,1)) '_' char(conditions(ii)) '_raw' '.mat'];
-fpath = ['../mat_data/' fname];
+fname = [char(conditions(ii)) '_raw' '.mat'];
 
-    if exist(fpath, 'file')
-    warning(['Output' fname ' exist for subject ' char(subpaths(i,1))])
+    if exist([outdir fname], 'file')
+    warning(['Output' fname ' exist for subject ' sub_date.ID{i}])
     continue
     end
 
@@ -73,7 +79,7 @@ cfg.channel    = {'MEG', 'ECG', 'EOG'};
 
 res4mat = ft_preprocessing(cfg);
 
-save(fpath, 'res4mat', '-v7.3')
+save([outdir fname], 'res4mat', '-v7.3')
 
 %write n of trials log        
 %How many stimtypes for cond and what trigger values
@@ -105,11 +111,13 @@ cfg.resamplefs = fs_ds;
 
 res4mat_ds = ft_resampledata(cfg, res4mat);
 
-fname = ['ID' char(subpaths(i,1)) '_' char(conditions(ii)) '_ds' '.mat'];
-fpath = ['../mat_data/' fname];
+%NB new fname
+fname = [char(conditions(ii)) '_ds' '.mat'];
 
-save(fpath, 'res4mat_ds')
+save([outdir fname], 'res4mat_ds')
 
 %clear temp variables
 clear res4mat res4mat_ds
+
+%end for conditions
 end

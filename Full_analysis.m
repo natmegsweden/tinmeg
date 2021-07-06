@@ -65,13 +65,13 @@ end
 
 %create log for n of artifacts rejected
 %first row are labels, first column IDs
-if exist('../Analysis Output/n_cond_artifact.csv', 'file');
-    artcondlog = readtable('../Analysis Output/n_cond_artifact.csv', 'ReadVariableNames', false);
-    artcondlog = table2cell(artcondlog);
-else 
-    %NB columns hardcoded
-    artcondlog = ['ID', strcat(conditions, '_jmp'), strcat(conditions, '_mus'), strcat(conditions, '_eog')];
-end
+% if exist('../Analysis Output/n_cond_artifact.csv', 'file');
+%     artcondlog = readtable('../Analysis Output/n_cond_artifact.csv', 'ReadVariableNames', false);
+%     artcondlog = table2cell(artcondlog);
+% else 
+%     %NB columns hardcoded
+%     artcondlog = ['ID', strcat(conditions, '_jmp'), strcat(conditions, '_mus'), strcat(conditions, '_eog')];
+% end
 
 %%  Loop over A_Preprocess.m for subjects without output files
 %   Also downsamples and saves with '_ds' in filename
