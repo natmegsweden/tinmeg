@@ -18,7 +18,7 @@ for i = 1:length(sub_date.ID)
     nstim = length(eval(['cond.' char(conditions(ii)) 'trig']));
     label = eval(['cond.' char(conditions(ii)) 'label']);
     
-        for stim_index = 1:nstim    
+        for stim_index = 1:nstim
 
         VAR = 'eog_timelockeds';
         T = load([subinpath char(label(stim_index)) '_eog' '.mat'], VAR);
@@ -311,11 +311,48 @@ hold off
 
 %% Habituation
 
-load('../mat_data/timelockeds/ID0697/PO60_95_eog_all.mat');
+%load('../mat_data/timelockeds/ID0697/PO60_80_eog_all.mat');
 
-figure
-hold on
-    for j = 1:50
-        plot(eog_timelockeds_all.trial(j,:))
+epochs_eog_all = struct;
+
+for i = 1:length(sub_date.ID)
+    
+    subinpath = [inpath 'ID' sub_date.ID{i} '/'];
+    
+    epochs_eog_all.subjects{i,1} = sub_date.ID{i};
+    
+    for ii = 1:length(conditions)
+    
+    nstim = length(eval(['cond.' char(conditions(ii)) 'trig']));
+    label = eval(['cond.' char(conditions(ii)) 'label']);
+    
+        for stim_index = 1:nstim
+
+        VAR = 'eog_timelockeds_all';
+        T = load([subinpath char(label(stim_index)) '_eog_all' '.mat'], VAR);
+        T = T.(VAR).trial(:,:);
+
+        epochs_eog_all.(conditions{ii}){i, stim_index} = T
+        
+        clear('T', 'VAR')
+        
+        %For stim
+        end
+    
+    %For conditions
     end
-hold off
+
+%For subjects
+end
+    
+%save(['../mat_data/epochs_eog_all.mat'], 'epochs_eog_all');
+    
+
+
+
+% figure
+% hold on
+%     for j = 1:50
+%         plot(eog_timelockeds_all.trial(j,:))
+%     end
+% hold off
