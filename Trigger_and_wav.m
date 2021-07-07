@@ -1,14 +1,20 @@
 
 %Confirming trigger timing to stimulation sound file for GP_ISI60
 
-ISI60 = audioread('/archive/20061_tinnitus/Wav-filer/Audio Tracks/A_C60_i60.wav');
+ISI60 = audioread('/archive/20061_tinnitus/Wav-filer/Audio Tracks/A_C60_i0.wav');
 
 %Convert to "mono"
 ISI60 = ISI60(:,1);
 
+%Figure expect three triggers
 %ISI60 start trigger        49729
 %ISI60 gap-onset trigger    49730
 %ISI60 pulse-onset trigger  49736
+
+%ISI0 start                 49793
+%ISI0 gap-onset trigger     49794
+%ISI0 pulse-onset trigger   49800
+
 
 %random example file
 infile = '/archive/20061_tinnitus/MEG/NatMEG_0697/210208/tinmeg1-2_mc_avgtrans_tsss_corr98.fif'
@@ -19,7 +25,7 @@ cfg                     = [];
 cfg.dataset             = infile;
 cfg.trialdef.prestim    = 1;
 cfg.trialdef.poststim   = 1;
-cfg.trialdef.eventvalue = [49729 49730 49736];
+cfg.trialdef.eventvalue = [49793 49794 49800];
 %cfg.trialfun            = 'ft_trialfun_neuromagSTI016fix';
 %cfg                     = ft_definetrial(cfg);
 %data                    = ft_preprocessing(cfg);

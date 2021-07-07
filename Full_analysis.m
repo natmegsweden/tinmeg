@@ -5,10 +5,10 @@
 %if invalid ID
 
 % Run for who?
-runwho = input('Who are we analysing today? specify all (default) or specific ID \n', 's');
-if isempty(runwho)
-    runwho = 'all'
-end
+% runwho = input('Who are we analysing today? specify all (default) or specific ID \n', 's');
+% if isempty(runwho)
+%     runwho = 'all'
+% end
 
 % Specify MEG data path
 meg_data_path = '/archive/20061_tinnitus/MEG/';
