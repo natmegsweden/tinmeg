@@ -15,18 +15,18 @@ end
 
 %For each condition loaded
 for ii = 1:length(conditions);
-fname = ['ID' char(sub_date.ID(i)) '_' char(conditions(ii)) '_ds_clean' '.mat'];
-fpath = ['../mat_data/' fname];
+fname = [char(conditions(ii)) '_ds_clean' '.mat'];
+fpath = ['../mat_data/preprocessing/' 'ID' sub_date.ID{i} '/' fname];
 
     %check if file exist
     if exist(fpath, 'file')
-    warning([char(conditions(ii)) ' for subject: ID' char(sub_date.ID(i)) ' exist'])
+    warning([char(conditions(ii)) ' for subject: ID' sub_date.ID{i} ' exist'])
     continue
     end
 
 %if not exist load downsampled (_ds) mat-file
-fname = ['ID' char(sub_date.ID(i)) '_' char(conditions(ii)) '_ds' '.mat']
-fpath = ['../mat_data/' fname]
+fname = [char(conditions(ii)) '_ds' '.mat'];
+fpath = ['../mat_data/preprocessing/' 'ID' sub_date.ID{i} '/' fname];
 
 res4mat_ds = load(fpath);
 res4mat_ds = res4mat_ds.res4mat_ds
@@ -45,8 +45,8 @@ cfg.channel = 'MEGGRAD';
 cleaned4mat = ft_rejectvisual(cfg, cleaned4mat);
 
 %new filename and save
-fname = ['ID' char(sub_date.ID(i)) '_' char(conditions(ii)) '_ds_clean' '.mat'];
-fpath = ['../mat_data/' fname];
+fname = [char(conditions(ii)) '_ds_clean' '.mat'];
+fpath = ['../mat_data/preprocessing/' 'ID' sub_date.ID{i} '/' fname];
 
 save(fpath, 'cleaned4mat');
 
