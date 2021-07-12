@@ -1,12 +1,14 @@
 
-epochs_eog = struct;
-
 inpath = '../mat_data/timelockeds/';
 
 load('../mat_data/epochs_eog.mat');
 load('../mat_data/epochs_eog_resp.mat');
+load('../mat_data/epochs_eog_all.mat');
 
 %% load EOG data to structure
+
+epochs_eog = struct;
+
 for i = 1:length(sub_date.ID)
     
     subinpath = [inpath 'ID' sub_date.ID{i} '/'];
@@ -38,6 +40,43 @@ for i = 1:length(sub_date.ID)
 end
 
 %save(['../mat_data/epochs_eog.mat'], 'epochs_eog');
+
+%% load EOG keeptrials data to structure
+
+epochs_eog_all = struct;
+
+for i = 1:length(sub_date.ID)
+    
+    subinpath = [inpath 'ID' sub_date.ID{i} '/'];
+    
+    epochs_eog_all.subjects{i,1} = sub_date.ID{i};
+    
+    for ii = 1:length(conditions)
+    
+    nstim = length(eval(['cond.' char(conditions(ii)) 'trig']));
+    label = eval(['cond.' char(conditions(ii)) 'label']);
+    
+        for stim_index = 1:nstim
+
+        VAR = 'eog_timelockeds_all';
+        T = load([subinpath char(label(stim_index)) '_eog_all' '.mat'], VAR);
+        T = T.(VAR).trial(:,:);
+
+        epochs_eog_all.(conditions{ii}){i, stim_index} = T
+        
+        clear('T', 'VAR')
+        
+        %For stim
+        end
+    
+    %For conditions
+    end
+
+%For subjects
+end
+    
+%save(['../mat_data/epochs_eog_all.mat'], 'epochs_eog_all');
+
 
 %% find biggest response from structure
 
@@ -309,50 +348,53 @@ ylabel('Amplitude (uV)');
 
 hold off
 
-%% Habituation
+%% Habituation plots
 
-%load('../mat_data/timelockeds/ID0697/PO60_80_eog_all.mat');
-
-epochs_eog_all = struct;
-
-for i = 1:length(sub_date.ID)
-    
-    subinpath = [inpath 'ID' sub_date.ID{i} '/'];
-    
-    epochs_eog_all.subjects{i,1} = sub_date.ID{i};
-    
-    for ii = 1:length(conditions)
-    
-    nstim = length(eval(['cond.' char(conditions(ii)) 'trig']));
-    label = eval(['cond.' char(conditions(ii)) 'label']);
-    
-        for stim_index = 1:nstim
-
-        VAR = 'eog_timelockeds_all';
-        T = load([subinpath char(label(stim_index)) '_eog_all' '.mat'], VAR);
-        T = T.(VAR).trial(:,:);
-
-        epochs_eog_all.(conditions{ii}){i, stim_index} = T
-        
-        clear('T', 'VAR')
-        
-        %For stim
-        end
-    
-    %For conditions
-    end
-
-%For subjects
+%lineplots - all trials for subject
+figure
+hold on
+for j = 1:45
+    a = epochs_eog_all.PO60{2,6};
+    plot(a(j,:));
 end
-    
-%save(['../mat_data/epochs_eog_all.mat'], 'epochs_eog_all');
-    
+hold off
 
 
 
-% figure
-% hold on
-%     for j = 1:50
-%         plot(eog_timelockeds_all.trial(j,:))
-%     end
-% hold off
+figure
+subplot(3,1,1)
+ax1 = gca;
+imagesc(ax1, epochs_eog_all.PO60{1,6})
+ax1.XTick = [];
+
+subplot(3,1,2)
+ax1 = gca;
+imagesc(ax1, epochs_eog_all.PO60{2,6})
+ax1.XTick = [];
+
+EOG_threshold = 0.5*10^-4;
+
+b = epochs_eog_all.PO60{1,6}(mean(epochs_eog_all.PO60{1,6}, 2) < EOG_threshold,:);
+c = epochs_eog_all.PO60{2,6}(mean(epochs_eog_all.PO60{2,6}, 2) < EOG_threshold,:);
+
+figure
+tight_subplot(3,1,1)
+imagesc(b)
+colormap bone
+
+ha = tight_subplot(4,1,[.01 .03],[.1 .01],[.01 .01])
+          for ii = 1:4; axes(ha(ii)); 
+              imagesc(epochs_eog_all.PO60{ii,6}(mean(epochs_eog_all.PO60{ii,6}, 2) < EOG_threshold,:))
+              colormap bone; 
+          end
+
+
+
+
+
+
+
+
+
+
+
