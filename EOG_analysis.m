@@ -372,8 +372,6 @@ ax1 = gca;
 imagesc(ax1, epochs_eog_all.PO60{2,6})
 ax1.XTick = [];
 
-EOG_threshold = 0.5*10^-4;
-
 b = epochs_eog_all.PO60{1,6}(mean(epochs_eog_all.PO60{1,6}, 2) < EOG_threshold,:);
 c = epochs_eog_all.PO60{2,6}(mean(epochs_eog_all.PO60{2,6}, 2) < EOG_threshold,:);
 
@@ -381,6 +379,8 @@ figure
 tight_subplot(3,1,1)
 imagesc(b)
 colormap bone
+
+EOG_threshold = 0.5*10^-4;
 
 ha = tight_subplot(4,1,[.01 .03],[.1 .01],[.01 .01])
           for ii = 1:4; axes(ha(ii)); 
