@@ -12,6 +12,8 @@ mri_resliced = ft_convert_units(mri_resliced, 'cm');
 
 save(['../mat_data/MRI_mat/' 'ID' char(sub_date{i,1}) '_mri_resliced'], 'mri_resliced');
 
+%load(['../mat_data/MRI_mat/' 'ID' char(sub_date{i,1}) '_mri_resliced']);
+
 %Segment MRI
 cfg = [];
 cfg.output = {'brain' 'skull' 'scalp'};
@@ -79,7 +81,7 @@ cfg.method    = 'basedonmni';
 cfg.template  = template_grid;
 cfg.nonlinear = 'yes';
 cfg.mri       = mri_resliced;
-cfg.unit      = 'mm';
+cfg.unit      = 'cm';
 
 subject_grid = ft_prepare_sourcemodel(cfg);
 

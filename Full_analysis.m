@@ -139,11 +139,11 @@ for i = 1:length(sub_date.ID);
     sub_mri_path = ['../MRI/' 'NatMEG_' char(sub_date{i,1})];
     fname = ['../mat_data/MRI_mat/' 'ID' char(sub_date{i,1}) '_MEG_headmodel.mat'];
 
-    %Check if headmodel exist for subject
-    if exist(fname, 'file')
-    warning(['Output' fname ' exist for subject ' char(sub_date{i,1})])
-    continue
-    end
+%     %Check if headmodel exist for subject
+%     if exist(fname, 'file')
+%     warning(['Output' fname ' exist for subject ' char(sub_date{i,1})])
+%     continue
+%     end
     
     run('D_MR_prep2.m');
     
@@ -152,7 +152,7 @@ end
 %% MR Step 3
 %  Loop through plots for ALL[!] subjects to check for errors
 
-for i = 1:length(sub_date.ID);
+for i = 1:4%length(sub_date.ID);
     
     load(['../mat_data/MRI_mat/' 'ID' char(sub_date{i,1}) '_headshape']);
     load(['../mat_data/MRI_mat/' 'ID' char(sub_date{i,1}) '_sensshape']);
@@ -165,6 +165,8 @@ for i = 1:length(sub_date.ID);
     ft_plot_headshape(headshape)
     ft_plot_headmodel(headmodel_meg)
     ft_plot_axes([], 'unit', 'cm');
+    
+    title(['SUBJECT: ' sub_date.ID{i}]);
     
     %Pause loop until figure is closed
     uiwait(fig);

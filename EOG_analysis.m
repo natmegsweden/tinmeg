@@ -4,7 +4,7 @@ inpath = '../mat_data/timelockeds/';
 load('../mat_data/epochs_eog.mat');
 load('../mat_data/epochs_eog_resp.mat');
 load('../mat_data/epochs_eog_all.mat');
-load(['../mat_data/epochs_eog_avgrast.mat');
+load(['../mat_data/epochs_eog_avgrast.mat']);
 
 
 %% load EOG data to structure
@@ -419,7 +419,7 @@ ha = tight_subplot(11,2,[.01 .05],[.1 .01],[.05 .01])
 times = [-20:1:60]/200*1000;
           for ii = 1:22; axes(ha(ii));
               imagesc(epochs_eog_all.PO60{ii,6}(mean(epochs_eog_all.PO60{ii,6}, 2) < EOG_threshold,:))
-              colormap bone;
+              colormap parula;
               hold on
               plot([21 21], [0 50], 'k --');
               
@@ -442,7 +442,7 @@ ha = tight_subplot(11,2,[.01 .05],[.1 .01],[.05 .01])
 times = [-20:1:60]/200*1000;
 for ii = 1:22; axes(ha(ii));
   imagesc(epochs_eog_all.GP60{ii,3}(mean(epochs_eog_all.PO60{ii,3}, 2) < EOG_threshold,:))
-  colormap bone;
+  colormap parula;
   hold on
   plot([21 21], [0 50], 'k --');
 
@@ -462,7 +462,7 @@ figure('Position', [450 500 800 1000]);
 ha = tight_subplot(6,1,[.01 .05],[.1 .01],[.05 .01])
 for ii = 1:6; axes(ha(ii));
   imagesc(epochs_eog_avgrast.PO60{1,ii})
-  colormap bone;
+  colormap parula;
   hold on
   plot([21 21], [0 45], 'k --');
 
@@ -488,7 +488,7 @@ for ii = 1:6;
   if ii < 5
       axes(ha(ii));
       imagesc(epochs_eog_avgrast.GP60{1,ii})
-      colormap bone;
+      colormap parula;
       hold on
       plot([21 21], [0 45], 'k --');
 
@@ -506,7 +506,7 @@ for ii = 1:6;
   elseif ii == 5
       axes(ha(ii));
       imagesc([])
-      colormap bone;
+      colormap parula;
       hold on
 
       %should use "times" here
@@ -518,7 +518,7 @@ for ii = 1:6;
     elseif ii == 6
       axes(ha(ii));
       imagesc(epochs_eog_avgrast.GO{1,1})
-      colormap bone;
+      colormap parula;
       hold on
       plot([21 21], [0 45], 'k --');
 
