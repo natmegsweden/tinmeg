@@ -382,7 +382,7 @@ ylabel('Amplitude (uV)');
 
 hold off
 
-%% Habituation plots
+%% Habituation plots/imagesc rasterplots
 
 EOG_threshold = 0.5*10^-4;
 
@@ -414,182 +414,256 @@ hold off
 
 end
 
-%PO60 raster for n = 22, with positive threshold
-ha = tight_subplot(11,2,[.01 .05],[.1 .01],[.05 .01])
+%% All n = 22 rasters
+
+EOG_threshold = 0.5*10^-4;
+
+for c = 1:length(cond.PO60label)
+
+%PO60 raster for n = 22, with positive threshold - mind GP/PO structure
+figure('Position', [450 500 200 900], 'Name', cond.PO60label{1,c},'NumberTitle','off');
+ha = tight_subplot(22,1,[.01 .1],[.1 .01],[.2 .15]);
+colbar = [-8*10^-5 8*10^-5];
 times = [-20:1:60]/200*1000;
           for ii = 1:22; axes(ha(ii));
-              imagesc(epochs_eog_all.PO60{ii,6}(mean(epochs_eog_all.PO60{ii,6}, 2) < EOG_threshold,:))
+              imagesc(epochs_eog_all.PO60{ii,c}(mean(epochs_eog_all.PO60{ii,c}, 2) < EOG_threshold,:), colbar);
               colormap parula;
               hold on
               plot([21 21], [0 50], 'k --');
               
-              %should use "times" here, show x-axis if won't work?
-              if ii == 21 | ii == 22
+              %should use "times" here
+              if ii == 22
                 ax = gca;
                 ax.XTick = [1:10:80];
                 ax.XTickLabel = [-100 -50 0 50 100 150 200 250 300];
+                ax.XTickLabelRotation = 90
+                ax.XGrid = 'On'
+                
+                ax.XTickLabel(2,:) = nan
+                ax.XTickLabel(4,:) = nan
+                ax.XTickLabel(6,:) = nan
+                ax.XTickLabel(8,:) = nan
               else
                 ax = gca;
                 ax.XTick = [1:10:80];
                 ax.XTickLabel = [];
+                ax.XGrid = 'On'
               end
               
               hold off
           end
+end
 
-%GP60 raster for n = 22, with positive threshold
-ha = tight_subplot(11,2,[.01 .05],[.1 .01],[.05 .01])
+for c = 1:length(cond.GP60label)
+
+%PO60 raster for n = 22, with positive threshold - mind GP/PO structure
+figure('Position', [450 500 200 900], 'Name', cond.GP60label{1,c},'NumberTitle','off');
+ha = tight_subplot(22,1,[.01 .1],[.1 .01],[.2 .15]);
+colbar = [-8*10^-5 8*10^-5];
 times = [-20:1:60]/200*1000;
-for ii = 1:22; axes(ha(ii));
-  imagesc(epochs_eog_all.GP60{ii,3}(mean(epochs_eog_all.PO60{ii,3}, 2) < EOG_threshold,:))
-  colormap parula;
-  hold on
-  plot([21 21], [0 50], 'k --');
-
-  %should use "times" here
-  ax = gca;
-  ax.XTick = [1:10:80];
-  ax.XTickLabel = [-100 -50 0 50 100 150 200 250 300];
-
-  hold off
+          for ii = 1:22; axes(ha(ii));
+              imagesc(epochs_eog_all.GP60{ii,c}(mean(epochs_eog_all.GP60{ii,c}, 2) < EOG_threshold,:), colbar);
+              colormap parula;
+              hold on
+              plot([21 21], [0 50], 'k --');
+              
+              %should use "times" here
+              if ii == 22
+                ax = gca;
+                ax.XTick = [1:10:80];
+                ax.XTickLabel = [-100 -50 0 50 100 150 200 250 300];
+                ax.XTickLabelRotation = 90
+                ax.XGrid = 'On'
+                
+                ax.XTickLabel(2,:) = nan
+                ax.XTickLabel(4,:) = nan
+                ax.XTickLabel(6,:) = nan
+                ax.XTickLabel(8,:) = nan
+              else
+                ax = gca;
+                ax.XTick = [1:10:80];
+                ax.XTickLabel = [];
+                ax.XGrid = 'On'
+              end
+              
+              hold off
+          end
 end
-     
-%The big ones
-%times = [-20:1:60]/200*1000;
 
-%PO60
-figure('Position', [450 500 800 1000]);
-ha = tight_subplot(6,1,[.01 .05],[.1 .01],[.05 .01])
+
+%% Average rasterplots
+
+%Pulse Only, average in rows
+figure('Position', [100 500 2000 200]);
+ha = tight_subplot(2,6,[.05 .015],[.2 .1],[.05 .05]);
+colbar = [-8*10^-5 8*10^-5]; %set limits of color-gradient/"z-axis"
+%PO70 in row
 for ii = 1:6; axes(ha(ii));
-  imagesc(epochs_eog_avgrast.PO60{1,ii})
-  colormap parula;
-  hold on
-  plot([21 21], [0 45], 'k --');
-
-  %should use "times" here, show x-axis if won't work?
-  if ii == 6
-    ax = gca;
-    ax.XTick = [1:10:80];
-    ax.XTickLabel = [-100 -50 0 50 100 150 200 250 300];
-  else
-    ax = gca;
-    ax.XTick = [1:10:80];
-    ax.XTickLabel = [];
-  end
-
-  hold off
-end
-
-
-%GP60 + GO
-figure('Position', [450 500 800 1000]);
-ha = tight_subplot(6,1,[.01 .05],[.1 .01],[.05 .01])
-for ii = 1:6; 
-  if ii < 5
-      axes(ha(ii));
-      imagesc(epochs_eog_avgrast.GP60{1,ii})
-      colormap parula;
-      hold on
-      plot([21 21], [0 45], 'k --');
-
-      %should use "times" here, show x-axis if won't work?
-      if ii == 4
-        ax = gca;
-        ax.XTick = [1:10:80];
-        ax.XTickLabel = [-100 -50 0 50 100 150 200 250 300];
-      else
-        ax = gca;
-        ax.XTick = [1:10:80];
-        ax.XTickLabel = [];
-      end
-      
-  elseif ii == 5
+  
+  if ii == 1
       axes(ha(ii));
       imagesc([])
       colormap parula;
       hold on
-
-      %should use "times" here
+      
       ax = gca;
       ax.XTick = [1:10:80];
       ax.XTickLabel = [];
       ax.YTickLabel = [];
-      
-    elseif ii == 6
-      axes(ha(ii));
-      imagesc(epochs_eog_avgrast.GO{1,1})
+      ax.XGrid = 'On';
+  
+  elseif ii == 2
+      imagesc(epochs_eog_avgrast.PO70{1,ii-1}, colbar)
       colormap parula;
       hold on
       plot([21 21], [0 45], 'k --');
-
-      %should use "times" here
+  
       ax = gca;
       ax.XTick = [1:10:80];
-      ax.XTickLabel = [-100 -50 0 50 100 150 200 250 300];
- 
-  end
+      ax.XTickLabel = [];
+      ax.XGrid = 'On';
       
-end
-
-%PO70
-figure('Position', [450 500 800 1000]);
-ha = tight_subplot(5,1,[.025 .01],[.05 .05],[.05 .05])
-for ii = 1:5; axes(ha(ii));
-  imagesc(epochs_eog_avgrast.PO70{1,ii})
-  colormap bone;
+  elseif ii > 2
+  
+  imagesc(epochs_eog_avgrast.PO70{1,ii-1}, colbar)
+  colormap parula;
   hold on
   plot([21 21], [0 45], 'k --');
-
-  %should use "times" here
-  if ii == 5
-    ax = gca;
-    ax.XTick = [1:10:80];
-    ax.XTickLabel = [-100 -50 0 50 100 150 200 250 300];
-  else
-    ax = gca;
-    ax.XTick = [1:10:80];
-    ax.XTickLabel = [];
+  
+   ax = gca;
+   ax.XTick = [1:10:80];
+   ax.XTickLabel = [];
+   ax.YTickLabel = [];
+   ax.XGrid = 'On';
   end
+end
 
-  hold off
+%PO60 in row
+for ii = 1:6; axes(ha(ii+6));
+  imagesc(epochs_eog_avgrast.PO60{1,ii}, colbar);
+  colormap parula;
+  hold on
+  plot([21 21], [0 45], 'k --');
+  
+  if ii > 1
+        ax = gca;
+        ax.YTickLabel = [];
+        ax.XGrid = 'On';
+  end
+  
+  ax = gca;
+  ax.XTick = [1:10:80];
+  ax.XTickLabel = [-100 -50 0 50 100 150 200 250 300];
+  
+  ax.XTickLabelRotation = 90;
+  ax.XGrid = 'On';
+
+  ax.XTickLabel(2,:) = nan;
+  ax.XTickLabel(4,:) = nan;
+  ax.XTickLabel(6,:) = nan;
+  ax.XTickLabel(8,:) = nan;
+  
 end
 
 
-%GP70 + GO
-figure('Position', [450 500 800 1000]);
-ha = tight_subplot(5,1,[.025 .01],[.05 .05],[.05 .05])
-for ii = 1:5; 
-  if ii < 5
+
+%Gap Only, Gap-Pulse in rows
+figure('Position', [100 500 2000 200]);
+ha = tight_subplot(2,6,[.05 .015],[.2 .1],[.05 .05]);
+colbar = [-8*10^-5 8*10^-5]; %set limits of color-gradient/"z-axis"
+%70 Carrier
+for ii = 1:6; axes(ha(ii));
+    
+      if ii == 1
       axes(ha(ii));
-      imagesc(epochs_eog_avgrast.GP60{1,ii})
-      colormap bone;
+      imagesc([])
+      colormap parula;
+    
+      elseif ii == 2
+
+      imagesc(epochs_eog_avgrast.GO{1,2}, colbar) %NB manual cell reference
+      colormap parula;
       hold on
       plot([21 21], [0 45], 'k --');
-
-      %should use "times" here, show x-axis if won't work?
-      if ii == 5
-        ax = gca;
-        ax.XTick = [1:10:80];
-        ax.XTickLabel = [-100 -50 0 50 100 150 200 250 300];
-      else
-        ax = gca;
-        ax.XTick = [1:10:80];
-        ax.XTickLabel = [];
-      end
       
-    elseif ii == 5
-      axes(ha(ii));
-      imagesc(epochs_eog_avgrast.GO{1,2})
-      colormap bone;
+      ax = gca;
+      ax.XTick = [1:10:80];
+      ax.XTickLabel = [];
+      ax.XGrid = 'On';
+      
+      elseif ii > 2
+
+      imagesc(epochs_eog_avgrast.GP70{1,ii-2}, colbar)
+      colormap parula;
       hold on
       plot([21 21], [0 45], 'k --');
+      
+      ax = gca;
+      ax.XTick = [1:10:80];
+      ax.XTickLabel = [];
+      ax.XGrid = 'On';
+      ax.YTickLabel = [];
+  end
+      
+end
 
-      %should use "times" here
+%60 Carrier
+for ii = 1:6; axes(ha(ii+6));
+    
+      if ii == 1
+      axes(ha(ii));
+      imagesc([])
+      colormap parula;
+    
+      elseif ii == 2
+
+      imagesc(epochs_eog_avgrast.GO{1,1}, colbar) %NB manual cell reference
+      colormap parula;
+      hold on
+      plot([21 21], [0 45], 'k --');
+      
       ax = gca;
       ax.XTick = [1:10:80];
       ax.XTickLabel = [-100 -50 0 50 100 150 200 250 300];
- 
+      ax.XGrid = 'On';
+      
+      ax.XTickLabelRotation = 90;
+      ax.XTickLabel(2,:) = nan;
+      ax.XTickLabel(4,:) = nan;
+      ax.XTickLabel(6,:) = nan;
+      ax.XTickLabel(8,:) = nan;
+      
+      elseif ii > 2
+
+      imagesc(epochs_eog_avgrast.GP60{1,ii-2}, colbar)
+      colormap parula;
+      hold on
+      plot([21 21], [0 45], 'k --');
+      
+      ax = gca;
+      ax.XTick = [1:10:80];
+      ax.XTickLabel = [-100 -50 0 50 100 150 200 250 300];
+      ax.YTickLabel = [];
+  
+      ax.XTickLabelRotation = 90;
+      ax.XGrid = 'On';
+
+      ax.XTickLabel(2,:) = nan;
+      ax.XTickLabel(4,:) = nan;
+      ax.XTickLabel(6,:) = nan;
+      ax.XTickLabel(8,:) = nan;
+
   end
       
 end
+hold off
+
+% set(gcf,'Units','inches');
+% screenposition = get(gcf,'Position');
+% set(gcf,...
+%     'PaperPosition',[0 0 screenposition(3:4)],...
+%     'PaperSize',[screenposition(3:4)]);
+% print -dpdf -painters GPGO_avg
+%The first two lines measure the size of your figure (in inches). The next line configures the print paper size to fit the figure size. 
+%The last line uses the print command and exports a vector pdf document as the output.
 
