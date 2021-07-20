@@ -3,161 +3,163 @@
 
 %% Load template grid
 
-load('/../../fieldtrip-20210311/template/sourcemodel/standard_sourcemodel3d10mm');
-template_grid = sourcemodel;
-clear sourcemodel
+% Loads in "Full_analysis.m" for consistency with MR preprocessing.
+% load('/../../fieldtrip-20210311/template/sourcemodel/standard_sourcemodel3d10mm');
+% template_grid = sourcemodel;
+% clear sourcemodel
 
-%% Load subject data
-load(['../mat_data/MRI_mat/ID' sub_date.ID{2} '_MEG_headmodel.mat']);  
-load(['../mat_data/MRI_mat/ID' sub_date.ID{2} '_mri_resliced.mat']);
+%% inspect subjects headmodel fit to grid
 
-%load(['../mat_data/ID' sub_date.ID{2} '_PO60_ds_clean.mat']);
+for i = 1%:4%length(sub_date.ID);
+    
+    inpath = ['../mat_data/ICA/' 'ID' sub_date.ID{i} '/'];
+    outdir = ['../mat_data/source_reconstruction/' 'ID' sub_date.ID{i} '/'];
+    
+    %headmodel_meg
+    headmodel_meg = load(['../mat_data/MRI_mat/ID' sub_date.ID{i} '_MEG_headmodel.mat']); 
+    headmodel_meg = headmodel_meg.headmodel_meg;
+    
+    subject_grid = load(['../mat_data/MRI_mat/ID' sub_date.ID{i} '_sub_grid.mat']);
+    subject_grid = subject_grid.subject_grid;
+    
+    
+%     %Final plot - aligned MEG   
+%     fig = figure;
+%     hold on;
+%     ft_plot_headmodel(headmodel_meg, 'edgecolor', 'none', 'facealpha', 0.4,'facecolor', 'b');
+%     ft_plot_mesh(subject_grid.pos(subject_grid.inside,:));
+%     title(['SUBJECT: ' sub_date.ID{i}]);
+% 
+%     %Pause loop until figure is closed
+%     uiwait(fig);
+    
 
-%put loaded data in structure?
-%ladda in headmodels + mr_resliced: skapa normaliserad source_model
-%spara sourcemodels
+    %Check if subject dir exist, create/define
+    if ~exist(outdir, 'file');
+    mkdir(outdir);
+    end
 
-%% Create the subject specific grid
+    %Load in the stupidest way possible
+    GOica = load([inpath 'GOica.mat']);
+    GOica = GOica.GOica;
+    PO60ica = load([inpath 'PO60ica.mat']);
+    PO60ica = PO60ica.PO60ica;
+    PO70ica = load([inpath 'PO70ica.mat']);
+    PO70ica = PO70ica.PO70ica;
+    GP60ica = load([inpath 'GP60ica.mat']);
+    GP60ica = GP60ica.GP60ica;
+    GP70ica = load([inpath 'GP70ica.mat']);
+    GP70ica = GP70ica.GP70ica;
 
-cfg           = [];
-cfg.method    = 'basedonmni';
-cfg.template  = template_grid;
-cfg.nonlinear = 'yes';
-cfg.mri       = mri_resliced;
-cfg.unit      = 'mm';
+    
+    %Append data
+    cfg = [];
+    cfg.keepsampleinfo = 'no'; %if keeping, error because of overlaps
+    appended = ft_appenddata(cfg, PO60ica, PO70ica, GP60ica, GP70ica, GOica);
+    
+    
+    cfg.senstype        = 'meg'; %??
+    cfg.grad            = appended.grad;
+    cfg.headmodel       = headmodel_meg;
+    cfg.sourcemodel     = subject_grid;
+    cfg.channel         = 'meg';
+    % cfg.grid.resolution = 1;            % Grid spacing 1x1x1 of unit defined below
+    % cfg.grid.unit       = 'cm';         % Grid unit
 
-subject_grid = ft_prepare_sourcemodel(cfg);
+    leadfield_meg = ft_prepare_leadfield(cfg);
+    
+    save([outdir 'leadfield.mat'], 'leadfield_meg');
+    
+    
+    %Calculate Kappa (rank deficiency)
+    cfg = [];
+    cfg.covariance          = 'yes';
+    cfg.covariancewindow    = 'all';
+    cfg.channel             = 'MEG';
+    data_cov = ft_timelockanalysis(cfg, appended);
 
-save(['../mat_data/MRI_mat/' 'ID' char(sub_date{i,1}) 'sub_grid'], 'subject_grid');
+    [u,s,v] = svd(data_cov.cov);
+    d       = -diff(log10(diag(s)));
+    d       = d./std(d);
+    kappa   = find(d>5,1,'first');
+    fprintf('Kappa = %i\n', kappa)
 
-% make a figure of the single subject headmodel, and grid positions
-% figure; hold on;
-% ft_plot_headmodel(headmodel_meg, 'edgecolor', 'none', 'facealpha', 0.4);
-% ft_plot_mesh(grid.pos(grid.inside,:));
+    %consider rank(data_cov.cov)?
 
+    % figure;
+    % semilogy(diag(s),'o-');
+    
+    
+    %Do initial source analysis to calculte filters
+    cfg = [];
+    cfg.method              = 'lcmv';
+    cfg.channel             = 'meg';
+    cfg.lcmv.keepfilter     = 'yes';
+    cfg.lcmv.fixedori       = 'yes';
+    cfg.lcmv.lambda         = '5%';
+    cfg.lcmv.kappa          = kappa;
+    cfg.lcmv.projectmom     = 'yes';
 
-%% Make leadfields for MEG: magnetometers
-cfg.senstype        = 'meg';
-cfg.grad            = cleaned4mat.grad;
-cfg.headmodel       = headmodel_meg;
-cfg.channel         = 'meg';
-cfg.grid.resolution = 1;            % Grid spacing 1x1x1 of unit defined below
-cfg.grid.unit       = 'cm';         % Grid unit
+    % Original
+    cfg.headmodel           = headmodel_meg;
+    cfg.sourcemodel         = leadfield_meg;
+    source_org = ft_sourceanalysis(cfg, data_cov);
+    
+    save([outdir 'source_org.mat'], 'source_org');
+    
+    %Select data (manual trigger, should refer to structure: cond)
+    cfg = [];
+    cfg.trials = appended.trialinfo == 33032;
+    cfg.latency = [0.0 0.300];
 
-leadfield_meg = ft_prepare_leadfield(cfg);
+    PO60_95 = ft_selectdata(cfg, appended);
+    
+    %Select baseline
+    cfg = [];
+    cfg.trials = appended.trialinfo == 33032;
+    cfg.latency = [-300 0];
+    
+    PO60_95_base = ft_selectdata(cfg, appended);
 
-%% Select data
-cfg = [];
-cfg.trials = cleaned4mat.trialinfo == 33032;
-cfg.latency = [0.0 0.150];
+    %Compute covariance matrix for data and baseline
+    cfg = [];
+    cfg.covariance              = 'yes';
+    cfg.covariancewindow        = 'all';
+    cfg.preproc.demean          = 'yes';
+    cfg.keeptrials              = 'yes'; %as R/L AC is highly correlated
 
-data = ft_selectdata(cfg, cleaned4mat);
+    PO60_95_cov = ft_timelockanalysis(cfg, PO60_95);
+    PO60_95_base_cov = ft_timelockanalysis(cfg, PO60_95_base);
+    
+    
+    %Source analysis on baseline and stim data
+    cfg=[];
+    cfg.method              = 'lcmv';
+    cfg.grid                = leadfield_meg;
+    cfg.sourcemodel.filter  = source_org.avg.filter;  % Reuse avg filter
+    cfg.headmodel           = headmodel_meg;
+    cfg.channel             = 'meggrad';
+    cfg.senstype            = 'MEG';
 
-%% evoked
-cfg = [];
-cfg.covariance              = 'yes';
-cfg.covariancewindow        = 'all';
-cfg.preproc.demean          = 'yes';
-cfg.keeptrials              = 'yes'; %as R/L AC is highly correlated
+    PO60_95_base_source = ft_sourceanalysis(cfg, PO60_95_cov);
+    PO60_95_source = ft_sourceanalysis(cfg, PO60_95_base_cov);
+    
+    %Contrast between stim and baseline
+    contrast_lcmv = PO60_95_source;       % Copy
+    contrast_lcmv.avg.pow = (PO60_95_source.avg.pow-PO60_95_base_source.avg.pow)./PO60_95_base_source.avg.pow;
+    
+    mri_resliced = load(['../mat_data/MRI_mat/ID' sub_date.ID{i} '_mri_resliced.mat']);
+    mri_resliced = mri_resliced.mri_resliced;
 
-evoked = ft_timelockanalysis(cfg, data);
-
-%% LCMV
-cfg = [];
-cfg.method          = 'lcmv';
-cfg.grid            = leadfield_meg;
-cfg.headmodel       = headmodel_meg;
-cfg.lcmv.lambda     = '5%';
-cfg.channel         = 'meggrad';
-cfg.senstype        = 'MEG';
-source_lcmv = ft_sourceanalysis(cfg, evoked);
-
-%% Load MRI
-load(['../mat_data/MRI_mat/ID' sub_date.ID{2} '_mri_resliced.mat']);
-
-%% Interpolate (middle of head bias (?))
-cfg = [];
-cfg.parameter    = 'pow';
-cfg.interpmethod = 'nearest';
-source_int  = ft_sourceinterpolate(cfg, source_lcmv, mri_resliced);
-
-% Plot
-cfg = [];
-cfg.method        = 'ortho';
-cfg.funparameter  = 'pow';
-ft_sourceplot(cfg,source_int);
-
-
-%% Select full window, baseline and TOI
-
-%full window
-cfg = [];
-cfg.trials = cleaned4mat.trialinfo == 33032;
-cfg.latency = [-0.200 0.200];
-
-data_all = ft_selectdata(cfg, cleaned4mat);
-
-%baseline window
-cfg.latency = [-0.200 -0.050];
-
-data_base = ft_selectdata(cfg, cleaned4mat);
-
-cfg.latency = [0.0 0.150];
-
-data_stim = ft_selectdata(cfg, cleaned4mat);
-
-%% Evoked for TOI
-% Combined
-cfg = [];
-cfg.covariance         = 'yes';
-cfg.covariancewindow   = 'all';
-cfg.preproc.demean     = 'yes';
-evo_all = ft_timelockanalysis(cfg, data_all);
-
-% Baseline and stimulation
-cfg = [];
-cfg.covariance         = 'yes';
-cfg.covariancewindow   = 'all';
-evo_base = ft_timelockanalysis(cfg, data_base);
-evo_stim = ft_timelockanalysis(cfg, data_stim);
-
-%% Calculate beamformer filter - average for TOI
-
-cfg=[];
-cfg.method          = 'lcmv';
-cfg.grid            = leadfield_meg;
-cfg.headmodel       = headmodel_meg;
-cfg.lcmv.keepfilter = 'yes';        % save the filter in the output data
-cfg.lcmv.lambda     = '5%';
-cfg.channel         = 'meggrad';
-cfg.senstype        = 'MEG';
-
-source_all = ft_sourceanalysis(cfg, evo_all);
-
-%% Source analysis on baseline and stim data
-cfg=[];
-cfg.method              = 'lcmv';
-cfg.grid                = leadfield_meg;
-cfg.sourcemodel.filter  = source_all.avg.filter;  % Reuse avg filter
-cfg.headmodel           = headmodel_meg;
-cfg.channel             = 'meggrad';
-cfg.senstype            = 'MEG';
-
-source_base = ft_sourceanalysis(cfg, evo_base);
-source_stim = ft_sourceanalysis(cfg, evo_stim);
-
-%% Create contrast - baseline and stim
-
-contrast_lcmv = source_stim;       % Copy
-contrast_lcmv.avg.pow = (source_stim.avg.pow-source_base.avg.pow)./source_base.avg.pow;
-
-%Save here
-
-%% Interpolate and plot contrasted source
-cfg = [];
-cfg.parameter    = 'pow';
-cfg.interpmethod = 'nearest';
-source_int  = ft_sourceinterpolate(cfg, contrast_lcmv, mri_resliced);
+    %Interpolate and plot contrasted source
+    cfg = [];
+    cfg.parameter    = 'pow';
+    cfg.interpmethod = 'nearest';
+    source_int  = ft_sourceinterpolate(cfg, contrast_lcmv, mri_resliced);
+    
+    save([outdir 'PO6095_interpolated.mat'], 'source_int');
+    
+end
 
 %Plot
 cfg = [];
