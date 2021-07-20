@@ -154,12 +154,17 @@ end
 
 for i = 1:4%length(sub_date.ID);
     
-    load(['../mat_data/MRI_mat/' 'ID' char(sub_date{i,1}) '_headshape']);
-    load(['../mat_data/MRI_mat/' 'ID' char(sub_date{i,1}) '_sensshape']);
-    load(['../mat_data/MRI_mat/' 'ID' char(sub_date{i,1}) '_MEG_headmodel']);
+    %ft_read_headshape(MEGfile);
+    load(['../mat_data/MRI_mat/' 'ID' sub_date.ID{i} '_headshape']);
     
-    %Final plot - aligned MEG   
-    fig = figure;
+    %ft_read_sens(MEGfile);
+    load(['../mat_data/MRI_mat/' 'ID' sub_date.ID{i} '_sensshape']);
+    
+    %ft_prepare_headmodel(cfg, mesh_brain);
+    load(['../mat_data/MRI_mat/' 'ID' sub_date.ID{i} '_MEG_headmodel']);
+    
+    %Final plot - aligned MEG
+    fig = figure('Position', [800 300 900 900]); %[Left Bottom Width Height]
     hold on;
     ft_plot_sens(sensshape)
     ft_plot_headshape(headshape)
