@@ -71,12 +71,37 @@ for i = 1%:4%length(sub_date.ID);
     save([outdir 'leadfield.mat'], 'leadfield_meg');
     
     
-    %Calculate Kappa (rank deficiency)
+    
+    
+    %Select filter data (manual trigger, should refer to structure: cond)
+    cfg = [];
+    cfg.trials = appended.trialinfo == 33032;
+    cfg.latency = [-300.0 0.300];
+
+    PO60_95_filter = ft_selectdata(cfg, appended);
+        
+    %Select event data (manual trigger, should refer to structure: cond)
+    cfg = [];
+    cfg.trials = appended.trialinfo == 33032;
+    cfg.latency = [0.0 0.300];
+
+    PO60_95 = ft_selectdata(cfg, appended);
+    
+    %Select baseline
+    cfg = [];
+    cfg.trials = appended.trialinfo == 33032;
+    cfg.latency = [-300 0];
+    
+    PO60_95_base = ft_selectdata(cfg, appended);
+    
+    
+    
+    %Calculate Filter covariance matrix and Kappa (rank deficiency)
     cfg = [];
     cfg.covariance          = 'yes';
     cfg.covariancewindow    = 'all';
     cfg.channel             = 'MEG';
-    data_cov = ft_timelockanalysis(cfg, appended);
+    data_cov = ft_timelockanalysis(cfg, PO60_95_filter);
 
     [u,s,v] = svd(data_cov.cov);
     d       = -diff(log10(diag(s)));
@@ -87,7 +112,7 @@ for i = 1%:4%length(sub_date.ID);
     %consider rank(data_cov.cov)?
 
     % figure;
-    % semilogy(diag(s),'o-');
+    % semilogy(diag(s),'o-');   
     
     
     %Do initial source analysis to calculte filters
@@ -107,19 +132,7 @@ for i = 1%:4%length(sub_date.ID);
     
     save([outdir 'source_org.mat'], 'source_org');
     
-    %Select data (manual trigger, should refer to structure: cond)
-    cfg = [];
-    cfg.trials = appended.trialinfo == 33032;
-    cfg.latency = [0.0 0.300];
 
-    PO60_95 = ft_selectdata(cfg, appended);
-    
-    %Select baseline
-    cfg = [];
-    cfg.trials = appended.trialinfo == 33032;
-    cfg.latency = [-300 0];
-    
-    PO60_95_base = ft_selectdata(cfg, appended);
 
     %Compute covariance matrix for data and baseline
     cfg = [];
@@ -141,8 +154,8 @@ for i = 1%:4%length(sub_date.ID);
     cfg.channel             = 'meggrad';
     cfg.senstype            = 'MEG';
 
-    PO60_95_base_source = ft_sourceanalysis(cfg, PO60_95_cov);
-    PO60_95_source = ft_sourceanalysis(cfg, PO60_95_base_cov);
+    PO60_95_base_source = ft_sourceanalysis(cfg, PO60_95_base_cov);
+    PO60_95_source = ft_sourceanalysis(cfg, PO60_95_cov);
     
     %Contrast between stim and baseline
     contrast_lcmv = PO60_95_source;       % Copy
