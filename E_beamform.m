@@ -40,29 +40,29 @@ for i = 1:4%length(sub_date.ID);
     end
 
 %     %Load in the stupidest way possible
-%     GOica = load([inpath 'GOica.mat']);
-%     GOica = GOica.GOica;
+    GOica = load([inpath 'GOica.mat']);
+    GOica = GOica.GOica;
     PO60ica = load([inpath 'PO60ica.mat']);
     PO60ica = PO60ica.PO60ica;
-%     PO70ica = load([inpath 'PO70ica.mat']);
-%     PO70ica = PO70ica.PO70ica;
-%     GP60ica = load([inpath 'GP60ica.mat']);
-%     GP60ica = GP60ica.GP60ica;
-%     GP70ica = load([inpath 'GP70ica.mat']);
-%     GP70ica = GP70ica.GP70ica;
+    PO70ica = load([inpath 'PO70ica.mat']);
+    PO70ica = PO70ica.PO70ica;
+    GP60ica = load([inpath 'GP60ica.mat']);
+    GP60ica = GP60ica.GP60ica;
+    GP70ica = load([inpath 'GP70ica.mat']);
+    GP70ica = GP70ica.GP70ica;
 
     
     %Append data
-%     cfg = [];
-%     cfg.keepsampleinfo = 'no'; %if keeping, error because of overlaps
-%     appended = ft_appenddata(cfg, PO60ica, PO70ica, GP60ica, GP70ica, GOica);
+    cfg = [];
+    cfg.keepsampleinfo = 'no'; %if keeping, error because of overlaps
+    appended = ft_appenddata(cfg, PO60ica, PO70ica, GP60ica, GP70ica, GOica);
     
     
     %Load or create leadfield
     if ~exist([outdir 'leadfield.mat'], 'file');
 
     cfg.senstype        = 'meg'; %??
-    cfg.grad            = PO60ica.grad;
+    cfg.grad            = appended.grad;
     cfg.headmodel       = headmodel_meg;
     cfg.sourcemodel     = subject_grid;
     cfg.channel         = 'meg';
@@ -80,13 +80,13 @@ for i = 1:4%length(sub_date.ID);
     end
     
     %Loose ECG/EOG channels
-    cfg = [];
-    cfg.channel = 'meg';
-    PO60ica = ft_selectdata(cfg, PO60ica);
+%     cfg = [];
+%     cfg.channel = 'meg';
+%     PO60ica = ft_selectdata(cfg, PO60ica);
     
     %Create noise covarmatrix for denoise_whiten
     cfg.latency = [-0.350 -0.100];
-    baseline_noise = ft_selectdata(cfg, PO60ica);
+    baseline_noise = ft_selectdata(cfg, appended);
     
     cfg            = [];
     cfg.covariance = 'yes';
@@ -104,12 +104,17 @@ for i = 1:4%length(sub_date.ID);
     kappa_mag = find(d_mag>4,1,'first');
     d_grad = -diff(log10(diag(s_grad))); d_grad = d_grad./std(d_grad);
     kappa_grad = find(d_grad>4,1,'first');
-
+    
+    kappa = min(kappa_mag,kappa_grad);
+    
     cfg            = [];
     cfg.channel    = 'meg';
-    cfg.kappa      = min(kappa_mag,kappa_grad);
-    dataw_meg      = ft_denoise_prewhiten(cfg, PO60ica, baseline_noise);
-
+    cfg.kappa      = kappa;
+    dataw_meg      = ft_denoise_prewhiten(cfg, appended, baseline_noise);
+ 
+%     cfg.layout = 'neuromag306all.lay';
+%     ft_multiplotER(cfg, PO60ica);
+    
     
     %Calculate Filter covariance matrix and Kappa (rank deficiency)
     cfg = [];
@@ -118,59 +123,59 @@ for i = 1:4%length(sub_date.ID);
     cfg.channel             = 'MEG';
     data_cov = ft_timelockanalysis(cfg, dataw_meg);
 
-    [u,s,v] = svd(data_cov.cov);
-    d       = -diff(log10(diag(s)));
-    d       = d./std(d);
-    kappa   = find(d>5,1,'first');
-    fprintf('Kappa = %i\n', kappa)
+%     [u,s,v] = svd(data_cov.cov);
+%     d       = -diff(log10(diag(s)));
+%     d       = d./std(d);
+%     kappa   = find(d>5,1,'first');
+%     fprintf('Kappa = %i\n', kappa)
 
     %consider rank(data_cov.cov)?
 
     % figure;
     % semilogy(diag(s),'o-');  
     
+    %ft_inverse_lcmv
     
     %Do initial source analysis to calculte filters
     cfg = [];
     cfg.method              = 'lcmv';
     cfg.channel             = 'meg';
     cfg.keepfilter          = 'yes';
-    %cfg.lcmv.fixedori      = 'yes'; %exist?
+    cfg.lcmv.fixedori       = 'yes';
     cfg.lambda              = '5%';
     cfg.kappa               = kappa;
-    %cfg.lcmv.projectmom    = 'yes'; %keepmom?
-    
-    %here? not sure this cfg exist?
-    %cfg.lcmv.weightnorm =   'unitnoisegain';
+    cfg.lcmv.projectmom     = 'yes';
+
+    cfg.lcmv.weightnorm     = 'unitnoisegain'; %experiment with this one
 
     % Original
     cfg.headmodel           = headmodel_meg;
     cfg.sourcemodel         = leadfield;
     source_org = ft_sourceanalysis(cfg, data_cov);
     
-    %save([outdir 'source_org.mat'], 'source_org');
+    save([outdir 'source_org.mat'], 'source_org');
     
     mri_resliced = load(['../mat_data/MRI_mat/ID' sub_date.ID{i} '_mri_resliced.mat']);
     mri_resliced = mri_resliced.mri_resliced;
     
-    for ii = 3:6%1:length(cond.PO60trig);
+    for ii = 1:length(cond.PO60trig);
     %Select filter data (manual trigger, should refer to structure: cond)
     trigger = cond.PO60trig(ii);
         
     
     %Select event data (manual trigger, should refer to structure: cond)
     cfg = [];
-    cfg.trials = PO60ica.trialinfo == trigger;
+    cfg.trials = dataw_meg.trialinfo == trigger;
     cfg.latency = [0 0.300];
 
-    stim = ft_selectdata(cfg, PO60ica);
+    stim = ft_selectdata(cfg, dataw_meg);
     
     %Select baseline
     cfg = [];
-    cfg.trials = PO60ica.trialinfo == trigger;
+    cfg.trials = dataw_meg.trialinfo == trigger;
     cfg.latency = [-0.300 0];
     
-    base = ft_selectdata(cfg, PO60ica);
+    base = ft_selectdata(cfg, dataw_meg);
     
 
     %Compute covariance matrix for data and baseline
