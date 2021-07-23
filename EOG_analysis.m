@@ -30,7 +30,7 @@ for i = 1:length(sub_date.ID)
 
         epochs_eog.(conditions{ii}){i, stim_index} = T
         
-        clear('T', 'VAR')
+        %clear('T', 'VAR')
         
         %For stim
         end
@@ -494,10 +494,10 @@ end
 %% Average rasterplots
 
 %Pulse Only, average in rows
-figure('Position', [100 500 2000 200]);
-ha = tight_subplot(2,6,[.05 .015],[.2 .1],[.05 .05]);
+figure('Position', [100 500 2000 500]);
+ha = tight_subplot(4,6,[.05 .015],[.2 .1],[.05 .05]);
 colbar = [-8*10^-5 8*10^-5]; %set limits of color-gradient/"z-axis"
-%PO70 in row
+%PO70 raster row
 for ii = 1:6; axes(ha(ii));
   
   if ii == 1
@@ -538,8 +538,56 @@ for ii = 1:6; axes(ha(ii));
   end
 end
 
-%PO60 in row
+%PO70 amplitude line row
 for ii = 1:6; axes(ha(ii+6));
+      if ii == 1
+      axes(ha(ii));
+      imagesc([])
+      colormap parula;
+      hold on
+      
+      ax = gca;
+      ax.XTick = [1:10:80];
+      ax.XTickLabel = [];
+      ax.YTickLabel = [];
+      ax.XGrid = 'On';
+      
+      elseif ii == 2
+      plot(mean(epochs_eog_avgrast.PO70{1,ii-1}), 'k', 'LineWidth', 0.5);
+      hold on
+      plot([21 21], [-8*10^-5 2*10^-5], 'k --');
+      ylim([-8*10^-5 2*10^-5]);
+      xlim([1 80]);
+      
+      ax = gca;
+      ax.XTick = [1:10:80];
+      ax.XTickLabel = [];
+      ax.XGrid = 'On';
+      ax.YGrid = 'On';
+      
+%       ax.YTickLabel{2,:} = '';
+%       ax.YTickLabel{4,:} = '';
+%       ax.YTickLabel{6,:} = '';
+      
+      elseif ii > 2
+      plot(mean(epochs_eog_avgrast.PO70{1,ii-1}), 'k', 'LineWidth', 0.5);
+      hold on
+      plot([21 21], [-8*10^-5 2*10^-5], 'k --');
+      ylim([-8*10^-5 2*10^-5]);
+      xlim([1 80]);
+      
+      ax = gca;
+      ax.XTick = [1:10:80];
+      ax.XTickLabel = [];
+      ax.YTickLabel = [];
+      ax.XGrid = 'On';
+      ax.YGrid = 'On';
+      
+      end
+end
+
+%PO60 in row
+for ii = 1:6; axes(ha(ii+12));
   imagesc(epochs_eog_avgrast.PO60{1,ii}, colbar);
   colormap parula;
   hold on
@@ -547,23 +595,54 @@ for ii = 1:6; axes(ha(ii+6));
   
   if ii > 1
         ax = gca;
+        ax.XTick = [1:10:80];
         ax.YTickLabel = [];
         ax.XGrid = 'On';
   end
   
   ax = gca;
   ax.XTick = [1:10:80];
-  ax.XTickLabel = [-100 -50 0 50 100 150 200 250 300];
-  
-  ax.XTickLabelRotation = 90;
-  ax.XGrid = 'On';
-
-  ax.XTickLabel(2,:) = nan;
-  ax.XTickLabel(4,:) = nan;
-  ax.XTickLabel(6,:) = nan;
-  ax.XTickLabel(8,:) = nan;
+  ax.XTickLabel = [];
   
 end
+
+%PO60 amplitude line row
+for ii = 1:6; axes(ha(ii+18));
+    
+      plot(mean(epochs_eog_avgrast.PO60{1,ii}), 'k', 'LineWidth', 0.5);
+      hold on
+      plot([21 21], [-8*10^-5 2*10^-5], 'k --');
+      ylim([-8*10^-5 2*10^-5]);
+      xlim([1 80]);
+      
+      if ii > 1
+          ax = gca; 
+          ax.YTickLabel = [];
+      end
+      
+      ax = gca;
+      ax.XGrid = 'On';
+      ax.YGrid = 'On';
+      
+      ax.XTick = [1:10:80];
+      ax.XTickLabel = [-100 -50 0 50 100 150 200 250 300];
+      ax.XTickLabelRotation = 90;
+
+
+     ax.XTickLabel(2,:) = nan;
+     ax.XTickLabel(4,:) = nan;
+     ax.XTickLabel(6,:) = nan;
+     ax.XTickLabel(8,:) = nan;
+      
+%       ax.YTickLabel{2,:} = '';
+%       ax.YTickLabel{4,:} = '';
+%       ax.YTickLabel{6,:} = '';
+      
+
+end
+
+
+
 
 
 
