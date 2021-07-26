@@ -494,7 +494,7 @@ end
 %% Average rasterplots
 
 %Pulse Only, average in rows
-figure('Position', [100 500 2000 500]);
+figure('Position', [100 500 2000 800]);
 ha = tight_subplot(4,6,[.05 .015],[.2 .1],[.05 .05]);
 colbar = [-8*10^-5 8*10^-5]; %set limits of color-gradient/"z-axis"
 %PO70 raster row
@@ -644,19 +644,21 @@ end
 
 
 
-
-
 %Gap Only, Gap-Pulse in rows
-figure('Position', [100 500 2000 200]);
-ha = tight_subplot(2,6,[.05 .015],[.2 .1],[.05 .05]);
+figure('Position', [100 500 2000 800]);
+ha = tight_subplot(4,6,[.05 .015],[.2 .1],[.05 .05]);
 colbar = [-8*10^-5 8*10^-5]; %set limits of color-gradient/"z-axis"
-%70 Carrier
+%GP70 raster row
 for ii = 1:6; axes(ha(ii));
     
       if ii == 1
-      axes(ha(ii));
-      imagesc([])
+      imagesc([]);
       colormap parula;
+      
+      ax = gca;
+      ax.XTick = [1:10:80];
+      ax.XTickLabel = [];
+      ax.YTickLabel = [];
     
       elseif ii == 2
 
@@ -686,13 +688,63 @@ for ii = 1:6; axes(ha(ii));
       
 end
 
-%60 Carrier
+%GP70 amplitude line row
 for ii = 1:6; axes(ha(ii+6));
-    
       if ii == 1
-      axes(ha(ii));
+      axes(ha(ii+6));
       imagesc([])
       colormap parula;
+      
+      ax = gca;
+      ax.XTick = [1:10:80];
+      ax.XTickLabel = [];
+      ax.YTickLabel = [];
+      
+      hold on
+      
+      elseif ii == 2
+          %static reference to GO cell
+      plot(mean(epochs_eog_avgrast.GO{1,2}), 'k', 'LineWidth', 0.5);
+      hold on
+      plot([21 21], [-8*10^-5 2*10^-5], 'k --');
+      ylim([-8*10^-5 2*10^-5]);
+      xlim([1 80]);
+      
+      ax = gca;
+      ax.XTick = [1:10:80];
+      ax.XTickLabel = [];
+      ax.XGrid = 'On';
+      ax.YGrid = 'On';
+      
+      elseif ii > 2
+      plot(mean(epochs_eog_avgrast.GP70{1,ii-2}), 'k', 'LineWidth', 0.5);
+      hold on
+      plot([21 21], [-8*10^-5 2*10^-5], 'k --');
+      ylim([-8*10^-5 2*10^-5]);
+      xlim([1 80]);
+      
+      ax = gca;
+      ax.XTick = [1:10:80];
+      ax.XTickLabel = [];
+      ax.YTickLabel = [];
+      ax.XGrid = 'On';
+      ax.YGrid = 'On';
+      
+      end
+end
+
+%GP60 raster row
+for ii = 1:6; axes(ha(ii+12));
+    
+      if ii == 1
+      axes(ha(ii+12));
+      imagesc([])
+      colormap parula;
+      
+      ax = gca;
+      ax.XTick = [1:10:80];
+      ax.XTickLabel = [];
+      ax.YTickLabel = [];
     
       elseif ii == 2
 
@@ -702,6 +754,56 @@ for ii = 1:6; axes(ha(ii+6));
       plot([21 21], [0 45], 'k --');
       
       ax = gca;
+      ax.XTick = [1:10:80];
+      ax.XTickLabel = [];
+      ax.XGrid = 'On';
+      
+      elseif ii > 2
+
+      imagesc(epochs_eog_avgrast.GP60{1,ii-2}, colbar)
+      colormap parula;
+      hold on
+      plot([21 21], [0 45], 'k --');
+      
+      ax = gca;
+      ax.XTick = [1:10:80];
+      ax.XTickLabel = [];
+      ax.YTickLabel = [];
+
+      ax.XGrid = 'On';
+
+
+  end
+      
+end
+
+%GP60 amplitude line row
+for ii = 1:6; axes(ha(ii+18));
+      if ii == 1
+      axes(ha(ii+18));
+      imagesc([])
+      colormap parula;
+      
+      ax = gca;
+      ax.XTick = [1:10:80];
+      ax.XTickLabel = [];
+      ax.YTickLabel = [];
+      
+      hold on
+      
+      elseif ii == 2
+          %static reference to GO cell
+      plot(mean(epochs_eog_avgrast.GO{1,1}), 'k', 'LineWidth', 0.5);
+      hold on
+      plot([21 21], [-8*10^-5 2*10^-5], 'k --');
+      ylim([-8*10^-5 2*10^-5]);
+      xlim([1 80]);
+      
+      ax = gca;
+
+      ax.XGrid = 'On';
+      ax.YGrid = 'On';
+      
       ax.XTick = [1:10:80];
       ax.XTickLabel = [-100 -50 0 50 100 150 200 250 300];
       ax.XGrid = 'On';
@@ -713,36 +815,37 @@ for ii = 1:6; axes(ha(ii+6));
       ax.XTickLabel(8,:) = nan;
       
       elseif ii > 2
-
-      imagesc(epochs_eog_avgrast.GP60{1,ii-2}, colbar)
-      colormap parula;
+      plot(mean(epochs_eog_avgrast.GP60{1,ii-2}), 'k', 'LineWidth', 0.5);
       hold on
-      plot([21 21], [0 45], 'k --');
+      plot([21 21], [-8*10^-5 2*10^-5], 'k --');
+      ylim([-8*10^-5 2*10^-5]);
+      xlim([1 80]);
       
       ax = gca;
       ax.XTick = [1:10:80];
-      ax.XTickLabel = [-100 -50 0 50 100 150 200 250 300];
       ax.YTickLabel = [];
-  
-      ax.XTickLabelRotation = 90;
       ax.XGrid = 'On';
-
+      ax.YGrid = 'On';
+      
+      ax.XTick = [1:10:80];
+      ax.XTickLabel = [-100 -50 0 50 100 150 200 250 300];
+      ax.XGrid = 'On';
+      
+      ax.XTickLabelRotation = 90;
       ax.XTickLabel(2,:) = nan;
       ax.XTickLabel(4,:) = nan;
       ax.XTickLabel(6,:) = nan;
       ax.XTickLabel(8,:) = nan;
-
-  end
       
+      end
 end
-hold off
 
 % set(gcf,'Units','inches');
 % screenposition = get(gcf,'Position');
 % set(gcf,...
 %     'PaperPosition',[0 0 screenposition(3:4)],...
 %     'PaperSize',[screenposition(3:4)]);
-% print -dpdf -painters GPGO_avg
+% print -dpdf -painters GOGP_avg
 %The first two lines measure the size of your figure (in inches). The next line configures the print paper size to fit the figure size. 
 %The last line uses the print command and exports a vector pdf document as the output.
 

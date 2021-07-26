@@ -80,9 +80,9 @@ for i = 1:4%length(sub_date.ID);
     end
     
     %Loose ECG/EOG channels
-%     cfg = [];
-%     cfg.channel = 'meg';
-%     PO60ica = ft_selectdata(cfg, PO60ica);
+    cfg = [];
+    cfg.channel = 'meg';
+    appended = ft_selectdata(cfg, appended);
     
     %Create noise covarmatrix for denoise_whiten
     cfg.latency = [-0.350 -0.100];
@@ -140,10 +140,10 @@ for i = 1:4%length(sub_date.ID);
     cfg = [];
     cfg.method              = 'lcmv';
     cfg.channel             = 'meg';
-    cfg.keepfilter          = 'yes';
+    cfg.lcmv.keepfilter          = 'yes';
     cfg.lcmv.fixedori       = 'yes';
-    cfg.lambda              = '5%';
-    cfg.kappa               = kappa;
+    cfg.lcmv.lambda              = '5%';
+    cfg.lcmv.kappa               = kappa;
     cfg.lcmv.projectmom     = 'yes';
 
     cfg.lcmv.weightnorm     = 'unitnoisegain'; %experiment with this one
@@ -201,6 +201,8 @@ for i = 1:4%length(sub_date.ID);
     stim_source = ft_sourceanalysis(cfg, stim_cov);
     base_source = ft_sourceanalysis(cfg, base_cov);
     
+    save([outdir char(cond.PO60label(ii)) '_stim_source.mat'], 'stim_source');
+    save([outdir char(cond.PO60label(ii)) '_base_source.mat'], 'base_source');
     
     %Contrast between stim and baseline
     contrast_lcmv = stim_source;       % Copy
