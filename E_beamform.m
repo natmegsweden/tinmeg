@@ -10,7 +10,7 @@
 
 %% inspect subjects headmodel fit to grid
 
-for i = 1:4%length(sub_date.ID);
+for i = 1%:4%length(sub_date.ID);
     
     inpath = ['../mat_data/ICA/' 'ID' sub_date.ID{i} '/'];
     outdir = ['../mat_data/source_reconstruction/' 'ID' sub_date.ID{i} '/'];
@@ -140,10 +140,10 @@ for i = 1:4%length(sub_date.ID);
     cfg = [];
     cfg.method              = 'lcmv';
     cfg.channel             = 'meg';
-    cfg.lcmv.keepfilter          = 'yes';
+    cfg.lcmv.keepfilter     = 'yes';
     cfg.lcmv.fixedori       = 'yes';
-    cfg.lcmv.lambda              = '5%';
-    cfg.lcmv.kappa               = kappa;
+    cfg.lcmv.lambda         = '5%';
+    cfg.lcmv.kappa          = kappa;
     cfg.lcmv.projectmom     = 'yes';
 
     cfg.lcmv.weightnorm     = 'unitnoisegain'; %experiment with this one
@@ -158,12 +158,12 @@ for i = 1:4%length(sub_date.ID);
     mri_resliced = load(['../mat_data/MRI_mat/ID' sub_date.ID{i} '_mri_resliced.mat']);
     mri_resliced = mri_resliced.mri_resliced;
     
+    %Currently only for PO60, consider: cond.([conditions{1} 'trig'])(1)
     for ii = 1:length(cond.PO60trig);
-    %Select filter data (manual trigger, should refer to structure: cond)
-    trigger = cond.PO60trig(ii);
-        
     
     %Select event data (manual trigger, should refer to structure: cond)
+    trigger = cond.PO60trig(ii);
+    
     cfg = [];
     cfg.trials = dataw_meg.trialinfo == trigger;
     cfg.latency = [0 0.300];
@@ -183,7 +183,7 @@ for i = 1:4%length(sub_date.ID);
     cfg.covariance              = 'yes';
     cfg.covariancewindow        = 'all';
     cfg.preproc.demean          = 'yes';
-    cfg.keeptrials              = 'no'; %Y/N makes no difference
+    cfg.keeptrials              = 'no'; %Y/N makes no difference?
 
     stim_cov = ft_timelockanalysis(cfg, stim);
     base_cov = ft_timelockanalysis(cfg, base);
@@ -207,7 +207,8 @@ for i = 1:4%length(sub_date.ID);
     %Contrast between stim and baseline
     contrast_lcmv = stim_source;       % Copy
     contrast_lcmv.avg.pow = (stim_source.avg.pow-base_source.avg.pow)./base_source.avg.pow;
-
+    
+    %Save contrast for ROI with atlas
 
     %Interpolate contrasted source
     cfg = [];
@@ -241,3 +242,77 @@ for i = 1:4%length(sub_date.ID);
     
 end
 
+%% Implement atlas for ROI analysis
+
+%Load atlas
+brainnetome = ft_read_atlas('../../fieldtrip-20210311/template/atlas/brainnetome/BNA_MPM_thr25_1.25mm.nii', 'unit', 'cm');
+
+for i = 2%:4%length(sub_date.ID);
+    
+    subject_grid = load(['../mat_data/MRI_mat/ID' sub_date.ID{i} '_sub_grid.mat']);
+    subject_grid = subject_grid.subject_grid;
+    
+    %create sourcemodel with atlas labels
+    cfg = [];
+    cfg.interpmethod = 'nearest';
+    cfg.parameter =     'tissue';
+    
+    atlas_interpolated = ft_sourceinterpolate(cfg, brainnetome, subject_grid);
+    
+    subject_grid.tissue = atlas_interpolated.tissue;
+    subject_grid.tissuelabel = atlas_interpolated.tissuelabel;
+    subject_grid.transform = atlas_interpolated.transform;
+    
+end
+
+%index for "area 41/42" (STG)
+indx = find(subject_grid.tissue == 71 | subject_grid.tissue == 72);
+
+% %Load headmodel and MR for plotting
+% load('../mat_data/MRI_mat/ID0539_MEG_headmodel.mat');
+% load('../mat_data/MRI_mat/ID0539_mri_resliced.mat');
+
+% %Subject MRI, headmodel and ROI sources
+% ft_determine_coordsys(mri_resliced, 'interactive', 'no'); hold on;
+% ft_plot_mesh(subject_grid.pos(indx,:), 'vertexcolor', 'r', 'vertexsize', 20);
+% ft_plot_headmodel(headmodel_meg, 'facealpha', 0.2, 'edgecolor', [0.9 0.9 1]);
+% x = gca;
+% x.CameraPosition = [64 -70 250];
+% 
+% %ROI sources within template grid
+% figure
+% hold on
+% ft_plot_mesh(subject_grid.pos(subject_grid.inside,:));
+% ft_plot_mesh(subject_grid.pos(indx,:), 'vertexcolor', 'r', 'vertexsize', 30);
+% 
+% %ROI sources within headmodel
+% figure
+% hold on
+% ft_plot_headmodel(headmodel_meg, 'facealpha', 0.5, 'edgecolor', [0.9 0.9 1]);
+% ft_plot_mesh(subject_grid.pos(indx,:), 'vertexcolor', 'r', 'vertexsize', 30);
+% x = gca;
+% x.CameraPosition = [110 135 10];
+
+%Load source reconstruction
+load('../mat_data/source_reconstruction/ID0539/PO60_80_stim_source.mat');
+load('../mat_data/source_reconstruction/ID0539/PO60_80_base_source.mat');
+
+%Contrast between stim and baseline
+contrast_lcmv = stim_source;       % Copy
+contrast_lcmv.avg.pow = (stim_source.avg.pow-base_source.avg.pow)./base_source.avg.pow;
+
+
+
+cfg = [];
+cfg.parcellation = 'tissue';
+cfg.parameter = 'pow';
+
+output = ft_sourceparcellate(cfg, contrast_lcmv, subject_grid);
+
+% output = 
+%              time: [1x61 double]
+%             label: {1x246 cell}
+%               pow: [246x1 double]
+%         powdimord: 'chan'
+%     brainordinate: [1x1 struct]
+%               cfg: [1x1 struct]

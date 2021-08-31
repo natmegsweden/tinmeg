@@ -76,6 +76,8 @@ save(['../mat_data/MRI_mat/' 'ID' char(sub_date{i,1}) '_MEG_headmodel'], 'headmo
 
 %% Create subject specific grid based on MNI template
 
+% template_grid loads in "Full_analysis.m" for consistency with source reconstruction.
+
 cfg           = [];
 cfg.method    = 'basedonmni';
 cfg.template  = template_grid;
