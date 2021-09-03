@@ -19,6 +19,7 @@ for i = 1%:4%length(sub_date.ID);
     headmodel_meg = load(['../mat_data/MRI_mat/ID' sub_date.ID{i} '_MEG_headmodel.mat']); 
     headmodel_meg = headmodel_meg.headmodel_meg;
     
+    %Load subject sourcemodel in template grid format (based on MNI)
     subject_grid = load(['../mat_data/MRI_mat/ID' sub_date.ID{i} '_sub_grid.mat']);
     subject_grid = subject_grid.subject_grid;
     
@@ -228,7 +229,6 @@ for i = 1%:4%length(sub_date.ID);
 %     cfg.colorlim      = [0 3] % or 'zeromax'
 %     cfg.opacitymap    = 'rampup'
 %     cfg.opacitylim    = [0 3] % or 'zeromax'
-
     
     cfg.position        = [700 300 950 950];
     ft_sourceplot(cfg, source_int);
@@ -265,8 +265,11 @@ for i = 2%:4%length(sub_date.ID);
     
 end
 
-%index for "area 41/42" (STG)
-indx = find(subject_grid.tissue == 71 | subject_grid.tissue == 72);
+
+
+%% Plots of ROI in subject
+
+% indx = find(subject_grid.tissue == 71 | subject_grid.tissue == 72);
 
 % %Load headmodel and MR for plotting
 % load('../mat_data/MRI_mat/ID0539_MEG_headmodel.mat');
@@ -293,26 +296,90 @@ indx = find(subject_grid.tissue == 71 | subject_grid.tissue == 72);
 % x = gca;
 % x.CameraPosition = [110 135 10];
 
-%Load source reconstruction
-load('../mat_data/source_reconstruction/ID0539/PO60_80_stim_source.mat');
-load('../mat_data/source_reconstruction/ID0539/PO60_80_base_source.mat');
 
-%Contrast between stim and baseline
-contrast_lcmv = stim_source;       % Copy
-contrast_lcmv.avg.pow = (stim_source.avg.pow-base_source.avg.pow)./base_source.avg.pow;
+%% Trying to loop conditions for four subjects
 
+roi_source = struct;
 
+%testing for 4 subjects
+for j = 1:4
+    
+    subject_grid = load(['../mat_data/MRI_mat/ID' sub_date.ID{j} '_sub_grid.mat']);
+    subject_grid = subject_grid.subject_grid;
+    
+    %create sourcemodel with atlas labels
+    cfg = [];
+    cfg.interpmethod = 'nearest';
+    cfg.parameter =     'tissue';
+    
+    atlas_interpolated = ft_sourceinterpolate(cfg, brainnetome, subject_grid);
+    
+    disp(['now parcelating subject: ' sub_date.ID{j}]);
+    
+    subject_grid.tissue = atlas_interpolated.tissue;
+    subject_grid.tissuelabel = atlas_interpolated.tissuelabel;
+    subject_grid.transform = atlas_interpolated.transform;
 
-cfg = [];
-cfg.parcellation = 'tissue';
-cfg.parameter = 'pow';
+    for jj = 1:numel(cond.PO60label);
 
-output = ft_sourceparcellate(cfg, contrast_lcmv, subject_grid);
+        load(['../mat_data/source_reconstruction/ID' sub_date.ID{j} '/' cond.PO60label{jj} '_stim_source.mat']);
+        load(['../mat_data/source_reconstruction/ID' sub_date.ID{j} '/' cond.PO60label{jj} '_base_source.mat']);
 
-% output = 
+        %Contrast between stim and baseline
+        contrast_lcmv = stim_source;       % Copy
+        contrast_lcmv.avg.pow = (stim_source.avg.pow-base_source.avg.pow)./base_source.avg.pow;
+        
+        cfg = [];
+        cfg.parcellation = 'tissue';
+        cfg.parameter = 'pow';
+
+        output = ft_sourceparcellate(cfg, contrast_lcmv, subject_grid);
+
+        roi_source.Rpow60PO(j, jj) = output.pow(71)
+        roi_source.Lpow60PO(j, jj) = output.pow(72)
+
+%       output = 
 %              time: [1x61 double]
 %             label: {1x246 cell}
 %               pow: [246x1 double]
 %         powdimord: 'chan'
 %     brainordinate: [1x1 struct]
 %               cfg: [1x1 struct]
+        
+    end
+
+end
+
+%save(['../mat_data/roi_source_test.mat'], 'roi_source');
+
+figure('Position', [600 300 1400 600]);
+subplot(1,2,1)
+boxplot(roi_source.Rpow60PO, 'Labels', {'70', '75', '80', '85', '90', '95'})
+ylim([-0.2 0.6])
+title('Right STG')
+xlabel('Pulse level (dBA equivalent)')
+ylabel('Power in ROI')
+
+subplot(1,2,2)
+boxplot(roi_source.Lpow60PO, 'Labels', {'70', '75', '80', '85', '90', '95'})
+ylim([-0.2 0.6])
+title('Left STG')
+xlabel('Pulse level (dBA equivalent)')
+%ylabel('Power in ROI')
+
+
+%% sourceplot ROI?
+
+contrast_lcmv.tissue = subject_grid.tissue;
+contrast_lcmv.mask = (contrast_lcmv.tissue == 71 | contrast_lcmv.tissue == 72);
+
+cfg = [];
+cfg.method = 'slice';
+cfg.funparameter = 'pow';
+cfg.maskparameter = 'mask';
+cfg.opacitylim = [0.1 1];
+
+ft_sourceplot(cfg, contrast_lcmv, mri_resliced);
+
+%% Group level analysis
+
