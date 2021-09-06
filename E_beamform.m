@@ -40,7 +40,7 @@ for i = 1%:4%length(sub_date.ID);
     mkdir(outdir);
     end
 
-%     %Load in the stupidest way possible
+    %Load in the stupidest way possible
     GOica = load([inpath 'GOica.mat']);
     GOica = GOica.GOica;
     PO60ica = load([inpath 'PO60ica.mat']);
@@ -189,7 +189,6 @@ for i = 1%:4%length(sub_date.ID);
     stim_cov = ft_timelockanalysis(cfg, stim);
     base_cov = ft_timelockanalysis(cfg, base);
     
-    
     %Source analysis on baseline and stim data
     cfg=[];
     cfg.method              = 'lcmv';
@@ -218,6 +217,7 @@ for i = 1%:4%length(sub_date.ID);
     source_int  = ft_sourceinterpolate(cfg, contrast_lcmv, mri_resliced);
     
     save([outdir char(cond.PO60label(ii)) '_interpolated.mat'], 'source_int');
+
     
     %Plot and save
     cfg = [];
@@ -265,6 +265,14 @@ for i = 2%:4%length(sub_date.ID);
     
 end
 
+%% ??
+
+%create sourcemodel with atlas labels
+    cfg = [];
+    cfg.interpmethod = 'nearest';
+    cfg.parameter =     'tissue';
+    
+    atlas_interpolated = ft_sourceinterpolate(cfg, brainnetome, mri_resliced);
 
 
 %% Plots of ROI in subject
@@ -376,10 +384,13 @@ contrast_lcmv.mask = (contrast_lcmv.tissue == 71 | contrast_lcmv.tissue == 72);
 cfg = [];
 cfg.method = 'slice';
 cfg.funparameter = 'pow';
-cfg.maskparameter = 'mask';
-cfg.opacitylim = [0.1 1];
+cfg.atlas = 'brainnetome';
+cfg.roi = contrast_lcmv.tissuelabel{71};
+
 
 ft_sourceplot(cfg, contrast_lcmv, mri_resliced);
 
 %% Group level analysis
+
+
 
