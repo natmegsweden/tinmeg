@@ -8,31 +8,25 @@
 % template_grid = sourcemodel;
 % clear sourcemodel
 
-%% inspect subjects headmodel fit to grid
+%% Beaformer LCMV with contrast WIP
 
-for i = 1%:4%length(sub_date.ID);
+for i = 1:4%length(sub_date.ID);
     
-    inpath = ['../mat_data/ICA/' 'ID' sub_date.ID{i} '/'];
+    meg_inpath = ['../mat_data/ICA/' 'ID' sub_date.ID{i} '/'];
+    mri_inpath = ['../mat_data/MRI_mat/ID' sub_date.ID{i} '/'];
     outdir = ['../mat_data/source_reconstruction/' 'ID' sub_date.ID{i} '/'];
     
     %headmodel_meg
-    headmodel_meg = load(['../mat_data/MRI_mat/ID' sub_date.ID{i} '_MEG_headmodel.mat']); 
+    headmodel_meg = load([mri_inpath 'meg_headmodel.mat']); 
     headmodel_meg = headmodel_meg.headmodel_meg;
     
     %Load subject sourcemodel in template grid format (based on MNI)
-    subject_grid = load(['../mat_data/MRI_mat/ID' sub_date.ID{i} '_sub_grid.mat']);
+    subject_grid = load([mri_inpath 'subject_grid.mat']);
     subject_grid = subject_grid.subject_grid;
     
-    
-%     %Final plot - aligned MEG   
-%     fig = figure;
-%     hold on;
-%     ft_plot_headmodel(headmodel_meg, 'edgecolor', 'none', 'facealpha', 0.4,'facecolor', 'b');
-%     ft_plot_mesh(subject_grid.pos(subject_grid.inside,:));
-%     title(['SUBJECT: ' sub_date.ID{i}]);
-% 
-%     %Pause loop until figure is closed
-%     uiwait(fig);
+    %Replace subjects grid position with template grid positions to be able to group subjects
+    subject_grid.pos_org = subject_grid.pos;
+    subject.grid.pos = template_grid.pos;
     
 
     %Check if subject dir exist, create/define
@@ -41,15 +35,15 @@ for i = 1%:4%length(sub_date.ID);
     end
 
     %Load in the stupidest way possible
-    GOica = load([inpath 'GOica.mat']);
+    GOica = load([meg_inpath 'GOica.mat']);
     GOica = GOica.GOica;
-    PO60ica = load([inpath 'PO60ica.mat']);
+    PO60ica = load([meg_inpath 'PO60ica.mat']);
     PO60ica = PO60ica.PO60ica;
-    PO70ica = load([inpath 'PO70ica.mat']);
+    PO70ica = load([meg_inpath 'PO70ica.mat']);
     PO70ica = PO70ica.PO70ica;
-    GP60ica = load([inpath 'GP60ica.mat']);
+    GP60ica = load([meg_inpath 'GP60ica.mat']);
     GP60ica = GP60ica.GP60ica;
-    GP70ica = load([inpath 'GP70ica.mat']);
+    GP70ica = load([meg_inpath 'GP70ica.mat']);
     GP70ica = GP70ica.GP70ica;
 
     
@@ -156,11 +150,11 @@ for i = 1%:4%length(sub_date.ID);
     
     save([outdir 'source_org.mat'], 'source_org');
     
-    mri_resliced = load(['../mat_data/MRI_mat/ID' sub_date.ID{i} '_mri_resliced.mat']);
+    mri_resliced = load([mri_inpath 'mri_resliced.mat']);
     mri_resliced = mri_resliced.mri_resliced;
     
     %Currently only for PO60, consider: cond.([conditions{1} 'trig'])(1)
-    for ii = 1:length(cond.PO60trig);
+    for ii = [2 5]%1:length(cond.PO60trig);
     
     %Select event data (manual trigger, should refer to structure: cond)
     trigger = cond.PO60trig(ii);
@@ -247,9 +241,9 @@ end
 %Load atlas
 brainnetome = ft_read_atlas('../../fieldtrip-20210311/template/atlas/brainnetome/BNA_MPM_thr25_1.25mm.nii', 'unit', 'cm');
 
-for i = 2%:4%length(sub_date.ID);
+for i = 1%:4%length(sub_date.ID);
     
-    subject_grid = load(['../mat_data/MRI_mat/ID' sub_date.ID{i} '_sub_grid.mat']);
+    subject_grid = load(mri_inpath 'subject_grid.mat']);
     subject_grid = subject_grid.subject_grid;
     
     %create sourcemodel with atlas labels
@@ -312,7 +306,7 @@ roi_source = struct;
 %testing for 4 subjects
 for j = 1:4
     
-    subject_grid = load(['../mat_data/MRI_mat/ID' sub_date.ID{j} '_sub_grid.mat']);
+    subject_grid = load([mri_inpath 'subject_grid.mat']);
     subject_grid = subject_grid.subject_grid;
     
     %create sourcemodel with atlas labels
@@ -378,17 +372,21 @@ xlabel('Pulse level (dBA equivalent)')
 
 %% sourceplot ROI?
 
+template_mri = ft_read_mri(['../../fieldtrip-20210311/external/spm8/templates/T1.nii']);
+
 contrast_lcmv.tissue = subject_grid.tissue;
+contrast_lcmv.tissuelabel = subject_grid.tissuelabel;
+
 contrast_lcmv.mask = (contrast_lcmv.tissue == 71 | contrast_lcmv.tissue == 72);
 
 cfg = [];
 cfg.method = 'slice';
 cfg.funparameter = 'pow';
 cfg.atlas = 'brainnetome';
-cfg.roi = contrast_lcmv.tissuelabel{71};
+%cfg.roi = contrast_lcmv.tissuelabel{71};
+cfg.maskparameter = contrast_lcmv.mask;
 
-
-ft_sourceplot(cfg, contrast_lcmv, mri_resliced);
+ft_sourceplot(cfg, contrast_lcmv, template_mri);
 
 %% Group level analysis
 

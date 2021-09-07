@@ -1,5 +1,5 @@
 
-load(['../mat_data/MRI_mat/' 'ID' char(sub_date{i,1}) '_mri_realigned']);
+load([sub_mri_path 'mri_realigned']);
 
 %Reslice MRI
 cfg = [];
@@ -7,12 +7,9 @@ cfg.resolution = 1;
 
 mri_resliced = ft_volumereslice(cfg, mri_realigned_vol_3);
 
-%Convert units
-mri_resliced = ft_convert_units(mri_resliced, 'cm');
+save([sub_mri_path 'mri_resliced'], 'mri_resliced');
 
-save(['../mat_data/MRI_mat/' 'ID' char(sub_date{i,1}) '_mri_resliced'], 'mri_resliced');
-
-%load(['../mat_data/MRI_mat/' 'ID' char(sub_date{i,1}) '_mri_resliced']);
+%load([sub_mri_path '_mri_resliced']);
 
 %Segment MRI
 cfg = [];
@@ -20,7 +17,7 @@ cfg.output = {'brain' 'skull' 'scalp'};
 
 mri_segmented = ft_volumesegment(cfg, mri_resliced);
 
-save(['../mat_data/MRI_mat/' 'ID' char(sub_date{i,1}) '_mri_segmented'], 'mri_segmented');
+save([sub_mri_path 'mri_segmented'], 'mri_segmented');
 
 %Correct compartments
 binary_brain = mri_segmented.brain;
@@ -51,7 +48,7 @@ mri_segmented_2.scalp    = binary_scalp & ~binary_brain & ~binary_skull;
 %     cfg.funparameter = 'scalp';
 %     ft_sourceplot(cfg, mri_segmented_2);
 
-save(['../mat_data/MRI_mat/' 'ID' char(sub_date{i,1}) '_mri_segmented_2'], 'mri_segmented_2');
+save([sub_mri_path 'mri_segmented_2'], 'mri_segmented_2');
 
 %Create mesh for brain
 cfg = [];
@@ -63,7 +60,7 @@ mesh_brain = ft_prepare_mesh(cfg, mri_segmented_2);
 
 %ft_plot_mesh(mesh_brain, 'facealpha', .5, 'edgealpha', 0.1)
 
-save(['../mat_data/MRI_mat/' 'ID' char(sub_date{i,1}) '_mesh_brain'], 'mesh_brain');
+save([sub_mri_path 'mesh_brain'], 'mesh_brain');
 
 
 %Final head_model (only need brain for MEG);
@@ -72,7 +69,7 @@ cfg.method = 'singleshell';
 
 headmodel_meg = ft_prepare_headmodel(cfg, mesh_brain);
 
-save(['../mat_data/MRI_mat/' 'ID' char(sub_date{i,1}) '_MEG_headmodel'], 'headmodel_meg');
+save([sub_mri_path 'meg_headmodel'], 'headmodel_meg');
 
 %% Create subject specific grid based on MNI template
 
@@ -83,9 +80,11 @@ cfg.method    = 'basedonmni';
 cfg.template  = template_grid;
 cfg.nonlinear = 'yes';
 cfg.mri       = mri_resliced;
-cfg.unit      = 'cm';
+cfg.unit      = 'mm';
+cfg.spmversion = 'spm12';
+cfg.spmmetthod = 'new';
 
 subject_grid = ft_prepare_sourcemodel(cfg);
 
-save(['../mat_data/MRI_mat/' 'ID' char(sub_date{i,1}) '_sub_grid'], 'subject_grid');
+save([sub_mri_path 'subject_grid'], 'subject_grid');
 

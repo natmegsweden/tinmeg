@@ -37,4 +37,9 @@ cfg.design(2,:) = [ones(1,nsubj)*1 ones(1,nsubj)*2];
 cfg.uvar        = 1; % row of design matrix that contains unit variable (in this case: subjects)
 cfg.ivar        = 2; % row of design matrix that contains independent variable (the conditions)
 
-stat = ft_sourcestatistics(cfg, PO60_75{:}, PO60_90{:});
+stat = ft_sourcestatistics(cfg, PO60_75{1,:}, PO60_90{1,:});
+
+
+isequal(PO60_75{1,3}.pos, PO60_75{1,4}.pos)
+
+

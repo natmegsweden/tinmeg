@@ -12,16 +12,16 @@
 %i = sub_date.ID(1);
 
 %Check for DICOM/nifti and read_mri
-if exist(fullfile(sub_mri_path, '/DICOM'))
+if exist(fullfile(mri_path_in, '/DICOM'))
 
 dicom_path = [mri_data_path 'NatMEG_' sub_date.ID{i} '/DICOM/'];
 dcmfile = dir(dicom_path);
 dcmfile = [dcmfile(3).name]; %Grab 3rd to avoid folders
 
-submri = ft_read_mri([dicom_path dcmfile])
+submri = ft_read_mri([dicom_path dcmfile]);
 
-elseif exist(fullfile(sub_mri_path, '/nifti'))
-submri = ft_read_mri([sub_mri_path '/nifti/NatMEG_' char(sub_date{i,1}) '_T1w.nii.gz'])
+elseif exist(fullfile(mri_path_in, '/nifti'))
+submri = ft_read_mri([mri_path_in '/nifti/NatMEG_' sub_date.ID{i} '_T1w.nii.gz']);
 
 end
 %Inspection plot
@@ -31,7 +31,7 @@ end
 warning(['Now displaying coordsys for subject ID ' sub_date.ID{i}])
 mri_coordsys = ft_determine_coordsys(submri);
 
-save(['../mat_data/MRI_mat/' 'ID' char(sub_date{i,1}) '_mri_coordsys'], 'mri_coordsys');
+save([mri_path_out 'mri_coordsys'], 'mri_coordsys');
 
 cfg = [];
 cfg.method = 'interactive';
@@ -41,10 +41,10 @@ cfg.coordsys = 'neuromag';
 warning(['Now displaying volume realign for subject ID ' sub_date.ID{i}])
 mri_realigned_1 = ft_volumerealign(cfg, mri_coordsys);
 
-%save(['../mat_data/MRI_mat/' 'ID' char(sub_date{i,1}) '_mri_realigned_1'], 'mri_realigned_1');
+%save([mri_path_out 'mri_realigned_1'], 'mri_realigned_1');
 
 %Read MEG data for subject, takes first available fif
-subpath = [meg_data_path 'NatMEG_' char(sub_date.ID{i}) '/' char(sub_date.date{i}) '/'];
+subpath = [meg_data_path 'NatMEG_' sub_date.ID{i} '/' sub_date.date{i} '/'];
 fnames = find_files(subpath, {'tinmeg1', 'tsss'}, 'ds');
 fnames = fnames{1};
 
@@ -53,8 +53,8 @@ MEGfile = fullfile(subpath, fnames);
 headshape = ft_read_headshape(MEGfile);
 sensshape = ft_read_sens(MEGfile);
 
-save(['../mat_data/MRI_mat/' 'ID' char(sub_date{i,1}) '_headshape'], 'headshape');
-save(['../mat_data/MRI_mat/' 'ID' char(sub_date{i,1}) '_sensshape'], 'sensshape');
+save([mri_path_out 'headshape'], 'headshape');
+save([mri_path_out 'sensshape'], 'sensshape');
 
 %plot headshape points
 % figure
@@ -79,4 +79,4 @@ cfg.coordsys            = 'neuromag';
 
 mri_realigned_vol_3 = ft_volumerealign(cfg, mri_realigned_vol_2);
 
-save(['../mat_data/MRI_mat/' 'ID' char(sub_date{i,1}) '_mri_realigned'], 'mri_realigned_vol_3');
+save([mri_path_out 'mri_realigned'], 'mri_realigned_vol_3');

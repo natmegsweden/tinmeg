@@ -114,64 +114,122 @@ clear('i', 'ii', 'iii', 'logheight');
 %% MR step 1
 %  Require some manual input for fiducials and coordsys
 
-for i = 1:length(sub_date.ID);
+for i = 1:4%length(sub_date.ID);
     
-    sub_mri_path = ['../MRI/' 'NatMEG_' char(sub_date{i,1})];
-    fname = ['../mat_data/MRI_mat/' 'ID' char(sub_date{i,1}) '_mri_realigned.mat'];
-
+    mri_path_in = ['../MRI/' 'NatMEG_' sub_date.ID{i}];
+    mri_path_out = ['../mat_data/MRI_mat/ID' sub_date.ID{i} '/'];
+    
     %Check if realigned mri exist for subject
-    if exist(fname, 'file')
-    warning(['Output' fname ' exist for subject ' char(sub_date{i,1})])
+    if exist([mri_path_out 'mri_realigned.mat'], 'file')
+    warning(['Output mri_realignet exist for subject: ' char(sub_date{i,1})])
     continue
+    
+    elseif ~exist(mri_path_out, 'file')
+    mkdir(mri_path_out);
+
     end
     
     run('D_MR_prep.m');
     
 end
 
-clear('');
+clear('mri_coordsys', 'mri_realigned_1', 'mri_realigned_vol_2', 'mri_realigned_vol_3', 'submri', 'sensshape', 'headshape', 'dcmfile', 'dicom_path', 'MEGfile', 'mri_path_in', 'mri_path_out', 'i');
 
 %% MR Step 2
 %  Re-slice and segment, time-conusming (5 min per subject) not requiring manual inputs
 
-for i = 1:length(sub_date.ID);
+for i = 1:4%length(sub_date.ID);
     
-    sub_mri_path = ['../MRI/' 'NatMEG_' char(sub_date{i,1})];
-    fname = ['../mat_data/MRI_mat/' 'ID' char(sub_date{i,1}) '_MEG_headmodel.mat'];
+    %Note paths change from MR step 1 - in/out same here
+    sub_mri_path = ['../mat_data/MRI_mat/ID' sub_date.ID{i} '/'];
+    
+    fname = [sub_mri_path 'meg_headmodel.mat'];
 
-%     %Check if headmodel exist for subject
-%     if exist(fname, 'file')
-%     warning(['Output' fname ' exist for subject ' char(sub_date{i,1})])
-%     continue
-%     end
+    %Check if headmodel exist for subject
+    if exist(fname, 'file')
+    warning(['Output' fname ' exist for subject ' sub_date.ID{i}])
+    continue
+    end
     
     run('D_MR_prep2.m');
     
 end
 
-%% MR Step 3
-%  Loop through plots for ALL[!] subjects to check for errors
+clear('binary_brain', 'binary_scalp', 'binary_skull', 'headmodel_meg', 'mesh_brain', 'mri_segmented', 'mri_segmented_2', 'mri_realigned_vol_3', 'mri_resliced', 'cfg');
 
+%% MR Step 3
+%  Loop through plots for ALL[!] subjects to check for error
+
+%Subject sourcemodel (basedonmni) and headmodel
+for i = 1:4%length(sub_date.ID);
+    meg_inpath = ['../mat_data/ICA/' 'ID' sub_date.ID{i} '/'];
+    mri_inpath = ['../mat_data/MRI_mat/ID' sub_date.ID{i} '/'];
+    outdir = ['../mat_data/source_reconstruction/' 'ID' sub_date.ID{i} '/'];
+    
+    %headmodel_meg
+    headmodel_meg = load([mri_inpath 'meg_headmodel.mat']); 
+    headmodel_meg = headmodel_meg.headmodel_meg;
+    
+    %Load subject sourcemodel in template grid format (based on MNI)
+    subject_grid = load([mri_inpath 'subject_grid.mat']);
+    subject_grid = subject_grid.subject_grid;
+    
+    
+    %Final plot - aligned MEG   
+    fig = figure('Position', [400 300 1800 800], 'Name', ['SUBJECT: ' sub_date.ID{i}], 'NumberTitle', 'off');
+    hold on;
+    
+    subplot(1,2,1)
+    ft_plot_headmodel(headmodel_meg, 'edgecolor', 'none', 'facealpha', 0.4,'facecolor', 'b');
+    ft_plot_mesh(subject_grid.pos(subject_grid.inside,:));
+    x = gca;
+    x.CameraPosition = [-1100 -1300 400];
+    
+    subplot(1,2,2)
+    ft_plot_headmodel(headmodel_meg, 'edgecolor', 'none', 'facealpha', 0.4,'facecolor', 'b');
+    ft_plot_mesh(subject_grid.pos(subject_grid.inside,:));
+    x = gca;
+    x.CameraPosition = [1100 1300 200];
+    
+    %Pause loop until figure is closed
+    uiwait(fig);
+    
+end
+
+%Headshape and headmodel in sensors
 for i = 1:4%length(sub_date.ID);
     
+    sub_mri_path = ['../mat_data/MRI_mat/ID' sub_date.ID{i} '/'];
+    
     %ft_read_headshape(MEGfile);
-    load(['../mat_data/MRI_mat/' 'ID' sub_date.ID{i} '_headshape']);
+    load([sub_mri_path 'headshape']);
     
     %ft_read_sens(MEGfile);
-    load(['../mat_data/MRI_mat/' 'ID' sub_date.ID{i} '_sensshape']);
+    load([sub_mri_path 'sensshape']);
     
     %ft_prepare_headmodel(cfg, mesh_brain);
-    load(['../mat_data/MRI_mat/' 'ID' sub_date.ID{i} '_MEG_headmodel']);
+    load([sub_mri_path 'meg_headmodel']);
     
     %Final plot - aligned MEG
-    fig = figure('Position', [800 300 900 900]); %[Left Bottom Width Height]
+    fig = figure('Position', [400 300 1800 800], 'Name', ['SUBJECT: ' sub_date.ID{i}], 'NumberTitle', 'off'); %Postion: [Left Bottom Width Height]
     hold on;
-    ft_plot_sens(sensshape)
+    
+    subplot(1,2,1)
+    ft_plot_sens(sensshape)    
     ft_plot_headshape(headshape)
     ft_plot_headmodel(headmodel_meg)
     ft_plot_axes([], 'unit', 'cm');
+    x = gca;
+    x.CameraPosition = [240 140 140];
     
-    title(['SUBJECT: ' sub_date.ID{i}]);
+    subplot(1,2,2)
+    ft_plot_sens(sensshape)
+    ft_plot_headshape(headshape)
+    ft_plot_headmodel(headmodel_meg)
+    ft_plot_axes([], 'unit', 'cm');    
+    
+    x = gca;
+    x.CameraPosition = [-240 -140 70];
     
     %Pause loop until figure is closed
     uiwait(fig);
