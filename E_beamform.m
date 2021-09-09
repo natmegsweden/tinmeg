@@ -24,11 +24,6 @@ for i = 1:4%length(sub_date.ID);
     subject_grid = load([mri_inpath 'subject_grid.mat']);
     subject_grid = subject_grid.subject_grid;
     
-    %Replace subjects grid position with template grid positions to be able to group subjects
-    subject_grid.pos_org = subject_grid.pos;
-    subject.grid.pos = template_grid.pos;
-    
-
     %Check if subject dir exist, create/define
     if ~exist(outdir, 'file');
     mkdir(outdir);
@@ -45,7 +40,6 @@ for i = 1:4%length(sub_date.ID);
     GP60ica = GP60ica.GP60ica;
     GP70ica = load([meg_inpath 'GP70ica.mat']);
     GP70ica = GP70ica.GP70ica;
-
     
     %Append data
     cfg = [];
@@ -54,7 +48,7 @@ for i = 1:4%length(sub_date.ID);
     
     
     %Load or create leadfield
-    if ~exist([outdir 'leadfield.mat'], 'file');
+%     if ~exist([outdir 'leadfield.mat'], 'file');
 
     cfg.senstype        = 'meg'; %??
     cfg.grad            = appended.grad;
@@ -67,12 +61,12 @@ for i = 1:4%length(sub_date.ID);
     leadfield = ft_prepare_leadfield(cfg);
     save([outdir 'leadfield.mat'], 'leadfield');
     
-    elseif exist([outdir 'leadfield.mat'], 'file');
-    
-    leadfield = load([outdir 'leadfield.mat']);
-    leadfield = leadfield.leadfield;
-    
-    end
+%     elseif exist([outdir 'leadfield.mat'], 'file');
+%     
+%     leadfield = load([outdir 'leadfield.mat']);
+%     leadfield = leadfield.leadfield;
+%     
+%     end
     
     %Loose ECG/EOG channels
     cfg = [];
@@ -148,13 +142,13 @@ for i = 1:4%length(sub_date.ID);
     cfg.sourcemodel         = leadfield;
     source_org = ft_sourceanalysis(cfg, data_cov);
     
-    save([outdir 'source_org.mat'], 'source_org');
+    %save([outdir 'source_org.mat'], 'source_org');
     
     mri_resliced = load([mri_inpath 'mri_resliced.mat']);
     mri_resliced = mri_resliced.mri_resliced;
     
     %Currently only for PO60, consider: cond.([conditions{1} 'trig'])(1)
-    for ii = [2 5]%1:length(cond.PO60trig);
+    for ii = 1:length(cond.PO60trig);
     
     %Select event data (manual trigger, should refer to structure: cond)
     trigger = cond.PO60trig(ii);
@@ -208,9 +202,9 @@ for i = 1:4%length(sub_date.ID);
     cfg = [];
     cfg.parameter    = 'pow';
     cfg.interpmethod = 'nearest';
-    source_int  = ft_sourceinterpolate(cfg, contrast_lcmv, mri_resliced);
+    %source_int  = ft_sourceinterpolate(cfg, contrast_lcmv, mri_resliced);
     
-    save([outdir char(cond.PO60label(ii)) '_interpolated.mat'], 'source_int');
+    %save([outdir char(cond.PO60label(ii)) '_interpolated.mat'], 'source_int');
 
     
     %Plot and save
@@ -225,9 +219,9 @@ for i = 1:4%length(sub_date.ID);
 %     cfg.opacitylim    = [0 3] % or 'zeromax'
     
     cfg.position        = [700 300 950 950];
-    ft_sourceplot(cfg, source_int);
+    %ft_sourceplot(cfg, source_int);
 
-    saveas(gcf, [outdir char(cond.PO60label(ii)) '.png']);
+    %saveas(gcf, [outdir char(cond.PO60label(ii)) '.png']);
     
     close
     
@@ -236,159 +230,4 @@ for i = 1:4%length(sub_date.ID);
     
 end
 
-%% Implement atlas for ROI analysis
-
-%Load atlas
-brainnetome = ft_read_atlas('../../fieldtrip-20210311/template/atlas/brainnetome/BNA_MPM_thr25_1.25mm.nii', 'unit', 'cm');
-
-for i = 1%:4%length(sub_date.ID);
-    
-    subject_grid = load(mri_inpath 'subject_grid.mat']);
-    subject_grid = subject_grid.subject_grid;
-    
-    %create sourcemodel with atlas labels
-    cfg = [];
-    cfg.interpmethod = 'nearest';
-    cfg.parameter =     'tissue';
-    
-    atlas_interpolated = ft_sourceinterpolate(cfg, brainnetome, subject_grid);
-    
-    subject_grid.tissue = atlas_interpolated.tissue;
-    subject_grid.tissuelabel = atlas_interpolated.tissuelabel;
-    subject_grid.transform = atlas_interpolated.transform;
-    
-end
-
-%% ??
-
-%create sourcemodel with atlas labels
-    cfg = [];
-    cfg.interpmethod = 'nearest';
-    cfg.parameter =     'tissue';
-    
-    atlas_interpolated = ft_sourceinterpolate(cfg, brainnetome, mri_resliced);
-
-
-%% Plots of ROI in subject
-
-% indx = find(subject_grid.tissue == 71 | subject_grid.tissue == 72);
-
-% %Load headmodel and MR for plotting
-% load('../mat_data/MRI_mat/ID0539_MEG_headmodel.mat');
-% load('../mat_data/MRI_mat/ID0539_mri_resliced.mat');
-
-% %Subject MRI, headmodel and ROI sources
-% ft_determine_coordsys(mri_resliced, 'interactive', 'no'); hold on;
-% ft_plot_mesh(subject_grid.pos(indx,:), 'vertexcolor', 'r', 'vertexsize', 20);
-% ft_plot_headmodel(headmodel_meg, 'facealpha', 0.2, 'edgecolor', [0.9 0.9 1]);
-% x = gca;
-% x.CameraPosition = [64 -70 250];
-% 
-% %ROI sources within template grid
-% figure
-% hold on
-% ft_plot_mesh(subject_grid.pos(subject_grid.inside,:));
-% ft_plot_mesh(subject_grid.pos(indx,:), 'vertexcolor', 'r', 'vertexsize', 30);
-% 
-% %ROI sources within headmodel
-% figure
-% hold on
-% ft_plot_headmodel(headmodel_meg, 'facealpha', 0.5, 'edgecolor', [0.9 0.9 1]);
-% ft_plot_mesh(subject_grid.pos(indx,:), 'vertexcolor', 'r', 'vertexsize', 30);
-% x = gca;
-% x.CameraPosition = [110 135 10];
-
-
-%% Trying to loop conditions for four subjects
-
-roi_source = struct;
-
-%testing for 4 subjects
-for j = 1:4
-    
-    subject_grid = load([mri_inpath 'subject_grid.mat']);
-    subject_grid = subject_grid.subject_grid;
-    
-    %create sourcemodel with atlas labels
-    cfg = [];
-    cfg.interpmethod = 'nearest';
-    cfg.parameter =     'tissue';
-    
-    atlas_interpolated = ft_sourceinterpolate(cfg, brainnetome, subject_grid);
-    
-    disp(['now parcelating subject: ' sub_date.ID{j}]);
-    
-    subject_grid.tissue = atlas_interpolated.tissue;
-    subject_grid.tissuelabel = atlas_interpolated.tissuelabel;
-    subject_grid.transform = atlas_interpolated.transform;
-
-    for jj = 1:numel(cond.PO60label);
-
-        load(['../mat_data/source_reconstruction/ID' sub_date.ID{j} '/' cond.PO60label{jj} '_stim_source.mat']);
-        load(['../mat_data/source_reconstruction/ID' sub_date.ID{j} '/' cond.PO60label{jj} '_base_source.mat']);
-
-        %Contrast between stim and baseline
-        contrast_lcmv = stim_source;       % Copy
-        contrast_lcmv.avg.pow = (stim_source.avg.pow-base_source.avg.pow)./base_source.avg.pow;
-        
-        cfg = [];
-        cfg.parcellation = 'tissue';
-        cfg.parameter = 'pow';
-
-        output = ft_sourceparcellate(cfg, contrast_lcmv, subject_grid);
-
-        roi_source.Rpow60PO(j, jj) = output.pow(71)
-        roi_source.Lpow60PO(j, jj) = output.pow(72)
-
-%       output = 
-%              time: [1x61 double]
-%             label: {1x246 cell}
-%               pow: [246x1 double]
-%         powdimord: 'chan'
-%     brainordinate: [1x1 struct]
-%               cfg: [1x1 struct]
-        
-    end
-
-end
-
-%save(['../mat_data/roi_source_test.mat'], 'roi_source');
-
-figure('Position', [600 300 1400 600]);
-subplot(1,2,1)
-boxplot(roi_source.Rpow60PO, 'Labels', {'70', '75', '80', '85', '90', '95'})
-ylim([-0.2 0.6])
-title('Right STG')
-xlabel('Pulse level (dBA equivalent)')
-ylabel('Power in ROI')
-
-subplot(1,2,2)
-boxplot(roi_source.Lpow60PO, 'Labels', {'70', '75', '80', '85', '90', '95'})
-ylim([-0.2 0.6])
-title('Left STG')
-xlabel('Pulse level (dBA equivalent)')
-%ylabel('Power in ROI')
-
-
-%% sourceplot ROI?
-
-template_mri = ft_read_mri(['../../fieldtrip-20210311/external/spm8/templates/T1.nii']);
-
-contrast_lcmv.tissue = subject_grid.tissue;
-contrast_lcmv.tissuelabel = subject_grid.tissuelabel;
-
-contrast_lcmv.mask = (contrast_lcmv.tissue == 71 | contrast_lcmv.tissue == 72);
-
-cfg = [];
-cfg.method = 'slice';
-cfg.funparameter = 'pow';
-cfg.atlas = 'brainnetome';
-%cfg.roi = contrast_lcmv.tissuelabel{71};
-cfg.maskparameter = contrast_lcmv.mask;
-
-ft_sourceplot(cfg, contrast_lcmv, template_mri);
-
-%% Group level analysis
-
-
-
+clear ('appended', 'subject_grid', 'headmodel_meg', 'dataw_meg', 'data_cov', 'base_cov', 'stim_cov', 'baseline_noise', 'mri_resliced', 'leadfield', 'kappa', 'kappa_grad', 'kappa_mag', 'trigger', 'd_grad', 'd_mag', 'source_org', 'base', 'stim', 'base_source', 'stim_source', 'contrast_lcmv', 'PO60ica', 'GP60ica', 'PO70ica', 'GP70ica', 'GOica', 's_grad', 's_mag', 'u', 'v', 'selmag', 'selgrad')
