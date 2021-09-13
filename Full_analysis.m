@@ -19,7 +19,13 @@ mri_data_path = '../MRI/';
 %Sourcemodel template
 load('/../../fieldtrip-20210311/template/sourcemodel/standard_sourcemodel3d6mm');
 template_grid = sourcemodel;
-clear sourcemodel
+template_grid = ft_convert_units(template_grid, 'mm');
+clear sourcemodel;
+
+%MRI template (https://www.fieldtriptoolbox.org/template/headmodel/)
+load standard_mri;
+template_mri = mri;
+clear mri;
 
 %Readtable of subjects (as string)
 sub_date = readtable('../sub_date.txt', 'Format', '%s%s');
