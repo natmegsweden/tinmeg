@@ -9,11 +9,11 @@ template_mri = mri;
 %% Load subjects source reconstructions for conditions and run ft_sourcestatistic
     
     %PO60
-for i = 1%:length(cond.PO60label);
+for i = 1:length(cond.PO60label);
 
     for ii = 1:4%length(sub_date.ID)
         
-    inpath = ['../mat_data/source_reconstruction/' 'ID' sub_date.ID{i} '/'];
+    inpath = ['../mat_data/source_reconstruction/' 'ID' sub_date.ID{ii} '/'];
         
     %Load conditions to compare
     base = load([inpath cond.PO60label{i} '_base_source.mat']);
