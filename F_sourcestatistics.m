@@ -30,7 +30,15 @@ for i = 1:length(cond.PO60label);
     all_base{ii} = base
     
     end
+    
+    cfg = [];
+    cfg.parameter = 'avg'
+    cfg.keepindividual = 'no';
 
+    sourceGA = ft_sourcegrandaverage(cfg, all_stim{:}, all_base{:});
+    
+    save(['../mat_data/stats/' cond.PO60label{i} '_source_gravg.mat'], 'sourceGA', '-v7.3');
+    
     cfg=[];
     cfg.dim         = all_stim{1}.dim;
     cfg.method      = 'montecarlo';
@@ -48,22 +56,23 @@ for i = 1:length(cond.PO60label);
     cfg.uvar        = 1; % row of design matrix that contains unit variable (in this case: subjects)
     cfg.ivar        = 2; % row of design matrix that contains independent variable (the conditions)
 
-    stat = ft_sourcestatistics(cfg, all_stim{:}, all_base{:});
+    %stat = ft_sourcestatistics(cfg, all_stim{:}, all_base{:});
     
-    save(['../mat_data/stats/' cond.PO60label{i} '_stat_stimVSbase.mat'], 'stat', '-v7.3');
+    %save(['../mat_data/stats/' cond.PO60label{i} '_stat_stimVSbase.mat'], 'stat', '-v7.3');
+    
+    clear ('all_base', 'all_stim');
     
     cfg = [];
     cfg.parameter    = 'stat';
     cfg.interpmethod = 'nearest';
-    int_stat = ft_sourceinterpolate(cfg, stat, template_mri);
+    %int_stat = ft_sourceinterpolate(cfg, stat, template_mri);
 
-    save(['../mat_data/stats/' cond.PO60label{i} '_int_stat.mat'], 'int_stat', '-v7.3');
+    %save(['../mat_data/stats/' cond.PO60label{i} '_int_stat.mat'], 'int_stat', '-v7.3');
+    
+    clear ('stat', 'int_stat');
     
 end
 
-
-
-clear ('base', 'stim');
 
 %%
 
@@ -74,9 +83,9 @@ cfg.funcolormap     = 'jet';
 
 cfg.maskparameter = cfg.funparameter;
 
-cfg.funcolorlim = [0 250];
+cfg.funcolorlim = [0 20];
 
-cfg.opacitylim = [0 250];
+cfg.opacitylim = [0 20];
 cfg.opacitymap = 'rampup';
 
 ft_sourceplot(cfg, int_stat);
