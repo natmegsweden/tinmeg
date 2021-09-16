@@ -31,13 +31,21 @@ for i = 1:length(cond.PO60label);
     
     end
     
+    %Calculate and save power difference for grand average
     cfg = [];
-    cfg.parameter = 'avg'
     cfg.keepindividual = 'no';
 
-    sourceGA = ft_sourcegrandaverage(cfg, all_stim{:}, all_base{:});
+    stim_gravg = ft_sourcegrandaverage(cfg, all_stim{:});
+    base_gravg = ft_sourcegrandaverage(cfg, all_base{:});
     
-    save(['../mat_data/stats/' cond.PO60label{i} '_source_gravg.mat'], 'sourceGA', '-v7.3');
+    cfg = [];
+    cfg.parameter = 'pow';
+    cfg.operation = 'x1 - x2'
+    pow_diff = ft_math(cfg, stim_gravg, base_gravg);
+    
+    clear('stim_gravg', 'base_grav');
+    
+    save(['../mat_data/stats/' cond.PO60label{i} '_pow_diff.mat'], 'pow_diff', '-v7.3');
     
     cfg=[];
     cfg.dim         = all_stim{1}.dim;
