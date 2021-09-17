@@ -1,7 +1,7 @@
 
 
 % For every subject
-for i = 1:4 %test with first 4, length(sub_date.ID)
+
 
 inpath = ['../mat_data/preprocessing/' 'ID' sub_date.ID{i} '/']
 
@@ -229,4 +229,4 @@ GOica.sampleinfo = GOmat.sampleinfo;
 
 save([outdir 'GOica.mat'], 'GOica');
 
-end
+clear('PO60ica', 'PO70ica', 'GP60ica', 'GP70ica', 'GOica');

@@ -113,6 +113,16 @@ end
 
 clear('i', 'ii', 'iii', 'logheight');
 
+%% ICA
+
+for i = 1:length(sub_date.ID);
+    
+    run('C2_ICA.m');
+    
+end
+
+
+
 %% Timelockedanalysis
 
 
