@@ -2,14 +2,13 @@
 
 % For every subject
 
-
 inpath = ['../mat_data/preprocessing/' 'ID' sub_date.ID{i} '/']
 
 outdir = ['../mat_data/ICA/' 'ID' sub_date.ID{i} '/']
 
 %Check if subject dir exist, create/define
 if ~exist(outdir, 'file');
-mkdir(outdir);
+    mkdir(outdir);
 end
 
 %Load in the stupidest way possible
@@ -229,4 +228,4 @@ GOica.sampleinfo = GOmat.sampleinfo;
 
 save([outdir 'GOica.mat'], 'GOica');
 
-clear('PO60ica', 'PO70ica', 'GP60ica', 'GP70ica', 'GOica');
+clear('PO60ica', 'PO70ica', 'GP60ica', 'GP70ica', 'GOica', 'appended_ICA', 'appended', 'temp', 'data_ecg', 'comp_ecg', 'freq', 'fd_comp', 'fdcomp', 'comp', 'PO60mat', 'PO70mat', 'GP60mat', 'GP70mat', 'GOmat', 'cleaned4mat', 'ecg');
