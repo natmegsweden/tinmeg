@@ -115,12 +115,23 @@ clear('i', 'ii', 'iii', 'logheight');
 
 %% ICA
 
+%need to implement skip if exist in C2_ICA.m
+
+%Warning: Modified ft_artefact_ecg to assume 'y' for inspection 2021-09-17
+% #205, #291, #306
+
 for i = 1:length(sub_date.ID);
+    
+    outdir = ['../mat_data/ICA/' 'ID' sub_date.ID{i} '/'];
+    
+    if exist(outdir, 'file');
+    warning(['Output folder exist for subject ' sub_date.ID{i} ' - skipping..']);
+    continue
+    end
     
     run('C2_ICA.m');
     
 end
-
 
 
 %% Timelockedanalysis
