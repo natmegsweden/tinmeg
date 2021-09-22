@@ -115,8 +115,6 @@ clear('i', 'ii', 'iii', 'logheight');
 
 %% ICA
 
-%need to implement skip if exist in C2_ICA.m
-
 %Warning: Modified ft_artefact_ecg to assume 'y' for inspection 2021-09-17
 % #205, #291, #306
 
