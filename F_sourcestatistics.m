@@ -6,14 +6,34 @@ brainnetome = ft_read_atlas('../../fieldtrip-20210311/template/atlas/brainnetome
 load standard_mri;
 template_mri = mri;
 
+%% Common variables that loads in "Full_analysis" - shared between many scripts in pipeline
+
+sub_date = table();
+sub_date.ID{1} = '0697';
+sub_date.date{1} = '210208';
+
+%all conditions
+conditions = ({'PO60', 'PO70', 'GP60', 'GP70', 'GO'});
+
+%Structure for triggers and labels
+cond = struct();
+
+%trigger at pulse onset
+cond.PO60trig   = [40968 36872 34824 33800 33288 33032];
+cond.PO60label  = ({'PO60_70', 'PO60_75', 'PO60_80', 'PO60_85', 'PO60_90', 'PO60_95'});
+
+%Sourcemodel template
+load('/../../fieldtrip-20210311/template/sourcemodel/standard_sourcemodel3d6mm');
+template_grid = sourcemodel;
+template_grid = ft_convert_units(template_grid, 'mm');
+clear sourcemodel;
+
 %% Load subjects source reconstructions for conditions and run ft_sourcestatistic
     
-    %PO60
-    %cond.PO60label is the names of 6 conditions i.e. 'PO60_70', 'PO60_75' and so on..
-    
+    %PO60    
 for i = 1%:length(cond.PO60label);
 
-    for ii = 1%:4%length(sub_date.ID) - load one subject only for test
+    for ii = 1%:4%length(sub_date.ID)
     
     inpath = ['../mat_data/source_reconstruction/' 'ID' sub_date.ID{ii} '/']; %sub_date is table of subject IDs
         
@@ -36,6 +56,7 @@ for i = 1%:length(cond.PO60label);
     
     end
     
+    
     %Calculate and save power difference for grand average
     cfg = [];
     cfg.keepindividual = 'no';
@@ -52,6 +73,8 @@ for i = 1%:length(cond.PO60label);
     
     %save(['../mat_data/stats/' cond.PO60label{i} '_pow_diff.mat'], 'pow_diff', '-v7.3');
     
+    
+    %Sourcestatistic between stim and baseline window
     cfg=[];
     cfg.dim         = all_stim{1}.dim;
     cfg.method      = 'montecarlo';
@@ -75,6 +98,8 @@ for i = 1%:length(cond.PO60label);
     
     clear ('all_base', 'all_stim');
     
+    
+    %Interpolate power difference on template MRI
     cfg = [];
     cfg.parameter    = 'pow';
     cfg.interpmethod = 'nearest';
