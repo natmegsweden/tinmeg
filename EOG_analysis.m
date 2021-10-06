@@ -177,6 +177,7 @@ plot([50 50], [ax.YLim(1), ax.YLim(2)], '--r');
 legend('70', '75', '80', '85', '90', '95');
 title({'Average EOG amplitude', 'after pulse only (n = 22)'});
 
+%NB, this is the GP times of samples, are corrected with ft_redefinetrial earlier.
 times = [-20:1:60]/200*1000;
 
 ax = gca;
