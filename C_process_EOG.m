@@ -4,6 +4,10 @@
 % Check if exist and skip
 % Plot
 
+%%%%%%%%%%%%%%%%%%%%%%
+%%% variable cfg.baseline for PO and GP conditions!
+%%%%%%%%%%%%%%%%%%%%%%
+
 %% Create timelockeds for EOG
 
 %implement: if exist load
