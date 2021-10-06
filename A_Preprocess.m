@@ -53,10 +53,15 @@ sub_data = subpaths(i,2:max(find(~cellfun(@isempty,subpaths(i,:)))));
 
 % NB! cellfun for cfg.dataset defines 2:highest populated column
 cfg.dataset             = sub_data;
-cfg.trialdef.prestim    = 0.35;        % seconds before trigger
-cfg.trialdef.poststim   = 0.30;        % seconds after trigger
+cfg.trialdef.prestim    = 0.500;        % seconds before trigger
+cfg.trialdef.poststim   = 0.320;        % seconds after trigger
 cfg.trialdef.eventvalue = eval(['cond.' char(conditions(ii)) 'trig']); % :/
 cfg.trialfun            = 'ft_trialfun_neuromagSTI016fix';
+
+% On pre/post-stim, consider ISI240 as longest trial, i.e trial structure of
+% baseline: 200 ms
+% gap duration: 50 ms
+% ISI: 240 ms, i.e, min of: 490 ms prestim
 
 cfg = ft_definetrial(cfg);
 
@@ -67,8 +72,8 @@ cfg.trl = cfg.trl(cfg.trl(:,1) >= 0,:);
 cfg.trl = cfg.trl(cfg.trl(:,2) < max([cfg.event.sample]),:);
 
 
-
 %Removed artifact script here
+
 
 % preprocessing
 cfg.demean     = 'no';
