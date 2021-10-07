@@ -39,7 +39,7 @@ end
 for ii = 1:length(conditions)
 
 %Create filename and check if raw file for condition exist
-fname = [char(conditions(ii)) '_raw' '.mat'];
+fname = [conditions{ii} '_raw' '.mat'];
 
     if exist([outdir fname], 'file')
     warning(['Output' fname ' exist for subject ' sub_date.ID{i}])
@@ -71,9 +71,16 @@ cfg.trl = cfg.trl(cfg.trl(:,1) >= 0,:);
 %Remove trials from cfg.trl that have higher sample index than exist in file
 cfg.trl = cfg.trl(cfg.trl(:,2) < max([cfg.event.sample]),:);
 
+%offset PO-trials with 50ms to compensate for ERROR in presentation-script that had trigger wait for gap duration (50ms) even when no gap
+for r = 1:length(cfg.trl)
+    if (ismember(cfg.trl(r,4), [cond.PO70trig cond.PO60trig]))
+        cfg.trl(r,1) = cfg.trl(r,1) - 250;
+        cfg.trl(r,2) = cfg.trl(r,2) - 250;
+        cfg.trl(r,3) = cfg.trl(r,3) - 250;
+    end
+end
 
-%Removed artifact script here
-
+clear r
 
 % preprocessing
 cfg.demean     = 'no';
@@ -83,6 +90,13 @@ cfg.dftfilter  = 'no';
 cfg.channel    = {'MEG', 'ECG', 'EOG'};
 
 res4mat = ft_preprocessing(cfg);
+
+%adjust time-variable to match offset for PO-trials
+if conditions{ii} == 'PO60' | conditions{ii} == 'PO70'    
+    cfg = [];
+    cfg.offset = 250;
+    res4mat = ft_redefinetrial(cfg, res4mat);   
+end
 
 save([outdir fname], 'res4mat', '-v7.3')
 
