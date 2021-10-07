@@ -57,7 +57,7 @@ end
 
 writetable(cell2table(subpaths), '../Analysis Output/included_filepaths.csv') %Write log
 
-%% Read or create log file of conditions and artifacts
+%% Read or create log file of conditions and trials for preprocessing
 
 %create log for n of trials in raw data
 %first row are labels, first column IDs
@@ -85,7 +85,7 @@ end
 %specify downsampled freq(Hz)
 fs_ds = 200;
 
-for i = 1:length(sub_date.ID);
+for i = 1%:5%length(sub_date.ID);
     
     run('A_Preprocess.m');
     

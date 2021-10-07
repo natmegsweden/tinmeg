@@ -136,7 +136,7 @@ fname = [char(conditions(ii)) '_ds' '.mat'];
 save([outdir fname], 'res4mat_ds')
 
 %clear temp variables
-clear res4mat res4mat_ds
+clear res4mat res4mat_ds trigs fname nstim outdir rawcondlog rawlogheight
 
 %end for conditions
 end
