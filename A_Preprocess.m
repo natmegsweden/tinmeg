@@ -92,7 +92,7 @@ cfg.channel    = {'MEG', 'ECG', 'EOG'};
 res4mat = ft_preprocessing(cfg);
 
 %adjust time-variable to match offset for PO-trials
-if conditions{ii} == 'PO60' | conditions{ii} == 'PO70'    
+if any(ismember(conditions{ii}, {'PO60', 'PO70'}))
     cfg = [];
     cfg.offset = 250;
     res4mat = ft_redefinetrial(cfg, res4mat);   
