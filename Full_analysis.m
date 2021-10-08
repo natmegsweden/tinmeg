@@ -85,13 +85,13 @@ end
 %specify downsampled freq(Hz)
 fs_ds = 200;
 
-for i = 1%:5%length(sub_date.ID);
+for i = 1:length(sub_date.ID);
     
     run('A_Preprocess.m');
     
 end
 
-clear('i', 'ii', 'iii', 'logheight', 'fs_ds');
+clear('i', 'ii', 'iii', 'logheight', 'fs_ds', 'trigs', 'rawcondlog', 'fname', 'nstim', 'outdir', 'rawlogheight');
 
 %% Loop over B_Clean.m for subjects and condititions with no cleaned output
 
@@ -111,7 +111,25 @@ for i = 1:length(sub_date.ID);
     
 end
 
-clear('i', 'ii', 'iii', 'logheight');
+clear('i', 'ii', 'iii', 'logheight', 'cleancondlog', 'cleaned4mat', 'fname', 'fpath', 'nstim', 'res4mat_ds', 'trigs');
+
+%% Process timelockeds of EOG002
+
+for i = 1:length(sub_date.ID)
+    
+    destdirectory = ['../mat_data/timelockeds/' 'ID' sub_date.ID{i} '/EOG/'];
+
+    %Check if output folder exist and skip subject or create folder
+    if exist(destdirectory, 'file');
+       warning(['EOG output folder already exist for subject ' sub_date.ID{i} ' - skipping..']);
+        continue
+    elseif ~exist(destdirectory, 'file');
+        mkdir(destdirectory);
+    end
+    
+    run('C_process_EOG.m');
+    
+end
 
 %% ICA
 
