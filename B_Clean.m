@@ -1,8 +1,8 @@
 %% Loop over dowsampled data in ft_rejectvisual where no cleaned output
 
 %Check if ID is in trial-log and determine row in log to write to
-if find(strcmp(['ID' char(sub_date.ID(i))], cleancondlog)) > 0;
-   logheight = find(strcmp(['ID' char(sub_date.ID(i))], cleancondlog));
+if find(strcmp(['ID' sub_date.ID{i}], cleancondlog)) > 0;
+   logheight = find(strcmp(['ID' sub_date.ID{i}], cleancondlog));
 else
 
 %Find height of trial-log and +1 for new row
@@ -10,7 +10,7 @@ logheight = size(cleancondlog);
 logheight = logheight(1) + 1;
 
 %Write ID to new row, column 1
-cleancondlog{logheight,1} = ['ID' char(sub_date.ID(i))];
+cleancondlog{logheight,1} = ['ID' sub_date.ID{i}];
 end
 
 %For each condition loaded
