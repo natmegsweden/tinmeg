@@ -1,62 +1,191 @@
 
 %% Source statistics and analysis
 
+%load atlas
 brainnetome = ft_read_atlas('../../fieldtrip-20210311/template/atlas/brainnetome/BNA_MPM_thr25_1.25mm.nii', 'unit', 'mm');
+%aal_atlas = ft_read_atlas('../../fieldtrip-20210311/template/atlas/aal/ROI_MNI_V4.nii', 'unit', 'mm');
 
-load standard_mri;
-template_mri = mri;
+%Interpolate atlas to template_grid
+cfg = [];
+cfg.parameter = 'tissue';
+cfg.interpmethod = 'nearest';
+atlas_grid = ft_sourceinterpolate(cfg, brainnetome, template_grid);
 
-%% Common variables that loads in "Full_analysis" - shared between many scripts in pipeline
+atlas_grid = ft_checkdata(atlas_grid, 'datatype', 'source');
+atlas_grid.inside = template_grid.inside;
 
-sub_date = table();
-sub_date.ID{1} = '0697';
-sub_date.date{1} = '210208';
+%Brainnetome-atlas labels (Brodmann 41&42 + TETE1.0&TE1.2)
+labels = [71 72 73 74];
 
-%all conditions
-conditions = ({'PO60', 'PO70', 'GP60', 'GP70', 'GO'});
+%Plot Atlas-ROI
+cfg.parameter = 'tissue';
+cfg.interpmethod = 'nearest';
+atlas_grid_int = ft_sourceinterpolate(cfg, atlas_grid, template_mri);
 
-%Structure for triggers and labels
-cond = struct();
+dummymask = (ismember(atlas_grid_int.tissue, labels));
+atlas_grid_int.dummymask = dummymask;
 
-%trigger at pulse onset
-cond.PO60trig   = [40968 36872 34824 33800 33288 33032];
-cond.PO60label  = ({'PO60_70', 'PO60_75', 'PO60_80', 'PO60_85', 'PO60_90', 'PO60_95'});
+cfg = [];
+cfg.method          = 'ortho';
+cfg.funparameter    = 'tissue';
+cfg.anaparameter    = 'anatomy';
+cfg.maskparameter   = 'dummymask';
+cfg.nslices = 25;
+cfg.position        = [700 300 950 950];
+ft_sourceplot(cfg, atlas_grid_int);
 
-%Sourcemodel template
-load('/../../fieldtrip-20210311/template/sourcemodel/standard_sourcemodel3d6mm');
-template_grid = sourcemodel;
-template_grid = ft_convert_units(template_grid, 'mm');
-clear sourcemodel;
+%% Plot difference map in TOI
 
-%% Load subjects source reconstructions for conditions and run ft_sourcestatistic
+    powdiff_sub = load([inpath cond.GP60label{3} '_powdiff.mat']);
+    powdiff_sub = powdiff_sub.powdiff_sub;
+    powdiff_sub.pos = template_grid.pos;
     
-    %PO60    
-for i = 1%:length(cond.PO60label);
-
-    for ii = 1%:4%length(sub_date.ID)
+    %POWERDIFF - Works but not informative..
+    cfg.parameter = 'pow';
+    cfg.interpmethod = 'nearest';
+    pow_diff_int = ft_sourceinterpolate(cfg, powdiff_sub, template_mri);
     
-    inpath = ['../mat_data/source_reconstruction/' 'ID' sub_date.ID{ii} '/']; %sub_date is table of subject IDs
+    pow_diff_int.dummymask = dummymask;
+    
+    cfg = [];
+    cfg.method          = 'slice';
+    cfg.funparameter    = 'pow';
+    cfg.funcolormap     = 'jet';
+    cfg.maskparameter   = 'dummymask';
+    cfg.position        = [700 300 950 950];
+    ft_sourceplot(cfg, pow_diff_int);
+
+%% Plot virtual channel for ROI
+
+virtchans = struct;
+
+%Condition
+for iii = 1%length(conditions);
+
+    %Trial
+    for i = 5%1:length(cond.([conditions{iii} 'label']));
+
+        for ii = 1:5%length(sub_date.ID)
+
+        inpath = ['../mat_data/source_reconstruction/' 'ID' sub_date.ID{ii} '/'];
+
+        stim = load([inpath cond.PO60label{i} '_stim_source.mat']);
+        stim = stim.stim_source; 
+        base = load([inpath cond.PO60label{i} '_base_source.mat']);
+        base = base.base_source;
+
+        %Parcellation
+        stim.tissue = atlas_grid.tissue;
+        stim.tissuelabel = atlas_grid.tissuelabel;
+        stim.pos = template_grid.pos;
+
+        base.tissue = atlas_grid.tissue;
+        base.tissuelabel = atlas_grid.tissuelabel;
+        base.pos = template_grid.pos;
+
+        cfg = [];
+        cfg.parcellation = 'tissue';
+        cfg.method = 'eig';
+
+        sub_par_stim = ft_sourceparcellate(cfg, stim, atlas_grid);
+        sub_par_base = ft_sourceparcellate(cfg, base, atlas_grid);
+
+        %Virtual-channel for area 71:74 in brainnetome
+        virtchans.(cond.([conditions{iii} 'label']){i})(ii,1:61) = mean(sub_par_stim.mom(71:74, :)) - (mean(mean(sub_par_base.mom(71:74, :))));
+
+        clear stim base;
         
-    %Load conditions to compare
-    base = load([inpath cond.PO60label{i} '_base_source.mat']); %baseline from ft_sourceanalysis
-    base = base.base_source;
+        %Subject
+        end
 
-    stim = load([inpath cond.PO60label{i} '_stim_source.mat']); %stim response window from ft_sourceanalysis
-    stim = stim.stim_source;
-    
-    %Overwrite position with template coordinates
-    base.pos = template_grid.pos;
-    stim.pos = template_grid.pos;
-    
-    %Collect all subjects in structure
-    all_stim{ii} = stim
-    all_base{ii} = base
-    
-    clear('stim', 'base');
-    
+    %Trials
     end
     
+%Conditions
+end
+
+%Condition
+for iii = 3%length(conditions);
+
+    %Trial
+    for i = 3%1:length(cond.([conditions{iii} 'label']));
+
+        for ii = 1:5%length(sub_date.ID)
+
+        inpath = ['../mat_data/source_reconstruction/' 'ID' sub_date.ID{ii} '/'];
+
+        stim = load([inpath cond.PO60label{i} '_stim_source.mat']);
+        stim = stim.stim_source; 
+        base = load([inpath cond.PO60label{i} '_base_source.mat']);
+        base = base.base_source;
+
+        %Parcellation
+        stim.tissue = atlas_grid.tissue;
+        stim.tissuelabel = atlas_grid.tissuelabel;
+        stim.pos = template_grid.pos;
+
+        base.tissue = atlas_grid.tissue;
+        base.tissuelabel = atlas_grid.tissuelabel;
+        base.pos = template_grid.pos;
+
+        cfg = [];
+        cfg.parcellation = 'tissue';
+        cfg.method = 'eig';
+
+        sub_par_stim = ft_sourceparcellate(cfg, stim, atlas_grid);
+        sub_par_base = ft_sourceparcellate(cfg, base, atlas_grid);
+
+        %Virtual-channel for area 71:74 in brainnetome
+        virtchans.(cond.([conditions{iii} 'label']){i})(ii,1:61) = mean(sub_par_stim.mom(71:74, :)) - (mean(mean(sub_par_base.mom(71:74, :))));
+
+        clear stim base;
+        
+        %Subject
+        end
+
+    %Trials
+    end
     
+%Conditions
+end
+
+
+figure; hold on
+for p = 1:5
+   
+    subplot(2,1,1);
+    xlim([1 61]);
+    ylim([-4 3]);
+    title('Pulse only control');
+    plot(virtchans.PO60_90(p,:), 'Color', [1 0 0 0.25]); hold on
+    plot(mean(virtchans.PO60_90(:,:)), 'Color', [1 0 0 1], 'LineWidth', 1);
+    
+    x = gca;
+    x.XTick = [1:10:61];
+    x.XTickLabel = [0:50:300];
+    x.XMinorTick = 'on';
+    x.FontSize = 12;
+    
+    subplot(2,1,2);
+    xlim([1 61]);
+    ylim([-4 3]);
+    title('ISI 120');
+    plot(virtchans.GP60_i120(p,:), 'Color', [0 0 1 0.25]); hold on;
+    plot(mean(virtchans.GP60_i120(:,:)), 'Color', [0 0 1 1], 'LineWidth', 1);
+    
+    x = gca;
+    x.XTick = [1:10:61];
+    x.XTickLabel = [0:50:300];
+    x.XMinorTick = 'on';
+    x.FontSize = 12;
+    
+end
+    
+%%
+
+all_stim{ii} = stim;
+all_base{ii} = base;
+
     %Calculate and save power difference for grand average
     cfg = [];
     cfg.keepindividual = 'no';
@@ -66,7 +195,7 @@ for i = 1%:length(cond.PO60label);
     
     cfg = [];
     cfg.parameter = 'pow';
-    cfg.operation = 'x1 - x2'
+    cfg.operation = 'x1 - x2';
     pow_diff = ft_math(cfg, stim_gravg, base_gravg);
     
     clear('stim_gravg', 'base_gravg');
@@ -98,7 +227,6 @@ for i = 1%:length(cond.PO60label);
     
     clear ('all_base', 'all_stim');
     
-    
     %Interpolate power difference on template MRI
     cfg = [];
     cfg.parameter    = 'pow';
@@ -109,32 +237,8 @@ for i = 1%:length(cond.PO60label);
     
     %clear ('int_powdiff');
     
-end
+
  
-%% Plot source power difference, n=4, PO60
-
-for i = 1:numel(cond.PO60label);
-
-load(['../mat_data/stats/'  cond.PO60label{i} '_stat_stimVSbase.mat']);
-
-%interpolate %.mask
-cfg = [];
-cfg.parameter    = 'mask';
-cfg.interpmethod = 'nearest';
-int_statmask = ft_sourceinterpolate(cfg, stat, template_mri);
-
-clear stat;
-
-save(['../mat_data/stats/' cond.PO60label{i} '_int_statmask.mat'], 'int_statmask', '-v7.3');
-
-load(['../mat_data/stats/'  cond.PO60label{i} '_int_powdiff.mat']);
-
-%Reshape .mask into cell array in interpolated power difference
-statmask = reshape(int_statmask.mask, int_powdiff.dim);
-int_powdiff.statmask = statmask;
-
-clear int_statmask;
-
 %ORTHO NOMASK
 cfg = [];
 cfg.method          = 'ortho';
@@ -149,69 +253,3 @@ cfg.opacitymap = 'rampup';
 
 cfg.position = [700 300 950 950];
 ft_sourceplot(cfg, int_powdiff);
-
-saveas(gcf, ['../Analysis Output/source_recon_test/' cond.PO60label{i} '_ortho_nomask.svg']);
-
-close
-
-
-%ORTHO MASK
-cfg = [];
-cfg.method          = 'ortho';
-cfg.funparameter    = 'pow';
-cfg.funcolormap     = 'jet';
-
-cfg.maskparameter = 'statmask';
-
-% cfg.funcolorlim = [0 20];
-% cfg.opacitylim = [0 20];
-cfg.opacitymap = 'rampup';
-
-cfg.position = [700 300 950 950];
-ft_sourceplot(cfg, int_powdiff);
-
-saveas(gcf, ['../Analysis Output/source_recon_test/' cond.PO60label{i} '_ortho_mask.svg']);
-
-close
-
-
-%SLICE NOMASK
-cfg = [];
-cfg.method          = 'slice';
-cfg.funparameter    = 'pow';
-cfg.funcolormap     = 'jet';
-
-%cfg.maskparameter = 'statmask';
-
-% cfg.funcolorlim = [0 20];
-% cfg.opacitylim = [0 20];
-cfg.opacitymap = 'rampup';
-
-cfg.position = [700 300 950 950];
-ft_sourceplot(cfg, int_powdiff);
-
-saveas(gcf, ['../Analysis Output/source_recon_test/' cond.PO60label{i} '_slice_nomask.svg']);
-
-close
-
-
-%SLICE MASK
-cfg = [];
-cfg.method          = 'slice';
-cfg.funparameter    = 'pow';
-cfg.funcolormap     = 'jet';
-
-cfg.maskparameter = 'statmask';
-
-% cfg.funcolorlim = [0 20];
-% cfg.opacitylim = [0 20];
-cfg.opacitymap = 'rampup';
-
-cfg.position = [700 300 950 950];
-ft_sourceplot(cfg, int_powdiff);
-
-saveas(gcf, ['../Analysis Output/source_recon_test/' cond.PO60label{i} '_slice_mask.svg']);
-
-close
-
-end
