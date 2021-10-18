@@ -1,10 +1,8 @@
 
-inpath = '../mat_data/timelockeds/';
+load('../mat_data/timelockeds/epochs_eog_all.mat');
+load(['../mat_data/timelockeds/epochs_eog_avgrast.mat']);
 
-load('../mat_data/epochs_eog.mat');
-load('../mat_data/epochs_eog_resp.mat');
-load('../mat_data/epochs_eog_all.mat');
-load(['../mat_data/epochs_eog_avgrast.mat']);
+load('../mat_data/timelockeds/epochs_eog.mat');
 
 
 %% load EOG data to structure
@@ -13,20 +11,20 @@ epochs_eog = struct;
 
 for i = 1:length(sub_date.ID)
     
-    subinpath = [inpath 'ID' sub_date.ID{i} '/'];
+    subinpath = ['../mat_data/timelockeds/ID' sub_date.ID{i} '/EOG/'];
     
     epochs_eog.subjects{i,1} = sub_date.ID{i};
     
     for ii = 1:length(conditions)
     
-    nstim = length(eval(['cond.' char(conditions(ii)) 'trig']));
-    label = eval(['cond.' char(conditions(ii)) 'label']);
+    nstim = length(eval(['cond.' conditions{ii} 'trig']));
+    label = eval(['cond.' conditions{ii} 'label']);
     
         for stim_index = 1:nstim
 
         VAR = 'eog_timelockeds';
         T = load([subinpath char(label(stim_index)) '_eog' '.mat'], VAR);
-        T = T.(VAR).avg(2,:);
+        T = T.(VAR).avg;
 
         epochs_eog.(conditions{ii}){i, stim_index} = T
         
@@ -41,7 +39,7 @@ for i = 1:length(sub_date.ID)
 %For subjects
 end
 
-%save(['../mat_data/epochs_eog.mat'], 'epochs_eog');
+%save(['../mat_data/timelockeds/epochs_eog.mat'], 'epochs_eog');
 
 %% load EOG keeptrials data to structure
 
@@ -49,7 +47,7 @@ epochs_eog_all = struct;
 
 for i = 1:length(sub_date.ID)
     
-    subinpath = [inpath 'ID' sub_date.ID{i} '/'];
+    subinpath = ['../mat_data/timelockeds/ID' sub_date.ID{i} '/EOG/'];
     
     epochs_eog_all.subjects{i,1} = sub_date.ID{i};
     
@@ -77,7 +75,7 @@ for i = 1:length(sub_date.ID)
 %For subjects
 end
     
-%save(['../mat_data/epochs_eog_all.mat'], 'epochs_eog_all');
+save(['../mat_data/timelockeds/epochs_eog_all.mat'], 'epochs_eog_all');
 
 
 %% find biggest response from structure
@@ -128,7 +126,9 @@ end
 
 epochs_eog_avgrast = struct;
 
-subinpath = [inpath 'ID' sub_date.ID{i} '/'];
+for i = 1:length(sub_date.ID)
+
+subinpath = ['../mat_data/timelockeds/ID' sub_date.ID{i} '/EOG/'];
 epochs_eog_avgrast.subjects{i,1} = sub_date.ID{i};
     
     for ii = 1:length(conditions)
@@ -154,350 +154,29 @@ epochs_eog_avgrast.subjects{i,1} = sub_date.ID{i};
     %For conditions
     end  
     
-%save(['../mat_data/epochs_eog_avgrast.mat'], 'epochs_eog_avgrast');
-
-%% Carrier 60 plots
-
-%Plot of mean EOG002 amplitude for all subjects PO60-stim
-%NB "times" (X axis) defined manually, from C_process_timelockeds.m
-figure
-hold on
-plot(mean(cell2mat(epochs_eog.PO60(:,1))));
-plot(mean(cell2mat(epochs_eog.PO60(:,2))));
-plot(mean(cell2mat(epochs_eog.PO60(:,3))));
-plot(mean(cell2mat(epochs_eog.PO60(:,4))));
-plot(mean(cell2mat(epochs_eog.PO60(:,5))));
-plot(mean(cell2mat(epochs_eog.PO60(:,6))));
-
-ax = gca;
-
-plot([35 35], [ax.YLim(1), ax.YLim(2)], '--r');
-plot([50 50], [ax.YLim(1), ax.YLim(2)], '--r');
-
-legend('70', '75', '80', '85', '90', '95');
-title({'Average EOG amplitude', 'after pulse only (n = 22)'});
-
-%NB, this is the GP times of samples, are corrected with ft_redefinetrial earlier.
-times = [-20:1:60]/200*1000;
-
-ax = gca;
-ax.XTickLabel = times(1:10:end);
-ax.XLim = [0 80];
-
-clear 'times';
-
-xlabel('Latency (ms)');
-ylabel('Amplitude (uV)');
-
-[hleg,att] = legend('show');
-title(hleg, 'Pulse level (dBA)');
-hleg.Location = 'southwest';
-
-hold off
-
-% Plot average GP60/ISI
-%NB "times" (X axis) defined manually, from C_process_timelockeds.m
-figure
-hold on
-plot(mean(cell2mat(epochs_eog.GP60(:,1))));
-plot(mean(cell2mat(epochs_eog.GP60(:,2))));
-plot(mean(cell2mat(epochs_eog.GP60(:,3))));
-plot(mean(cell2mat(epochs_eog.GP60(:,4))));
-
-%plot(mean(cell2mat(epochs_eog.GO(:,1))), '--r', 'LineWidth', 1);
-
-ax = gca;
-
-plot([35 35], [ax.YLim(1), ax.YLim(2)], '--r');
-plot([50 50], [ax.YLim(1), ax.YLim(2)], '--r');
-
-times = [-20:1:60]/200*1000;
-
-ax = gca;
-ax.XTickLabel = times(1:10:end);
-ax.XLim = [0 80];
-
-legend('0','60','120','240');
-title({'Average EOG amplitude with different', 'inter-stimulus interval (ISI) (n = 22)'});
-
-[hleg,att] = legend('show');
-title(hleg, 'ISI (ms)');
-hleg.Location = 'southwest';
-
-hold off
-
-%Boxplot of maximum response amplitude PO60
-boxlabel = [repmat({'70'}, length(epochs_eog_resp.PO60(:,1)), 1),
-    repmat({'75'}, length(epochs_eog_resp.PO60(:,2)), 1),
-    repmat({'80'}, length(epochs_eog_resp.PO60(:,3)), 1),
-    repmat({'85'}, length(epochs_eog_resp.PO60(:,4)), 1),
-    repmat({'90'}, length(epochs_eog_resp.PO60(:,5)), 1),
-    repmat({'95'}, length(epochs_eog_resp.PO60(:,6)), 1)];
-
-figure
-hold on
-boxplot([cell2mat(epochs_eog_resp.PO60(:,1)), 
-    cell2mat(epochs_eog_resp.PO60(:,2)), 
-    cell2mat(epochs_eog_resp.PO60(:,3)), 
-    cell2mat(epochs_eog_resp.PO60(:,4)), 
-    cell2mat(epochs_eog_resp.PO60(:,5)), 
-    cell2mat(epochs_eog_resp.PO60(:,6))], boxlabel);
-
-title({'EOG amplitude after pulse only (n = 22)', '60dBA carrier'});
-
-xlabel('Pulse level (dBA)');
-ylabel('Amplitude (uV)');
-
-hold off
-
-
-%Boxplot Boxplot of maximum response amplitude GP60
-boxlabel = [repmat({'ISI 0'}, length(epochs_eog_resp.GP60(:,1)), 1),
-    repmat({'ISI 60'}, length(epochs_eog_resp.GP60(:,2)), 1),
-    repmat({'ISI 120'}, length(epochs_eog_resp.GP60(:,3)), 1),
-    repmat({'ISI 240'}, length(epochs_eog_resp.GP60(:,4)), 1)];
-
-figure
-hold on
-boxplot([cell2mat(epochs_eog_resp.GP60(:,1)), 
-    cell2mat(epochs_eog_resp.GP60(:,2)), 
-    cell2mat(epochs_eog_resp.GP60(:,3)), 
-    cell2mat(epochs_eog_resp.GP60(:,4))], boxlabel);
-
-title({'EOG amplitude after gap-pulse (n = 22)', '60dBA carrier'});
-
-xlabel('Inter-stimulus interval (ms)');
-ylabel('Amplitude (uV)');
-
-hold off
-
-%% Carrier 70 plots
-
-%Plot of mean EOG002 amplitude for all subjects PO70-stim
-%NB "times" (X axis) defined manually, from C_process_timelockeds.m
-figure
-hold on
-plot(mean(cell2mat(epochs_eog.PO70(:,1))));
-plot(mean(cell2mat(epochs_eog.PO70(:,2))));
-plot(mean(cell2mat(epochs_eog.PO70(:,3))));
-plot(mean(cell2mat(epochs_eog.PO70(:,4))));
-plot(mean(cell2mat(epochs_eog.PO70(:,5))));
-
-ax = gca;
-
-plot([35 35], [ax.YLim(1), ax.YLim(2)], '--r');
-plot([50 50], [ax.YLim(1), ax.YLim(2)], '--r');
-
-legend('75', '80', '85', '90', '95');
-title({'Average EOG amplitude', 'after pulse only (n = 22)'});
-
-times = [-20:1:60]/200*1000;
-
-ax = gca;
-ax.XTickLabel = times(1:10:end);
-ax.XLim = [0 80];
-
-clear 'times';
-
-xlabel('Latency (ms)');
-ylabel('Amplitude (uV)');
-
-[hleg,att] = legend('show');
-title(hleg, 'Pulse level (dBA)');
-hleg.Location = 'southwest';
-
-hold off
-
-% Plot average GP70/ISI
-%NB "times" (X axis) defined manually, from C_process_timelockeds.m
-figure
-hold on
-plot(mean(cell2mat(epochs_eog.GP70(:,1))));
-plot(mean(cell2mat(epochs_eog.GP70(:,2))));
-plot(mean(cell2mat(epochs_eog.GP70(:,3))));
-plot(mean(cell2mat(epochs_eog.GP70(:,4))));
-
-%plot(mean(cell2mat(epochs_eog.GO(:,1))), '--r', 'LineWidth', 1);
-
-ax = gca;
-
-plot([35 35], [ax.YLim(1), ax.YLim(2)], '--r');
-plot([50 50], [ax.YLim(1), ax.YLim(2)], '--r');
-
-times = [-20:1:60]/200*1000;
-
-ax = gca;
-ax.XTickLabel = times(1:10:end);
-ax.XLim = [0 80];
-
-legend('0','60','120','240');
-title({'Average EOG amplitude with different', 'inter-stimulus interval (ISI) (n = 22)'});
-
-[hleg,att] = legend('show');
-title(hleg, 'ISI (ms)');
-hleg.Location = 'southwest';
-
-hold off
-
-
-%Boxplot of maximum response amplitude PO70
-boxlabel = [repmat({'75'}, length(epochs_eog_resp.PO70(:,1)), 1),
-    repmat({'80'}, length(epochs_eog_resp.PO70(:,2)), 1),
-    repmat({'85'}, length(epochs_eog_resp.PO70(:,3)), 1),
-    repmat({'90'}, length(epochs_eog_resp.PO70(:,4)), 1),
-    repmat({'95'}, length(epochs_eog_resp.PO70(:,5)), 1)];
-
-figure
-hold on
-boxplot([cell2mat(epochs_eog_resp.PO70(:,1)), 
-    cell2mat(epochs_eog_resp.PO70(:,2)), 
-    cell2mat(epochs_eog_resp.PO70(:,3)), 
-    cell2mat(epochs_eog_resp.PO70(:,4)), 
-    cell2mat(epochs_eog_resp.PO70(:,5))], boxlabel);
-
-title({'EOG amplitude after pulse only (n = 22)', '70dBA carrier'});
-
-xlabel('Pulse level (dBA)');
-ylabel('Amplitude (uV)');
-
-hold off
-
-
-%Boxplot Boxplot of maximum response amplitude GP60
-boxlabel = [repmat({'ISI 0'}, length(epochs_eog_resp.PO70(:,1)), 1),
-    repmat({'ISI 60'}, length(epochs_eog_resp.PO70(:,2)), 1),
-    repmat({'ISI 120'}, length(epochs_eog_resp.PO70(:,3)), 1),
-    repmat({'ISI 240'}, length(epochs_eog_resp.PO70(:,4)), 1)];
-
-figure
-hold on
-boxplot([cell2mat(epochs_eog_resp.PO70(:,1)), 
-    cell2mat(epochs_eog_resp.PO70(:,2)), 
-    cell2mat(epochs_eog_resp.PO70(:,3)), 
-    cell2mat(epochs_eog_resp.PO70(:,4))], boxlabel);
-
-title({'EOG amplitude after gap-pulse (n = 5)', '70dBA carrier'});
-
-xlabel('Inter-stimulus interval (ms)');
-ylabel('Amplitude (uV)');
-
-hold off
-
-%% Habituation plots/imagesc rasterplots
-
-EOG_threshold = 0.5*10^-4;
-
-%PO60 lineplots - all trials for subjects, with positive threshold
-for i = 1:length(sub_date.ID)
-
-a = epochs_eog_all.PO60{i,2}(mean(epochs_eog_all.PO60{i,2}, 2) < EOG_threshold,:);
-
-figure
-hold on
-    for j = 1:size(a,1)
-        plot(a(j,:));
-    end 
-hold off
-
 end
 
-%GP60 lineplots - all trials for subjects, with positive threshold
-for i = 1:length(sub_date.ID)
-
-a = epochs_eog_all.GP60{i,2}(mean(epochs_eog_all.GP60{i,2}, 2) < EOG_threshold,:);
-
-figure
-hold on
-    for j = 1:size(a,1)
-        plot(a(j,:));
-    end 
-hold off
-
-end
-
-%% All n = 22 rasters
-
-EOG_threshold = 0.5*10^-4;
-
-for c = 1:length(cond.PO60label)
-
-%PO60 raster for n = 22, with positive threshold - mind GP/PO structure
-figure('Position', [450 500 200 900], 'Name', cond.PO60label{1,c},'NumberTitle','off');
-ha = tight_subplot(22,1,[.01 .1],[.1 .01],[.2 .15]);
-colbar = [-8*10^-5 8*10^-5];
-times = [-20:1:60]/200*1000;
-          for ii = 1:22; axes(ha(ii));
-              imagesc(epochs_eog_all.PO60{ii,c}(mean(epochs_eog_all.PO60{ii,c}, 2) < EOG_threshold,:), colbar);
-              colormap parula;
-              hold on
-              plot([21 21], [0 50], 'k --');
-              
-              %should use "times" here
-              if ii == 22
-                ax = gca;
-                ax.XTick = [1:10:80];
-                ax.XTickLabel = [-100 -50 0 50 100 150 200 250 300];
-                ax.XTickLabelRotation = 90
-                ax.XGrid = 'On'
-                
-                ax.XTickLabel(2,:) = nan
-                ax.XTickLabel(4,:) = nan
-                ax.XTickLabel(6,:) = nan
-                ax.XTickLabel(8,:) = nan
-              else
-                ax = gca;
-                ax.XTick = [1:10:80];
-                ax.XTickLabel = [];
-                ax.XGrid = 'On'
-              end
-              
-              hold off
-          end
-end
-
-for c = 1:length(cond.GP60label)
-
-%PO60 raster for n = 22, with positive threshold - mind GP/PO structure
-figure('Position', [450 500 200 900], 'Name', cond.GP60label{1,c},'NumberTitle','off');
-ha = tight_subplot(22,1,[.01 .1],[.1 .01],[.2 .15]);
-colbar = [-8*10^-5 8*10^-5];
-times = [-20:1:60]/200*1000;
-          for ii = 1:22; axes(ha(ii));
-              imagesc(epochs_eog_all.GP60{ii,c}(mean(epochs_eog_all.GP60{ii,c}, 2) < EOG_threshold,:), colbar);
-              colormap parula;
-              hold on
-              plot([21 21], [0 50], 'k --');
-              
-              %should use "times" here
-              if ii == 22
-                ax = gca;
-                ax.XTick = [1:10:80];
-                ax.XTickLabel = [-100 -50 0 50 100 150 200 250 300];
-                ax.XTickLabelRotation = 90
-                ax.XGrid = 'On'
-                
-                ax.XTickLabel(2,:) = nan
-                ax.XTickLabel(4,:) = nan
-                ax.XTickLabel(6,:) = nan
-                ax.XTickLabel(8,:) = nan
-              else
-                ax = gca;
-                ax.XTick = [1:10:80];
-                ax.XTickLabel = [];
-                ax.XGrid = 'On'
-              end
-              
-              hold off
-          end
-end
-
+save(['../mat_data/timelockeds/epochs_eog_avgrast.mat'], 'epochs_eog_avgrast');
 
 %% Average rasterplots
 
-%Pulse Only, average in rows
+xtick = [1:10:165];
+xticklab = [-500:50:320];
+
+ytick = [0:10:45];
+yticklab = [0:10:45];
+
+triglinex = [101 101];
+xrange = [13 161];
+
+amp_ylim_low = -8*10^-5;
+amp_ylim_high = 2*10^-5;
+
+%Pulse Only average in rows
 figure('Position', [100 500 2000 800]);
 ha = tight_subplot(4,6,[.05 .015],[.2 .1],[.05 .05]);
 colbar = [-8*10^-5 8*10^-5]; %set limits of color-gradient/"z-axis"
+
 %PO70 raster row
 for ii = 1:6; axes(ha(ii));
   
@@ -507,35 +186,46 @@ for ii = 1:6; axes(ha(ii));
       colormap parula;
       hold on
       
+      xlim(xrange);
+      
       ax = gca;
-      ax.XTick = [1:10:80];
+      ax.XTick = xtick;
       ax.XTickLabel = [];
       ax.YTickLabel = [];
-      ax.XGrid = 'On';
+      ax.XGrid = 'Off';
   
   elseif ii == 2
       imagesc(epochs_eog_avgrast.PO70{1,ii-1}, colbar)
       colormap parula;
       hold on
-      plot([21 21], [0 45], 'k --');
+      plot(triglinex, [0 45], 'k --');
+      
+      xlim(xrange);
   
       ax = gca;
-      ax.XTick = [1:10:80];
+      
+      ax.YTick = [ytick];
+      ax.YTickLabel = [yticklab];         
+      ax.XTick = xtick;
       ax.XTickLabel = [];
       ax.XGrid = 'On';
+      ax.FontSize = 12;
       
   elseif ii > 2
   
-  imagesc(epochs_eog_avgrast.PO70{1,ii-1}, colbar)
-  colormap parula;
-  hold on
-  plot([21 21], [0 45], 'k --');
-  
-   ax = gca;
-   ax.XTick = [1:10:80];
-   ax.XTickLabel = [];
-   ax.YTickLabel = [];
-   ax.XGrid = 'On';
+      imagesc(epochs_eog_avgrast.PO70{1,ii-1}, colbar)
+      colormap parula;
+      hold on
+      plot(triglinex, [0 45], 'k --');
+
+      xlim(xrange);
+
+      ax = gca;
+      ax.XTick = xtick;
+      ax.XTickLabel = [];
+      ax.YTickLabel = [];
+      ax.XGrid = 'On';
+      
   end
 end
 
@@ -548,7 +238,7 @@ for ii = 1:6; axes(ha(ii+6));
       hold on
       
       ax = gca;
-      ax.XTick = [1:10:80];
+      ax.XTick = xtick;
       ax.XTickLabel = [];
       ax.YTickLabel = [];
       ax.XGrid = 'On';
@@ -556,29 +246,26 @@ for ii = 1:6; axes(ha(ii+6));
       elseif ii == 2
       plot(mean(epochs_eog_avgrast.PO70{1,ii-1}), 'k', 'LineWidth', 0.5);
       hold on
-      plot([21 21], [-8*10^-5 2*10^-5], 'k --');
-      ylim([-8*10^-5 2*10^-5]);
-      xlim([1 80]);
+      plot(triglinex, [amp_ylim_low amp_ylim_high], 'k --');
+      ylim([amp_ylim_low amp_ylim_high]);
+      xlim(xrange);
       
       ax = gca;
-      ax.XTick = [1:10:80];
+      ax.XTick = [xtick];
       ax.XTickLabel = [];
       ax.XGrid = 'On';
       ax.YGrid = 'On';
-      
-%       ax.YTickLabel{2,:} = '';
-%       ax.YTickLabel{4,:} = '';
-%       ax.YTickLabel{6,:} = '';
+      ax.FontSize = 12;
       
       elseif ii > 2
       plot(mean(epochs_eog_avgrast.PO70{1,ii-1}), 'k', 'LineWidth', 0.5);
       hold on
-      plot([21 21], [-8*10^-5 2*10^-5], 'k --');
-      ylim([-8*10^-5 2*10^-5]);
-      xlim([1 80]);
+      plot(triglinex, [amp_ylim_low amp_ylim_high], 'k --');
+      ylim([amp_ylim_low amp_ylim_high]);
+      xlim(xrange);
       
       ax = gca;
-      ax.XTick = [1:10:80];
+      ax.XTick = [xtick];
       ax.XTickLabel = [];
       ax.YTickLabel = [];
       ax.XGrid = 'On';
@@ -587,23 +274,38 @@ for ii = 1:6; axes(ha(ii+6));
       end
 end
 
-%PO60 in row
+%PO60 raster in row
 for ii = 1:6; axes(ha(ii+12));
   imagesc(epochs_eog_avgrast.PO60{1,ii}, colbar);
   colormap parula;
   hold on
-  plot([21 21], [0 45], 'k --');
+  plot(triglinex, [0 45], 'k --');
+
+  xlim(xrange);
+
+  ax = gca;
+
+  ax.YTick = [ytick];
+  ax.YTickLabel = [yticklab];         
+  ax.XTick = xtick;
+  ax.XTickLabel = [];
+  ax.XGrid = 'On';
+  ax.FontSize = 12;
   
   if ii > 1
-        ax = gca;
-        ax.XTick = [1:10:80];
-        ax.YTickLabel = [];
-        ax.XGrid = 'On';
-  end
-  
+  plot(triglinex, [0 45], 'k --');
+
+  xlim(xrange);
+
   ax = gca;
-  ax.XTick = [1:10:80];
+
+  ax.YTick = [ytick];
+  ax.YTickLabel = [];         
+  ax.XTick = xtick;
   ax.XTickLabel = [];
+  ax.XGrid = 'On';
+  
+  end
   
 end
 
@@ -612,9 +314,16 @@ for ii = 1:6; axes(ha(ii+18));
     
       plot(mean(epochs_eog_avgrast.PO60{1,ii}), 'k', 'LineWidth', 0.5);
       hold on
-      plot([21 21], [-8*10^-5 2*10^-5], 'k --');
-      ylim([-8*10^-5 2*10^-5]);
-      xlim([1 80]);
+      
+      plot(triglinex, [amp_ylim_low amp_ylim_high], 'k --');
+      ylim([amp_ylim_low amp_ylim_high]);
+      xlim(xrange);
+      
+      ax = gca;
+      ax.XTick = [xtick];
+      ax.XTickLabel = [];
+      ax.XGrid = 'On';
+      ax.YGrid = 'On';
       
       if ii > 1
           ax = gca; 
@@ -625,24 +334,21 @@ for ii = 1:6; axes(ha(ii+18));
       ax.XGrid = 'On';
       ax.YGrid = 'On';
       
-      ax.XTick = [1:10:80];
-      ax.XTickLabel = [-100 -50 0 50 100 150 200 250 300];
+      ax.XTick = [xtick];
+      ax.XTickLabel = [xticklab];
       ax.XTickLabelRotation = 90;
-
+      ax.FontSize = 12;
 
      ax.XTickLabel(2,:) = nan;
      ax.XTickLabel(4,:) = nan;
      ax.XTickLabel(6,:) = nan;
      ax.XTickLabel(8,:) = nan;
-      
-%       ax.YTickLabel{2,:} = '';
-%       ax.YTickLabel{4,:} = '';
-%       ax.YTickLabel{6,:} = '';
-      
+     ax.XTickLabel(10,:) = nan;
+     ax.XTickLabel(12,:) = nan;
+     ax.XTickLabel(14,:) = nan;
+     ax.XTickLabel(16,:) = nan;
 
 end
-
-
 
 
 %Gap Only, Gap-Pulse in rows
@@ -657,7 +363,7 @@ for ii = 1:6; axes(ha(ii));
       colormap parula;
       
       ax = gca;
-      ax.XTick = [1:10:80];
+      ax.XTick = [xtick];
       ax.XTickLabel = [];
       ax.YTickLabel = [];
     
@@ -666,25 +372,33 @@ for ii = 1:6; axes(ha(ii));
       imagesc(epochs_eog_avgrast.GO{1,2}, colbar) %NB manual cell reference
       colormap parula;
       hold on
-      plot([21 21], [0 45], 'k --');
+      plot(triglinex, [0 45], 'k --');
       
+      xlim(xrange);
+  
       ax = gca;
-      ax.XTick = [1:10:80];
+      
+      ax.YTick = [ytick];
+      ax.YTickLabel = [yticklab];         
+      ax.XTick = xtick;
       ax.XTickLabel = [];
       ax.XGrid = 'On';
+      ax.FontSize = 12;
       
       elseif ii > 2
 
       imagesc(epochs_eog_avgrast.GP70{1,ii-2}, colbar)
       colormap parula;
       hold on
-      plot([21 21], [0 45], 'k --');
-      
+      plot(triglinex, [0 45], 'k --');
+
+      xlim(xrange);
+
       ax = gca;
-      ax.XTick = [1:10:80];
+      ax.XTick = xtick;
       ax.XTickLabel = [];
-      ax.XGrid = 'On';
       ax.YTickLabel = [];
+      ax.XGrid = 'On';
   end
       
 end
@@ -697,7 +411,7 @@ for ii = 1:6; axes(ha(ii+6));
       colormap parula;
       
       ax = gca;
-      ax.XTick = [1:10:80];
+      ax.XTick = [xtick];
       ax.XTickLabel = [];
       ax.YTickLabel = [];
       
@@ -707,25 +421,26 @@ for ii = 1:6; axes(ha(ii+6));
           %static reference to GO cell
       plot(mean(epochs_eog_avgrast.GO{1,2}), 'k', 'LineWidth', 0.5);
       hold on
-      plot([21 21], [-8*10^-5 2*10^-5], 'k --');
-      ylim([-8*10^-5 2*10^-5]);
-      xlim([1 80]);
+      plot(triglinex, [amp_ylim_low amp_ylim_high], 'k --');
+      ylim([amp_ylim_low amp_ylim_high]);
+      xlim(xrange);
       
       ax = gca;
-      ax.XTick = [1:10:80];
+      ax.XTick = [xtick];
       ax.XTickLabel = [];
       ax.XGrid = 'On';
       ax.YGrid = 'On';
+      ax.FontSize = 12;
       
       elseif ii > 2
       plot(mean(epochs_eog_avgrast.GP70{1,ii-2}), 'k', 'LineWidth', 0.5);
       hold on
-      plot([21 21], [-8*10^-5 2*10^-5], 'k --');
-      ylim([-8*10^-5 2*10^-5]);
-      xlim([1 80]);
+      plot(triglinex, [amp_ylim_low amp_ylim_high], 'k --');
+      ylim([amp_ylim_low amp_ylim_high]);
+      xlim(xrange);
       
       ax = gca;
-      ax.XTick = [1:10:80];
+      ax.XTick = [xtick];
       ax.XTickLabel = [];
       ax.YTickLabel = [];
       ax.XGrid = 'On';
@@ -743,7 +458,7 @@ for ii = 1:6; axes(ha(ii+12));
       colormap parula;
       
       ax = gca;
-      ax.XTick = [1:10:80];
+      ax.XTick = [xtick];
       ax.XTickLabel = [];
       ax.YTickLabel = [];
     
@@ -752,27 +467,36 @@ for ii = 1:6; axes(ha(ii+12));
       imagesc(epochs_eog_avgrast.GO{1,1}, colbar) %NB manual cell reference
       colormap parula;
       hold on
-      plot([21 21], [0 45], 'k --');
+      plot(triglinex, [0 45], 'k --');
       
+      xlim(xrange);
+  
       ax = gca;
-      ax.XTick = [1:10:80];
+      
+      ax.YTick = [ytick];
+      ax.YTickLabel = [yticklab];         
+      ax.XTick = xtick;
       ax.XTickLabel = [];
       ax.XGrid = 'On';
+      ax.FontSize = 12;
       
       elseif ii > 2
 
       imagesc(epochs_eog_avgrast.GP60{1,ii-2}, colbar)
       colormap parula;
       hold on
-      plot([21 21], [0 45], 'k --');
+      plot(triglinex, [0 45], 'k --');
       
+      xlim(xrange);
+  
       ax = gca;
-      ax.XTick = [1:10:80];
+      
+      ax.YTick = [ytick];
+      ax.YTickLabel = [];         
+      ax.XTick = xtick;
       ax.XTickLabel = [];
-      ax.YTickLabel = [];
-
       ax.XGrid = 'On';
-
+      ax.FontSize = 12;
 
   end
       
@@ -786,7 +510,7 @@ for ii = 1:6; axes(ha(ii+18));
       colormap parula;
       
       ax = gca;
-      ax.XTick = [1:10:80];
+      ax.XTick = [xtick];
       ax.XTickLabel = [];
       ax.YTickLabel = [];
       
@@ -796,47 +520,53 @@ for ii = 1:6; axes(ha(ii+18));
           %static reference to GO cell
       plot(mean(epochs_eog_avgrast.GO{1,1}), 'k', 'LineWidth', 0.5);
       hold on
-      plot([21 21], [-8*10^-5 2*10^-5], 'k --');
-      ylim([-8*10^-5 2*10^-5]);
-      xlim([1 80]);
+      plot(triglinex, [amp_ylim_low amp_ylim_high], 'k --');
+      ylim([amp_ylim_low amp_ylim_high]);
+      xlim(xrange);
       
       ax = gca;
-
       ax.XGrid = 'On';
       ax.YGrid = 'On';
       
-      ax.XTick = [1:10:80];
-      ax.XTickLabel = [-100 -50 0 50 100 150 200 250 300];
-      ax.XGrid = 'On';
-      
+      ax.XTick = [xtick];
+      ax.XTickLabel = [xticklab];
       ax.XTickLabelRotation = 90;
+      ax.FontSize = 12;
+
       ax.XTickLabel(2,:) = nan;
       ax.XTickLabel(4,:) = nan;
       ax.XTickLabel(6,:) = nan;
       ax.XTickLabel(8,:) = nan;
+      ax.XTickLabel(10,:) = nan;
+      ax.XTickLabel(12,:) = nan;
+      ax.XTickLabel(14,:) = nan;
+      ax.XTickLabel(16,:) = nan;
       
       elseif ii > 2
       plot(mean(epochs_eog_avgrast.GP60{1,ii-2}), 'k', 'LineWidth', 0.5);
       hold on
-      plot([21 21], [-8*10^-5 2*10^-5], 'k --');
-      ylim([-8*10^-5 2*10^-5]);
-      xlim([1 80]);
+      plot(triglinex, [amp_ylim_low amp_ylim_high], 'k --');
+      ylim([amp_ylim_low amp_ylim_high]);
+      xlim(xrange);
       
       ax = gca;
-      ax.XTick = [1:10:80];
       ax.YTickLabel = [];
       ax.XGrid = 'On';
       ax.YGrid = 'On';
       
-      ax.XTick = [1:10:80];
-      ax.XTickLabel = [-100 -50 0 50 100 150 200 250 300];
-      ax.XGrid = 'On';
-      
+      ax.XTick = [xtick];
+      ax.XTickLabel = [xticklab];
       ax.XTickLabelRotation = 90;
+      ax.FontSize = 12;
+
       ax.XTickLabel(2,:) = nan;
       ax.XTickLabel(4,:) = nan;
       ax.XTickLabel(6,:) = nan;
       ax.XTickLabel(8,:) = nan;
+      ax.XTickLabel(10,:) = nan;
+      ax.XTickLabel(12,:) = nan;
+      ax.XTickLabel(14,:) = nan;
+      ax.XTickLabel(16,:) = nan;
       
       end
 end
@@ -846,7 +576,7 @@ end
 % set(gcf,...
 %     'PaperPosition',[0 0 screenposition(3:4)],...
 %     'PaperSize',[screenposition(3:4)]);
-% print -dpdf -painters GOGP_avg
+% print -dpdf -painters PO_avg
 %The first two lines measure the size of your figure (in inches). The next line configures the print paper size to fit the figure size. 
 %The last line uses the print command and exports a vector pdf document as the output.
 
