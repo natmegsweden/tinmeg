@@ -1,22 +1,13 @@
-%% https://github.com/natmegsweden/meeg_course/blob/master/tutorial_05_beamformer.md
+%% Beamformer LCMV
+% https://github.com/natmegsweden/meeg_course/blob/master/tutorial_05_beamformer.md
 
-
-%% Load template grid
-
-% Loads in "Full_analysis.m" for consistency with MR preprocessing.
-% load('/../../fieldtrip-20210311/template/sourcemodel/standard_sourcemodel3d10mm');
-% template_grid = sourcemodel;
-% clear sourcemodel
-
-%% Beaformer LCMV with contrast WIP
-
-for i = 1:4%length(sub_date.ID);
+for i = 1:5%length(sub_date.ID);
     
     meg_inpath = ['../mat_data/ICA/' 'ID' sub_date.ID{i} '/'];
     mri_inpath = ['../mat_data/MRI_mat/ID' sub_date.ID{i} '/'];
     outdir = ['../mat_data/source_reconstruction/' 'ID' sub_date.ID{i} '/'];
     
-    %headmodel_meg
+    %load headmodel
     headmodel_meg = load([mri_inpath 'meg_headmodel.mat']); 
     headmodel_meg = headmodel_meg.headmodel_meg;
     
@@ -29,7 +20,7 @@ for i = 1:4%length(sub_date.ID);
     mkdir(outdir);
     end
 
-    %Load in the stupidest way possible
+    %Load all MEG-files
     GOica = load([meg_inpath 'GOica.mat']);
     GOica = GOica.GOica;
     PO60ica = load([meg_inpath 'PO60ica.mat']);
@@ -46,47 +37,50 @@ for i = 1:4%length(sub_date.ID);
     cfg.keepsampleinfo = 'no'; %if keeping, error because of overlaps
     appended = ft_appenddata(cfg, PO60ica, PO70ica, GP60ica, GP70ica, GOica);
     
-    
-    %Load or create leadfield
-%     if ~exist([outdir 'leadfield.mat'], 'file');
-
-    cfg.senstype        = 'meg'; %??
-    cfg.grad            = appended.grad;
-    cfg.headmodel       = headmodel_meg;
-    cfg.sourcemodel     = subject_grid;
-    cfg.channel         = 'meg';
-    % cfg.grid.resolution = 1;            % Grid spacing 1x1x1 of unit defined below
-    % cfg.grid.unit       = 'cm';         % Grid unit
-
-    leadfield = ft_prepare_leadfield(cfg);
-    save([outdir 'leadfield.mat'], 'leadfield');
-    
-%     elseif exist([outdir 'leadfield.mat'], 'file');
-%     
-%     leadfield = load([outdir 'leadfield.mat']);
-%     leadfield = leadfield.leadfield;
-%     
-%     end
+    %clear GOica PO60ica PO70ica GP60ica GP70ica;
     
     %Loose ECG/EOG channels
     cfg = [];
     cfg.channel = 'meg';
     appended = ft_selectdata(cfg, appended);
     
+    
+    %Load or create leadfield
+    if ~exist([outdir 'leadfield.mat'], 'file');
+
+    cfg.senstype        = 'meg'; %??
+    cfg.grad            = appended.grad;
+    cfg.headmodel       = headmodel_meg;
+    cfg.sourcemodel     = subject_grid;
+    cfg.channel         = 'meg';
+    %cfg.grid.resolution = 1;            % Grid spacing 1x1x1 of unit defined below
+    %cfg.grid.unit       = 'cm';         % Grid unit
+
+    leadfield = ft_prepare_leadfield(cfg);
+    save([outdir 'leadfield.mat'], 'leadfield');
+    
+    elseif exist([outdir 'leadfield.mat'], 'file');
+    
+    leadfield = load([outdir 'leadfield.mat']);
+    leadfield = leadfield.leadfield;
+    
+    end
+    
+    
     %Create noise covarmatrix for denoise_whiten
-    cfg.latency = [-0.350 -0.100];
+    cfg.latency = [-0.500 -0.300];
     baseline_noise = ft_selectdata(cfg, appended);
     
     cfg            = [];
     cfg.covariance = 'yes';
-    baseline_noise   = ft_timelockanalysis(cfg, baseline_noise); 
+    baseline_noise   = ft_timelockanalysis(cfg, baseline_noise);
     
-    %to selects mags and grads
+    %Select mags and grads
     selmag  = ft_chantype(baseline_noise.label, 'megmag');
     selgrad = ft_chantype(baseline_noise.label, 'megplanar');
     
-    %Denoise_Whiten
-    % the following lines detect the location of the first large 'cliff' in the singular value spectrum of the grads and mags
+    %Denoise_Whiten, see: https://www.fieldtriptoolbox.org/workshop/paris2019/handson_sourceanalysis/
+    %Detect the location of the first large 'cliff' in the singular value spectrum of the grads and mags
     [u,s_mag,v]  = svd(baseline_noise.cov(selmag,  selmag));
     [u,s_grad,v] = svd(baseline_noise.cov(selgrad, selgrad));
     d_mag = -diff(log10(diag(s_mag))); d_mag = d_mag./std(d_mag);
@@ -99,31 +93,19 @@ for i = 1:4%length(sub_date.ID);
     cfg            = [];
     cfg.channel    = 'meg';
     cfg.kappa      = kappa;
-    dataw_meg      = ft_denoise_prewhiten(cfg, appended, baseline_noise);
+    appended_pw      = ft_denoise_prewhiten(cfg, appended, baseline_noise);
  
-%     cfg.layout = 'neuromag306all.lay';
-%     ft_multiplotER(cfg, PO60ica);
+    clear baseline_noise appended;
+    clear d_mag kappa_mag d_grad kappa_grad u v s_mag s_grad selmag selgrad;
     
     
-    %Calculate Filter covariance matrix and Kappa (rank deficiency)
+    %Calculate Filter covariance matrix
     cfg = [];
     cfg.covariance          = 'yes';
     cfg.covariancewindow    = 'all';
     cfg.channel             = 'MEG';
-    data_cov = ft_timelockanalysis(cfg, dataw_meg);
+    data_cov = ft_timelockanalysis(cfg, appended_pw);
 
-%     [u,s,v] = svd(data_cov.cov);
-%     d       = -diff(log10(diag(s)));
-%     d       = d./std(d);
-%     kappa   = find(d>5,1,'first');
-%     fprintf('Kappa = %i\n', kappa)
-
-    %consider rank(data_cov.cov)?
-
-    % figure;
-    % semilogy(diag(s),'o-');  
-    
-    %ft_inverse_lcmv
     
     %Do initial source analysis to calculte filters
     cfg = [];
@@ -142,92 +124,85 @@ for i = 1:4%length(sub_date.ID);
     cfg.sourcemodel         = leadfield;
     source_org = ft_sourceanalysis(cfg, data_cov);
     
-    %save([outdir 'source_org.mat'], 'source_org');
+    save([outdir 'source_org.mat'], 'source_org');
     
-    mri_resliced = load([mri_inpath 'mri_resliced.mat']);
-    mri_resliced = mri_resliced.mri_resliced;
     
-    %Currently only for PO60, consider: cond.([conditions{1} 'trig'])(1)
-    for ii = 1:length(cond.PO60trig);
+    for iii = [1 3]%1:numel(conditions);
     
-    %Select event data (manual trigger, should refer to structure: cond)
-    trigger = cond.PO60trig(ii);
-    
-    cfg = [];
-    cfg.trials = dataw_meg.trialinfo == trigger;
-    cfg.latency = [0 0.300];
+        %Currently only for PO60, consider: cond.([conditions{1} 'trig'])(1)
+        for ii = 1:length(cond.([conditions{iii} 'trig']));
 
-    stim = ft_selectdata(cfg, dataw_meg);
-    
-    %Select baseline
-    cfg = [];
-    cfg.trials = dataw_meg.trialinfo == trigger;
-    cfg.latency = [-0.300 0];
-    
-    base = ft_selectdata(cfg, dataw_meg);
-    
+        %Select event data (manual trigger, should refer to structure: cond)
+        trigger = cond.([conditions{iii} 'trig'])(ii);
 
-    %Compute covariance matrix for data and baseline
-    cfg = [];
-    cfg.covariance              = 'yes';
-    cfg.covariancewindow        = 'all';
-    cfg.preproc.demean          = 'yes';
-    cfg.keeptrials              = 'no'; %Y/N makes no difference?
+        cfg = [];
+        cfg.trials = appended_pw.trialinfo == trigger;
+        cfg.latency = [0 0.300];
 
-    stim_cov = ft_timelockanalysis(cfg, stim);
-    base_cov = ft_timelockanalysis(cfg, base);
-    
-    %Source analysis on baseline and stim data
-    cfg=[];
-    cfg.method              = 'lcmv';
-    cfg.sourcemodel         = leadfield;
-    cfg.sourcemodel.filter  = source_org.avg.filter;  % Reuse avg filter
-    cfg.headmodel           = headmodel_meg;
-    cfg.channel             = 'meg'; %grad & mag
-    cfg.senstype            = 'MEG';
+        stim = ft_selectdata(cfg, appended_pw);
 
-    stim_source = ft_sourceanalysis(cfg, stim_cov);
-    base_source = ft_sourceanalysis(cfg, base_cov);
-    
-    save([outdir char(cond.PO60label(ii)) '_stim_source.mat'], 'stim_source');
-    save([outdir char(cond.PO60label(ii)) '_base_source.mat'], 'base_source');
-    
-    %Contrast between stim and baseline
-    contrast_lcmv = stim_source;       % Copy
-    contrast_lcmv.avg.pow = (stim_source.avg.pow-base_source.avg.pow)./base_source.avg.pow;
-    
-    %Save contrast for ROI with atlas
+        %Select baseline
+        cfg = [];
+        cfg.trials = appended_pw.trialinfo == trigger;
+        
+        if ismember(conditions{iii}, {'GO60', 'GO70', 'PO60', 'PO70'});
+        %Baseline window: 200ms before pulse onset in PO trials
+        cfg.latency = [-0.200 0];
+        elseif ismember(conditions{iii}, {'GP60', 'GP70'});
+            %Baseline window variable timepoint: 200ms before gap onset in GP trials
+            if ii == 1 %ISI 0
+            cfg.latency = [-0.250 -0.050];
+            elseif ii == 2 %ISI 60
+                cfg.latency = [-0.310 -0.110];
+            elseif ii == 3 %ISI 120
+                cfg.latency = [-0.370 -0.170];
+            elseif ii == 4 %ISI 240
+                cfg.latency = [-0.490 -0.290];
+            end
+        end
 
-    %Interpolate contrasted source
-    cfg = [];
-    cfg.parameter    = 'pow';
-    cfg.interpmethod = 'nearest';
-    %source_int  = ft_sourceinterpolate(cfg, contrast_lcmv, mri_resliced);
-    
-    %save([outdir char(cond.PO60label(ii)) '_interpolated.mat'], 'source_int');
+        base = ft_selectdata(cfg, appended_pw);
 
-    
-    %Plot and save
-    cfg = [];
-    cfg.method          = 'ortho';
-    cfg.funparameter    = 'pow';
-    cfg.funcolormap     = 'jet';
-    
-%     cfg.maskparameter = cfg.funparameter
-%     cfg.colorlim      = [0 3] % or 'zeromax'
-%     cfg.opacitymap    = 'rampup'
-%     cfg.opacitylim    = [0 3] % or 'zeromax'
-    
-    cfg.position        = [700 300 950 950];
-    %ft_sourceplot(cfg, source_int);
 
-    %saveas(gcf, [outdir char(cond.PO60label(ii)) '.png']);
+        %Compute covariance matrix for data and baseline
+        cfg = [];
+        cfg.covariance              = 'yes';
+        cfg.covariancewindow        = 'all';
+        cfg.preproc.demean          = 'yes';
+        cfg.keeptrials              = 'no'; %Y/N makes no difference?
+
+        stim_cov = ft_timelockanalysis(cfg, stim);
+        base_cov = ft_timelockanalysis(cfg, base);
+        
+        clear stim base;
+
+        %Source analysis on baseline and stim data
+        cfg=[];
+        cfg.method              = 'lcmv';
+        cfg.sourcemodel         = leadfield;
+        cfg.sourcemodel.filter  = source_org.avg.filter;  % Reuse avg filter
+        cfg.headmodel           = headmodel_meg;
+        cfg.channel             = 'meg'; %grad & mag
+        cfg.senstype            = 'MEG';
+
+        stim_source = ft_sourceanalysis(cfg, stim_cov);
+        base_source = ft_sourceanalysis(cfg, base_cov);
+
+        save([outdir cond.([conditions{iii} 'label']){ii} '_stim_source.mat'], 'stim_source');
+        save([outdir cond.([conditions{iii} 'label']){ii} '_base_source.mat'], 'base_source');
+        
+        cfg = [];
+        cfg.parameter = 'pow';
+        cfg.operation = 'x1 - mean(x2)'; %Different window duration
+        powdiff_sub = ft_math(cfg, stim_source, base_source);
+        
+        save([outdir cond.([conditions{iii} 'label']){ii} '_powdiff.mat'], 'powdiff_sub');
     
-    close
-    
+        %For trial
+        end
+        
+    %For condition
     end
 
-    
+%For subject
 end
-
-clear ('appended', 'subject_grid', 'headmodel_meg', 'dataw_meg', 'data_cov', 'base_cov', 'stim_cov', 'baseline_noise', 'mri_resliced', 'leadfield', 'kappa', 'kappa_grad', 'kappa_mag', 'trigger', 'd_grad', 'd_mag', 'source_org', 'base', 'stim', 'base_source', 'stim_source', 'contrast_lcmv', 'PO60ica', 'GP60ica', 'PO70ica', 'GP70ica', 'GOica', 's_grad', 's_mag', 'u', 'v', 'selmag', 'selgrad')
