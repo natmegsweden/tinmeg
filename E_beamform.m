@@ -1,7 +1,7 @@
 %% Beamformer LCMV
 % https://github.com/natmegsweden/meeg_course/blob/master/tutorial_05_beamformer.md
 
-for i = 1:5%length(sub_date.ID);
+for i = 6:22%length(sub_date.ID);
     
     meg_inpath = ['../mat_data/ICA/' 'ID' sub_date.ID{i} '/'];
     mri_inpath = ['../mat_data/MRI_mat/ID' sub_date.ID{i} '/'];
@@ -37,7 +37,7 @@ for i = 1:5%length(sub_date.ID);
     cfg.keepsampleinfo = 'no'; %if keeping, error because of overlaps
     appended = ft_appenddata(cfg, PO60ica, PO70ica, GP60ica, GP70ica, GOica);
     
-    %clear GOica PO60ica PO70ica GP60ica GP70ica;
+    clear GOica PO60ica PO70ica GP60ica GP70ica;
     
     %Loose ECG/EOG channels
     cfg = [];
@@ -93,7 +93,7 @@ for i = 1:5%length(sub_date.ID);
     cfg            = [];
     cfg.channel    = 'meg';
     cfg.kappa      = kappa;
-    appended_pw      = ft_denoise_prewhiten(cfg, appended, baseline_noise);
+    appended_pw    = ft_denoise_prewhiten(cfg, appended, baseline_noise);
  
     clear baseline_noise appended;
     clear d_mag kappa_mag d_grad kappa_grad u v s_mag s_grad selmag selgrad;
@@ -123,6 +123,8 @@ for i = 1:5%length(sub_date.ID);
     cfg.headmodel           = headmodel_meg;
     cfg.sourcemodel         = leadfield;
     source_org = ft_sourceanalysis(cfg, data_cov);
+    
+    clear data_cov
     
     save([outdir 'source_org.mat'], 'source_org');
     
@@ -187,6 +189,8 @@ for i = 1:5%length(sub_date.ID);
 
         stim_source = ft_sourceanalysis(cfg, stim_cov);
         base_source = ft_sourceanalysis(cfg, base_cov);
+        
+        clear stim_cov base_cov;
 
         save([outdir cond.([conditions{iii} 'label']){ii} '_stim_source.mat'], 'stim_source');
         save([outdir cond.([conditions{iii} 'label']){ii} '_base_source.mat'], 'base_source');
@@ -197,12 +201,16 @@ for i = 1:5%length(sub_date.ID);
         powdiff_sub = ft_math(cfg, stim_source, base_source);
         
         save([outdir cond.([conditions{iii} 'label']){ii} '_powdiff.mat'], 'powdiff_sub');
-    
+        
+        clear powdiff_sub stim_source base_source;
+        
         %For trial
         end
         
     %For condition
     end
+
+clear appended_pw;    
 
 %For subject
 end
