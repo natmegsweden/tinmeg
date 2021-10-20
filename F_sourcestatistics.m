@@ -1,4 +1,3 @@
-
 %% Source statistics and analysis
 
 %load atlas
@@ -34,7 +33,7 @@ cfg.nslices = 25;
 cfg.position        = [700 300 950 950];
 ft_sourceplot(cfg, atlas_grid_int);
 
-%% Plot difference map in TOI
+%% Plot difference map in TOI - WIP
 
     powdiff_sub = load([inpath cond.GP60label{3} '_powdiff.mat']);
     powdiff_sub = powdiff_sub.powdiff_sub;
@@ -57,7 +56,8 @@ ft_sourceplot(cfg, atlas_grid_int);
 
 %% Plot virtual channel for ROI
 
-virtchans = struct;
+%virtchans = struct;
+%load virtchans
 
 %Condition
 for iii = 1%length(conditions);
@@ -65,7 +65,7 @@ for iii = 1%length(conditions);
     %Trial
     for i = 5%1:length(cond.([conditions{iii} 'label']));
 
-        for ii = 1:5%length(sub_date.ID)
+        for ii = 1:length(sub_date.ID)
 
         inpath = ['../mat_data/source_reconstruction/' 'ID' sub_date.ID{ii} '/'];
 
@@ -110,13 +110,13 @@ for iii = 3%length(conditions);
     %Trial
     for i = 3%1:length(cond.([conditions{iii} 'label']));
 
-        for ii = 1:5%length(sub_date.ID)
+        for ii = 1:length(sub_date.ID)
 
         inpath = ['../mat_data/source_reconstruction/' 'ID' sub_date.ID{ii} '/'];
 
-        stim = load([inpath cond.PO60label{i} '_stim_source.mat']);
+        stim = load([inpath cond.GP60label{i} '_stim_source.mat']);
         stim = stim.stim_source; 
-        base = load([inpath cond.PO60label{i} '_base_source.mat']);
+        base = load([inpath cond.GP60label{i} '_base_source.mat']);
         base = base.base_source;
 
         %Parcellation
@@ -149,9 +149,10 @@ for iii = 3%length(conditions);
 %Conditions
 end
 
+%save(['../mat_data/source_reconstruction/'  'virtchans_i120.mat'], 'virtchans', '-v7.3');
 
 figure; hold on
-for p = 1:5
+for p = 1:22
    
     subplot(2,1,1);
     xlim([1 61]);
