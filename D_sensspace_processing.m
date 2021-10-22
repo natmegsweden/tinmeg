@@ -85,6 +85,7 @@ load('../mat_data/timelockeds/grand_cmb_avg.mat');
 
 mean_sub = load(['../mat_data/timelockeds/mean_sub.mat']);
 mean_sub = mean_sub.timelockeds_cmb;
+mean_sub.time = round(mean_sub.time,3); %Round to avoid issues with floating point precision in plots
 
 %Old, hand-picked sensors from MultiPlotER
 %l_mag_chan = {'MEG1611', 'MEG1621', 'MEG1811', 'MEG1641', 'MEG1631', 'MEG1841', 'MEG1731', 'MEG1941', 'MEG1911'};
@@ -97,14 +98,11 @@ mean_sub = mean_sub.timelockeds_cmb;
 top_chan = {'MEG0242+0243', 'MEG1222+1223', 'MEG1322+1323', 'MEG1332+1333', 'MEG1342+1343', 'MEG1442+1443', 'MEG1522+1523', 'MEG1612+1613',  'MEG2422+2423', 'MEG2612+2613',  'MEG2642+2643'};
 
 
-%GRAD-PLOTS PO60 (Combines planar in loop)
+%GRAD-PLOTS PO60
 for j = 1:6
 
 cfg =[];
 mean_sub.avg = gravg_cmb.PO60{j}
-
-%Round to avoid issues with floating point precision in plots
-mean_sub.time = round(mean_sub.time,3)
 
 figure('Position', [400 400 1800 400]); hold on;
 
@@ -145,7 +143,7 @@ patch('Faces', [1 2 3 4], 'Vertices', [71 minylim; 71 maxylim; 101 maxylim; 101 
         x.XTickLabelRotation = 90;
     end
     
-    %find max of first 102 chan (grads) at mean of samples 76:86 (25-75ms)
+    %find max of first 102 chan (grads) at mean of samples 116:131 (75-150ms)
     [val, ind] = sort(mean(mean_sub.avg(1:102,116:131),2), 'descend');
 
     max_grad{j,1} = mean_sub.label{ind(1)};
@@ -160,14 +158,11 @@ patch('Faces', [1 2 3 4], 'Vertices', [71 minylim; 71 maxylim; 101 maxylim; 101 
     
 end
 
-%GRAD-PLOTS GP60 (Combines planar in loop)
+%GRAD-PLOTS GP60
 for j = 1:4
 
 cfg =[];
 mean_sub.avg = gravg_cmb.GP60{j}
-
-%Round to avoid issues with floating point precision in plots
-mean_sub.time = round(mean_sub.time,3)
 
 figure('Position', [400 400 1800 400]); hold on;
 
@@ -224,29 +219,16 @@ patch('Faces', [1 2 3 4], 'Vertices', [g_low minylim; g_low maxylim; g_high maxy
         x.XTickLabelRotation = 90;
     end
     
-    %find max of first 102 chan (grads) at mean of samples 76:86 (25-75ms)
-    [val, ind] = sort(mean(mean_sub.avg(1:102,116:131),2), 'descend');
-
-    max_grad{j,1} = mean_sub.label{ind(1)};
-    max_grad{j,2} = mean_sub.label{ind(2)};
-    max_grad{j,3} = mean_sub.label{ind(3)};
-    max_grad{j,4} = mean_sub.label{ind(4)};
-    max_grad{j,5} = mean_sub.label{ind(5)};
-    max_grad{j,6} = mean_sub.label{ind(6)};
-    
     %saveas(gcf, ['../Analysis Output/' cond.GP60label{j} 'butterfly.svg']);
     %close
     
 end
 
-%GRAD-PLOTS GO60 (Combines planar in loop)
+%GRAD-PLOTS GO60
 for j = 1
 
 cfg =[];
 mean_sub.avg = gravg_cmb.GO{j}
-
-%Round to avoid issues with floating point precision in plots
-mean_sub.time = round(mean_sub.time,3)
 
 figure('Position', [400 400 1800 400]); hold on;
 
@@ -279,7 +261,7 @@ patch('Faces', [1 2 3 4], 'Vertices', [101 minylim; 101 maxylim; 111 maxylim; 11
         
         end
         
-        %dashed line at time zero (sample 71)
+        %dashed line at time zero (sample 101)
         plot([101 101], [-0.5*10^-12 10*10^-12], 'k --');
         
         %Convert x-axis to ms from sample number
@@ -290,16 +272,6 @@ patch('Faces', [1 2 3 4], 'Vertices', [101 minylim; 101 maxylim; 111 maxylim; 11
         x.FontSize = 20;
         x.XTickLabelRotation = 90;
     end
-    
-    %find max of first 102 chan (grads) at mean of samples 76:86 (25-75ms)
-    [val, ind] = sort(mean(mean_sub.avg(1:102,116:131),2), 'descend');
-
-    max_grad{j,1} = mean_sub.label{ind(1)};
-    max_grad{j,2} = mean_sub.label{ind(2)};
-    max_grad{j,3} = mean_sub.label{ind(3)};
-    max_grad{j,4} = mean_sub.label{ind(4)};
-    max_grad{j,5} = mean_sub.label{ind(5)};
-    max_grad{j,6} = mean_sub.label{ind(6)};
     
     %saveas(gcf, ['../Analysis Output/' cond.GOlabel{j} 'butterfly.svg']);
     %close
@@ -382,11 +354,118 @@ view([-100 25])
 
 %% Quantify individual subjects components latencies and amplitude
 
+%NB top_chan is defined during butterfly plots
+top_chan_idx = find(ismember(mean_sub.label, top_chan));
+
+sub_sensoi = struct();
+
+%Gather mean of sensors of interest (from top_chan) for all subjects and trials
+for i = 1:numel(conditions)
+    n_stim = length(cond.([conditions{i} 'label']));
+    
+    for ii = 1:numel(sub_date.ID)
+        
+        for iii = 1:n_stim
+           
+        sub_sensoi.(conditions{i}){ii,iii} = mean(all_cmb_avg.(conditions{i}){ii,iii}(top_chan_idx,:));
+            
+        %for trial (column)
+        end
+    
+    %for subject (row)
+    end
+
+%for condition
+end
+
+%% Inspect and plot PO60_90 (i.e. pulse only control). Also write latency of max and mean amplitude within TOI to struct.
+%NB mean_sub loads for butterfly plots
+
+%Structure for amplitude and latency-measures
+sub_amp_lat = struct();
+
+%Specify plot y-limits
+minylim = 0*10^-12;
+maxylim = 14*10^-12;
+
+%Time windows of interest
+N1on = find(mean_sub.time == 0.050);
+N1off = find(mean_sub.time == 0.150);
+P2on = find(mean_sub.time == 0.150);
+P2off = find(mean_sub.time == 0.250);
+
+n_subs = 1:numel(sub_date.ID);
+
+figure('Position', [400 400 1800 400]); hold on;
+xlim([1 165]);
+ylim([minylim maxylim]);
+title('PO60_90', 'Interpreter', 'none');
+for i = 1:numel(sub_date.ID)
+
+%find lat and amp for N1, collect in struct
+[M, I] = max(sub_sensoi.PO60{i,5}(N1on:N1off));
+sub_amp_lat.PO60_90_N1lat(i,1) = mean_sub.time(N1on-1+I);
+sub_amp_lat.PO60_90_N1amp(i,1) = mean(sub_sensoi.PO60{i,5}(N1on:N1off));
+clear M I
+
+%find lat and amp for P2, collect in struct
+[M, I] = max(sub_sensoi.PO60{i,5}(P2on:P2off));
+sub_amp_lat.PO60_90_P2lat(i,1) = mean_sub.time(N1on-1+I);
+sub_amp_lat.PO60_90_P2amp(i,1) = mean(sub_sensoi.PO60{i,5}(P2on:P2off));
+clear M I
+    
+plot(sub_sensoi.PO60{i,5}, 'Color', [0 0 0 0.5])
+tempmean(i,1:165) = sub_sensoi.PO60{i,5};
+end
+patch('Faces', [1 2 3 4], 'Vertices', [N1on minylim; N1on maxylim; N1off maxylim; N1off minylim], 'FaceColor', 'blue', 'FaceAlpha', 0.05, 'EdgeAlpha', 0);
+patch('Faces', [1 2 3 4], 'Vertices', [P2on minylim; P2on maxylim; P2off maxylim; P2off minylim], 'FaceColor', 'yellow', 'FaceAlpha', 0.1, 'EdgeAlpha', 0);
+plot(mean(tempmean), 'Color', [1 0 0], 'LineWidth', 1.5); clear tempmean;
+plot([101 101], [minylim maxylim], 'k --');
+x = gca;
+x.XTick = [1:10:165];
+x.XTickLabel = [-500:50:320];
+
+
+%Inspect GO_60 (i.e. GAP only)
+figure('Position', [400 400 1800 400]); hold on;
+xlim([1 165]);
+ylim([0*10^-12 14*10^-12]);
+title('GO_60', 'Interpreter', 'none');
+for i = 1:numel(sub_date.ID)
+    
+%find lat and amp for N1, collect in struct
+[M, I] = max(sub_sensoi.GO{i,1}(N1on:N1off));
+sub_amp_lat.GO60_90_N1lat(i,1) = mean_sub.time(N1on-1+I);
+sub_amp_lat.GO60_90_N1amp(i,1) = mean(sub_sensoi.GO{i,1}(N1on:N1off));
+clear M I
+
+%find lat and amp for P2, collect in struct
+[M, I] = max(sub_sensoi.GO{i,1}(P2on:P2off));
+sub_amp_lat.GO60_90_P2lat(i,1) = mean_sub.time(N1on-1+I);
+sub_amp_lat.GO60_90_P2amp(i,1) = mean(sub_sensoi.GO{i,1}(P2on:P2off));
+clear M I
+    
+plot(sub_sensoi.GO{i,1}, 'Color', [0 0 0 0.5])
+tempmean(i,1:165) = sub_sensoi.GO{i,1};
+end
+patch('Faces', [1 2 3 4], 'Vertices', [111 minylim; 111 maxylim; 131 maxylim; 131 minylim], 'FaceColor', 'blue', 'FaceAlpha', 0.05, 'EdgeAlpha', 0);
+patch('Faces', [1 2 3 4], 'Vertices', [131 minylim; 131 maxylim; 151 maxylim; 151 minylim], 'FaceColor', 'yellow', 'FaceAlpha', 0.1, 'EdgeAlpha', 0);
+plot(mean(tempmean), 'Color', [1 0 0], 'LineWidth', 1.5); clear tempmean;
+plot([101 101], [minylim maxylim], 'k --');
+x = gca;
+x.XTick = [1:10:165];
+x.XTickLabel = [-500:50:320];
+
+%% Plot amp and latencies
+
+figure; hold on;
+xlim([0 3]);
+plot([1 2], [sub_amp_lat.GO60_90_N1amp sub_amp_lat.PO60_90_N1amp], 'Color', [0 0 0 0.5])
+scatter(ones(1,22), sub_amp_lat.GO60_90_N1amp)
+scatter(ones(1,22)+1, sub_amp_lat.PO60_90_N1amp)
 
 
 %% TopoplotER
-
-load('../mat_data/sensspace/sensspace_avg.mat', 
 
 for c = 1:numel(conditions);
 
