@@ -1,18 +1,18 @@
 %% Load conditions for subjects, average trials via ft_timelockanalysis
 
-all_avg = struct();
-gravg = struct();
+all_cmb_avg = struct();
+gravg_cmb = struct ();
 
 %% Process timelockeds per condition, gather subject- and grand average
 
-for ii = 1%:length(conditions)
+for ii = 1:length(conditions)
 
 nstim = length(eval(['cond.' char(conditions(ii)) 'trig']));
 trig = eval(['cond.' char(conditions(ii)) 'trig']);
 
-    for iii = 1%:nstim
+    for iii = 1:nstim
 
-        for i = 1%:length(sub_date.ID)
+        for i = 1:length(sub_date.ID)
 
         subinpath = ['../mat_data/ICA/' 'ID' sub_date.ID{i} '/'];
         
@@ -25,8 +25,6 @@ trig = eval(['cond.' char(conditions(ii)) 'trig']);
         cfg.covariancewindow = 'prestim';
         cfg.keeptrials = 'no'; %if yes, no avg in output variable "timelockeds"
         cfg.preproc.demean = 'yes';
-        
-        %NB - Forgot GO below, re-run eventually
         
         if ismember(conditions{ii}, {'GO60', 'GO70', 'PO60', 'PO70'});
         %Baseline window: 150ms before pulse onset in PO trials
@@ -51,15 +49,21 @@ trig = eval(['cond.' char(conditions(ii)) 'trig']);
         timelockeds = ft_timelockanalysis(cfg, tempdat);
         
         clear tempdat
-
-        %Grab only 'avg' parameter in struct compatible with cat(mean())
-        all_avg.(conditions{ii}){i, iii} = timelockeds.avg;
         
-        %save('../mat_data/timelockeds/mean_sub.mat', 'timelockeds', '-v7.3');
-        clear timelockeds
+        cfg = [];
+        timelockeds_cmb = ft_combineplanar(cfg, timelockeds);
+        
+        all_cmb_avg.(conditions{ii}){i, iii} = timelockeds_cmb.avg;
+        
+        %Grab only 'avg' parameter in struct compatible with cat(mean())
+        %all_avg.(conditions{ii}){i, iii} = timelockeds.avg;
+        
+        %Save some subject data structure for use with plot functions later
+        %save('../mat_data/timelockeds/mean_sub.mat', 'timelockeds_cmb', '-v7.3');
+        clear timelockeds timelockeds_cmb
         
         %Calculate grand average over trial and subject per condition
-        gravg.(conditions{ii}){iii} = mean(cat(3, all_avg.(conditions{ii}){:, iii}), 3);
+        gravg_cmb.(conditions{ii}){iii} = mean(cat(3, all_cmb_avg.(conditions{ii}){:, iii}), 3);
 
         end
 
@@ -71,16 +75,16 @@ end
 
 clear i ii iii trig nstim
 
-%save('../mat_data/timelockeds/all_avg.mat', 'all_avg', '-v7.3');
-%save('../mat_data/timelockeds/grand_avg.mat', 'gravg', '-v7.3');
+%save('../mat_data/timelockeds/grand_avg_cmb.mat', 'gravg_cmb', '-v7.3');
+%save('../mat_data/timelockeds/all_cmb_avg.mat', 'all_cmb_avg', '-v7.3');
 
 %% Butterfly with selected sensors
 
-load('../mat_data/timelockeds/all_avg.mat');
-load('../mat_data/timelockeds/grand_avg.mat');
+load('../mat_data/timelockeds/all_cmb_avg.mat');
+load('../mat_data/timelockeds/grand_cmb_avg.mat');
 
 mean_sub = load(['../mat_data/timelockeds/mean_sub.mat']);
-mean_sub = mean_sub.timelockeds; clear timelockeds;
+mean_sub = mean_sub.timelockeds_cmb;
 
 %Old, hand-picked sensors from MultiPlotER
 %l_mag_chan = {'MEG1611', 'MEG1621', 'MEG1811', 'MEG1641', 'MEG1631', 'MEG1841', 'MEG1731', 'MEG1941', 'MEG1911'};
@@ -97,12 +101,10 @@ top_chan = {'MEG0242+0243', 'MEG1222+1223', 'MEG1322+1323', 'MEG1332+1333', 'MEG
 for j = 1:6
 
 cfg =[];
-mean_sub.avg = gravg.PO60{j}
-
-combined_sub = ft_combineplanar(cfg, mean_sub);
+mean_sub.avg = gravg_cmb.PO60{j}
 
 %Round to avoid issues with floating point precision in plots
-combined_sub.time = round(combined_sub.time,3)
+mean_sub.time = round(mean_sub.time,3)
 
 figure('Position', [400 400 1800 400]); hold on;
 
@@ -122,12 +124,12 @@ patch('Faces', [1 2 3 4], 'Vertices', [71 minylim; 71 maxylim; 101 maxylim; 101 
     for i = 1:102
         
         %Top 6 channels (amplitude) in orange
-        if ismember(combined_sub.label{i}, top_chan)
-        plot(combined_sub.avg(i,:), 'Color', [0.85 0.325 0.098], 'LineWidth', 1.5);
+        if ismember(mean_sub.label{i}, top_chan)
+        plot(mean_sub.avg(i,:), 'Color', [0.85 0.325 0.098], 'LineWidth', 1.5);
 
         %Other GRADS in black (50% opacity)
-        elseif combined_sub.label{i}(end) == int2str(3) %if GRAD - plot
-        plot(combined_sub.avg(i,:), 'Color', [0 0 0 0.25]);
+        elseif mean_sub.label{i}(end) == int2str(3) %if GRAD - plot
+        plot(mean_sub.avg(i,:), 'Color', [0 0 0 0.25]);
         
         end
         
@@ -144,14 +146,14 @@ patch('Faces', [1 2 3 4], 'Vertices', [71 minylim; 71 maxylim; 101 maxylim; 101 
     end
     
     %find max of first 102 chan (grads) at mean of samples 76:86 (25-75ms)
-    [val, ind] = sort(mean(combined_sub.avg(1:102,116:131),2), 'descend');
+    [val, ind] = sort(mean(mean_sub.avg(1:102,116:131),2), 'descend');
 
-    max_grad{j,1} = combined_sub.label{ind(1)};
-    max_grad{j,2} = combined_sub.label{ind(2)};
-    max_grad{j,3} = combined_sub.label{ind(3)};
-    max_grad{j,4} = combined_sub.label{ind(4)};
-    max_grad{j,5} = combined_sub.label{ind(5)};
-    max_grad{j,6} = combined_sub.label{ind(6)};
+    max_grad{j,1} = mean_sub.label{ind(1)};
+    max_grad{j,2} = mean_sub.label{ind(2)};
+    max_grad{j,3} = mean_sub.label{ind(3)};
+    max_grad{j,4} = mean_sub.label{ind(4)};
+    max_grad{j,5} = mean_sub.label{ind(5)};
+    max_grad{j,6} = mean_sub.label{ind(6)};
     
     %saveas(gcf, ['../Analysis Output/' cond.PO60label{j} 'butterfly.svg']);
     %close
@@ -162,12 +164,10 @@ end
 for j = 1:4
 
 cfg =[];
-mean_sub.avg = gravg.GP60{j}
-
-combined_sub = ft_combineplanar(cfg, mean_sub);
+mean_sub.avg = gravg_cmb.GP60{j}
 
 %Round to avoid issues with floating point precision in plots
-combined_sub.time = round(combined_sub.time,3)
+mean_sub.time = round(mean_sub.time,3)
 
 figure('Position', [400 400 1800 400]); hold on;
 
@@ -183,14 +183,14 @@ ylim([minylim maxylim]);
 patch('Faces', [1 2 3 4], 'Vertices', [116 -0.5*10^-12; 116 10*10^-12; 131 10*10^-12; 131 -0.5*10^-12], 'FaceColor', 'green', 'FaceAlpha', 0.05, 'EdgeAlpha', 0)
 
 %An attempt to make defining shaded regions (baseline and gap) somewhat readable
-if j == 1; b_low = find(combined_sub.time == -0.200); b_high = find(combined_sub.time == -0.0500);
-            g_low = find(combined_sub.time == -0.0500); g_high = find(combined_sub.time == 0);
-elseif j == 2; b_low = find(combined_sub.time == -0.260); b_high = find(combined_sub.time == -0.110);
-            g_low = find(combined_sub.time == -0.110); g_high = find(combined_sub.time == -0.060);  
-elseif j == 3; b_low = find(combined_sub.time == -0.320); b_high = find(combined_sub.time == -0.170);
-            g_low = find(combined_sub.time == -0.170); g_high = find(combined_sub.time == -0.120);
-elseif j == 4; b_low = find(combined_sub.time == -0.440); b_high = find(combined_sub.time == -0.290);
-            g_low = find(combined_sub.time == -0.290); g_high = find(combined_sub.time == -0.240);
+if j == 1; b_low = find(mean_sub.time == -0.200); b_high = find(mean_sub.time == -0.0500);
+            g_low = find(mean_sub.time == -0.0500); g_high = find(mean_sub.time == 0);
+elseif j == 2; b_low = find(mean_sub.time == -0.260); b_high = find(mean_sub.time == -0.110);
+            g_low = find(mean_sub.time == -0.110); g_high = find(mean_sub.time == -0.060);  
+elseif j == 3; b_low = find(mean_sub.time == -0.320); b_high = find(mean_sub.time == -0.170);
+            g_low = find(mean_sub.time == -0.170); g_high = find(mean_sub.time == -0.120);
+elseif j == 4; b_low = find(mean_sub.time == -0.440); b_high = find(mean_sub.time == -0.290);
+            g_low = find(mean_sub.time == -0.290); g_high = find(mean_sub.time == -0.240);
 end
 
 %Baseline shade
@@ -203,12 +203,12 @@ patch('Faces', [1 2 3 4], 'Vertices', [g_low minylim; g_low maxylim; g_high maxy
     for i = 1:102
         
         %Top 6 channels (amplitude) in orange
-        if ismember(combined_sub.label{i}, top_chan)
-        plot(combined_sub.avg(i,:), 'Color', [0.85 0.325 0.098], 'LineWidth', 1.5);
+        if ismember(mean_sub.label{i}, top_chan)
+        plot(mean_sub.avg(i,:), 'Color', [0.85 0.325 0.098], 'LineWidth', 1.5);
 
         %Other GRADS in black (50% opacity)
-        elseif combined_sub.label{i}(end) == int2str(3) %if GRAD - plot
-        plot(combined_sub.avg(i,:), 'Color', [0 0 0 0.25]);
+        elseif mean_sub.label{i}(end) == int2str(3) %if GRAD - plot
+        plot(mean_sub.avg(i,:), 'Color', [0 0 0 0.25]);
         
         end
         
@@ -225,14 +225,14 @@ patch('Faces', [1 2 3 4], 'Vertices', [g_low minylim; g_low maxylim; g_high maxy
     end
     
     %find max of first 102 chan (grads) at mean of samples 76:86 (25-75ms)
-    [val, ind] = sort(mean(combined_sub.avg(1:102,116:131),2), 'descend');
+    [val, ind] = sort(mean(mean_sub.avg(1:102,116:131),2), 'descend');
 
-    max_grad{j,1} = combined_sub.label{ind(1)};
-    max_grad{j,2} = combined_sub.label{ind(2)};
-    max_grad{j,3} = combined_sub.label{ind(3)};
-    max_grad{j,4} = combined_sub.label{ind(4)};
-    max_grad{j,5} = combined_sub.label{ind(5)};
-    max_grad{j,6} = combined_sub.label{ind(6)};
+    max_grad{j,1} = mean_sub.label{ind(1)};
+    max_grad{j,2} = mean_sub.label{ind(2)};
+    max_grad{j,3} = mean_sub.label{ind(3)};
+    max_grad{j,4} = mean_sub.label{ind(4)};
+    max_grad{j,5} = mean_sub.label{ind(5)};
+    max_grad{j,6} = mean_sub.label{ind(6)};
     
     %saveas(gcf, ['../Analysis Output/' cond.GP60label{j} 'butterfly.svg']);
     %close
@@ -243,12 +243,10 @@ end
 for j = 1
 
 cfg =[];
-mean_sub.avg = gravg.GO{j}
-
-combined_sub = ft_combineplanar(cfg, mean_sub);
+mean_sub.avg = gravg_cmb.GO{j}
 
 %Round to avoid issues with floating point precision in plots
-combined_sub.time = round(combined_sub.time,3)
+mean_sub.time = round(mean_sub.time,3)
 
 figure('Position', [400 400 1800 400]); hold on;
 
@@ -272,12 +270,12 @@ patch('Faces', [1 2 3 4], 'Vertices', [101 minylim; 101 maxylim; 111 maxylim; 11
     for i = 1:102
         
         %Top 6 channels (amplitude) in orange
-        if ismember(combined_sub.label{i}, top_chan)
-        plot(combined_sub.avg(i,:), 'Color', [0.85 0.325 0.098], 'LineWidth', 1.5);
+        if ismember(mean_sub.label{i}, top_chan)
+        plot(mean_sub.avg(i,:), 'Color', [0.85 0.325 0.098], 'LineWidth', 1.5);
 
         %Other GRADS in black (50% opacity)
-        elseif combined_sub.label{i}(end) == int2str(3) %if GRAD - plot
-        plot(combined_sub.avg(i,:), 'Color', [0 0 0 0.25]);
+        elseif mean_sub.label{i}(end) == int2str(3) %if GRAD - plot
+        plot(mean_sub.avg(i,:), 'Color', [0 0 0 0.25]);
         
         end
         
@@ -294,14 +292,14 @@ patch('Faces', [1 2 3 4], 'Vertices', [101 minylim; 101 maxylim; 111 maxylim; 11
     end
     
     %find max of first 102 chan (grads) at mean of samples 76:86 (25-75ms)
-    [val, ind] = sort(mean(combined_sub.avg(1:102,116:131),2), 'descend');
+    [val, ind] = sort(mean(mean_sub.avg(1:102,116:131),2), 'descend');
 
-    max_grad{j,1} = combined_sub.label{ind(1)};
-    max_grad{j,2} = combined_sub.label{ind(2)};
-    max_grad{j,3} = combined_sub.label{ind(3)};
-    max_grad{j,4} = combined_sub.label{ind(4)};
-    max_grad{j,5} = combined_sub.label{ind(5)};
-    max_grad{j,6} = combined_sub.label{ind(6)};
+    max_grad{j,1} = mean_sub.label{ind(1)};
+    max_grad{j,2} = mean_sub.label{ind(2)};
+    max_grad{j,3} = mean_sub.label{ind(3)};
+    max_grad{j,4} = mean_sub.label{ind(4)};
+    max_grad{j,5} = mean_sub.label{ind(5)};
+    max_grad{j,6} = mean_sub.label{ind(6)};
     
     %saveas(gcf, ['../Analysis Output/' cond.GOlabel{j} 'butterfly.svg']);
     %close
@@ -381,6 +379,10 @@ ft_plot_sens(sensors, 'facecolor', colors, 'facealpha', 0.7);
 ft_plot_mesh(ft_convert_units(mesh_scalp, 'cm'), 'edgecolor', [173/256 216/256 230/256]);
 
 view([-100 25])
+
+%% Quantify individual subjects components latencies and amplitude
+
+
 
 %% TopoplotER
 
