@@ -80,8 +80,11 @@ clear i ii iii trig nstim
 
 %% Butterfly with selected sensors
 
-load('../mat_data/timelockeds/all_cmb_avg.mat');
-load('../mat_data/timelockeds/grand_cmb_avg.mat');
+all_cmb_avg = load('../mat_data/timelockeds/all_cmb_avg.mat');
+all_cmb_avg = all_cmb_avg.all_cmb_avg;
+
+gravg_cmb = load('../mat_data/timelockeds/grand_avg_cmb.mat');
+gravg_cmb = gravg_cmb.gravg_cmb;
 
 mean_sub = load(['../mat_data/timelockeds/mean_sub.mat']);
 mean_sub = mean_sub.timelockeds_cmb;
@@ -378,8 +381,14 @@ for i = 1:numel(conditions)
 %for condition
 end
 
+%save('../mat_data/timelockeds/subjects_sensoi_avg.mat', 'sub_sensoi', '-v7.3');
+
 %% Inspect and plot PO60_90 (i.e. pulse only control). Also write latency of max and mean amplitude within TOI to struct.
 %NB mean_sub loads for butterfly plots
+
+%Load average sensors of interest for subjects
+sub_sensoi = load('../mat_data/timelockeds/subjects_sensoi_avg.mat');
+sub_sensoi = sub_sensoi.sub_sensoi;
 
 %Structure for amplitude and latency-measures
 sub_amp_lat = struct();
@@ -388,16 +397,18 @@ sub_amp_lat = struct();
 minylim = 0*10^-12;
 maxylim = 14*10^-12;
 
-%Time windows of interest
+n_subs = 1:numel(sub_date.ID);
+
+%% PO60_90: Extract and plot amplitude and latencies
+
+%Time windows of interest, varies with gap position!!
 N1on = find(mean_sub.time == 0.050);
 N1off = find(mean_sub.time == 0.150);
 P2on = find(mean_sub.time == 0.150);
 P2off = find(mean_sub.time == 0.250);
 
-n_subs = 1:numel(sub_date.ID);
-
 figure('Position', [400 400 1800 400]); hold on;
-xlim([1 165]);
+xlim([51 165]);
 ylim([minylim maxylim]);
 title('PO60_90', 'Interpreter', 'none');
 for i = 1:numel(sub_date.ID)
@@ -410,25 +421,40 @@ clear M I
 
 %find lat and amp for P2, collect in struct
 [M, I] = max(sub_sensoi.PO60{i,5}(P2on:P2off));
-sub_amp_lat.PO60_90_P2lat(i,1) = mean_sub.time(N1on-1+I);
+sub_amp_lat.PO60_90_P2lat(i,1) = mean_sub.time(P2on-1+I);
 sub_amp_lat.PO60_90_P2amp(i,1) = mean(sub_sensoi.PO60{i,5}(P2on:P2off));
 clear M I
     
 plot(sub_sensoi.PO60{i,5}, 'Color', [0 0 0 0.5])
 tempmean(i,1:165) = sub_sensoi.PO60{i,5};
 end
-patch('Faces', [1 2 3 4], 'Vertices', [N1on minylim; N1on maxylim; N1off maxylim; N1off minylim], 'FaceColor', 'blue', 'FaceAlpha', 0.05, 'EdgeAlpha', 0);
+patch('Faces', [1 2 3 4], 'Vertices', [N1on minylim; N1on maxylim; N1off maxylim; N1off minylim], 'FaceColor', 'green', 'FaceAlpha', 0.05, 'EdgeAlpha', 0);
 patch('Faces', [1 2 3 4], 'Vertices', [P2on minylim; P2on maxylim; P2off maxylim; P2off minylim], 'FaceColor', 'yellow', 'FaceAlpha', 0.1, 'EdgeAlpha', 0);
 plot(mean(tempmean), 'Color', [1 0 0], 'LineWidth', 1.5); clear tempmean;
 plot([101 101], [minylim maxylim], 'k --');
 x = gca;
 x.XTick = [1:10:165];
 x.XTickLabel = [-500:50:320];
+x.XMinorTick = 'on';
+x.FontSize = 20;
+x.XTickLabelRotation = 90;
 
+%saveas(gcf, ['../Analysis Output/PO60_90_subs.svg']);
+%close;
 
-%Inspect GO_60 (i.e. GAP only)
+%% GO_60: Extract and plot amplitude and latencies
+
+%Time windows of interest, varies with gap position!!
+N1on = find(mean_sub.time == 0.050);
+N1off = find(mean_sub.time == 0.150);
+P2on = find(mean_sub.time == 0.150);
+P2off = find(mean_sub.time == 0.250);
+
+gapon = find(mean_sub.time == 0);
+gapoff = find(mean_sub.time == 0.05);
+
 figure('Position', [400 400 1800 400]); hold on;
-xlim([1 165]);
+xlim([51 165]);
 ylim([0*10^-12 14*10^-12]);
 title('GO_60', 'Interpreter', 'none');
 for i = 1:numel(sub_date.ID)
@@ -441,28 +467,226 @@ clear M I
 
 %find lat and amp for P2, collect in struct
 [M, I] = max(sub_sensoi.GO{i,1}(P2on:P2off));
-sub_amp_lat.GO60_90_P2lat(i,1) = mean_sub.time(N1on-1+I);
+sub_amp_lat.GO60_90_P2lat(i,1) = mean_sub.time(P2on-1+I);
 sub_amp_lat.GO60_90_P2amp(i,1) = mean(sub_sensoi.GO{i,1}(P2on:P2off));
 clear M I
     
 plot(sub_sensoi.GO{i,1}, 'Color', [0 0 0 0.5])
 tempmean(i,1:165) = sub_sensoi.GO{i,1};
 end
-patch('Faces', [1 2 3 4], 'Vertices', [111 minylim; 111 maxylim; 131 maxylim; 131 minylim], 'FaceColor', 'blue', 'FaceAlpha', 0.05, 'EdgeAlpha', 0);
-patch('Faces', [1 2 3 4], 'Vertices', [131 minylim; 131 maxylim; 151 maxylim; 151 minylim], 'FaceColor', 'yellow', 'FaceAlpha', 0.1, 'EdgeAlpha', 0);
+patch('Faces', [1 2 3 4], 'Vertices', [gapon minylim; gapon maxylim; gapoff maxylim; gapoff minylim], 'FaceColor', 'red', 'FaceAlpha', 0.05, 'EdgeAlpha', 0);
+patch('Faces', [1 2 3 4], 'Vertices', [N1on minylim; N1on maxylim; N1off maxylim; N1off minylim], 'FaceColor', 'green', 'FaceAlpha', 0.05, 'EdgeAlpha', 0);
+patch('Faces', [1 2 3 4], 'Vertices', [P2on minylim; P2on maxylim; P2off maxylim; P2off minylim], 'FaceColor', 'yellow', 'FaceAlpha', 0.1, 'EdgeAlpha', 0);
+plot(mean(tempmean), 'Color', [1 0 0], 'LineWidth', 1.5); clear tempmean;
+%plot([101 101], [minylim maxylim], 'k --');
+x = gca;
+x.XTick = [1:10:165];
+x.XTickLabel = [-500:50:320];
+x.XMinorTick = 'on';
+x.FontSize = 20;
+x.XTickLabelRotation = 90;
+
+%saveas(gcf, ['../Analysis Output/GO60_subs.svg']);
+%close;
+
+%% GO_i0 & GO_i60: Extract and plot amplitude and latencies
+
+% GP60_i0!!
+%Adapt N1 & P2 window to gap i0 (-50ms)
+N1on = find(mean_sub.time == round(0.050 - 0.050, 3));
+N1off = find(mean_sub.time == round(0.150 - 0.050, 3));
+P2on = find(mean_sub.time == round(0.150 - 0.050, 3));
+P2off = find(mean_sub.time == round(0.250 - 0.050, 3));
+
+gapon = find(mean_sub.time == -0.050);
+gapoff = find(mean_sub.time == 0);
+
+figure('Position', [400 400 1800 400]); hold on;
+xlim([51 165]);
+ylim([0*10^-12 14*10^-12]);
+title('GP_i0', 'Interpreter', 'none');
+for i = 1:numel(sub_date.ID)
+    
+%find lat and amp for N1, collect in struct
+[M, I] = max(sub_sensoi.GP60{i,1}(N1on:N1off));
+sub_amp_lat.GP60_i0_N1lat(i,1) = mean_sub.time(N1on-1+I) + 0.050; %NB - Compensate t = 0 to first stimulation event (i.e gap onset)
+sub_amp_lat.GP60_i0_N1amp(i,1) = mean(sub_sensoi.GP60{i,1}(N1on:N1off));
+clear M I
+
+%find lat and amp for P2, collect in struct
+[M, I] = max(sub_sensoi.GP60{i,1}(P2on:P2off));
+sub_amp_lat.GP60_i0_P2lat(i,1) = mean_sub.time(P2on-1+I) + 0.050; %NB - Compensate t = 0 to first stimulation event (i.e gap onset)
+sub_amp_lat.GP60_i0_P2amp(i,1) = mean(sub_sensoi.GP60{i,1}(P2on:P2off));
+clear M I
+    
+plot(sub_sensoi.GP60{i,1}, 'Color', [0 0 0 0.5])
+tempmean(i,1:165) = sub_sensoi.GP60{i,1};
+end
+
+%Gap patch
+patch('Faces', [1 2 3 4], 'Vertices', [gapon minylim; gapon maxylim; gapoff maxylim; gapoff minylim], 'FaceColor', 'red', 'FaceAlpha', 0.05, 'EdgeAlpha', 0);
+
+%N1 Patch
+patch('Faces', [1 2 3 4], 'Vertices', [N1on minylim; N1on maxylim; N1off maxylim; N1off minylim], 'FaceColor', 'green', 'FaceAlpha', 0.05, 'EdgeAlpha', 0);
+
+%P2 patch
+patch('Faces', [1 2 3 4], 'Vertices', [P2on minylim; P2on maxylim; P2off maxylim; P2off minylim], 'FaceColor', 'yellow', 'FaceAlpha', 0.1, 'EdgeAlpha', 0);
 plot(mean(tempmean), 'Color', [1 0 0], 'LineWidth', 1.5); clear tempmean;
 plot([101 101], [minylim maxylim], 'k --');
 x = gca;
 x.XTick = [1:10:165];
 x.XTickLabel = [-500:50:320];
+x.XMinorTick = 'on';
+x.FontSize = 20;
+x.XTickLabelRotation = 90;
+
+%saveas(gcf, ['../Analysis Output/GP60_i0_subs.svg']);
+%close;
+
+% GP60_i60!!
+%Adapt N1 & P2 window to gap i0 (-50ms)
+N1on = find(mean_sub.time == round(0.050 - 0.110, 3));
+N1off = find(mean_sub.time == round(0.150 - 0.110, 3));
+P2on = find(mean_sub.time == round(0.150 - 0.110, 3));
+P2off = find(mean_sub.time == round(0.250 - 0.110, 3));
+
+gapon = find(mean_sub.time == -0.110);
+gapoff = find(mean_sub.time == -0.060);
+
+figure('Position', [400 400 1800 400]); hold on;
+xlim([51 165]);
+ylim([0*10^-12 14*10^-12]);
+title('GP_i60', 'Interpreter', 'none');
+for i = 1:numel(sub_date.ID)
+    
+%find lat and amp for N1, collect in struct
+[M, I] = max(sub_sensoi.GP60{i,2}(N1on:N1off));
+sub_amp_lat.GP60_i60_N1lat(i,1) = mean_sub.time(N1on-1+I) + 0.110; %NB - Compensate t = 0 to first stimulation event (i.e gap onset)
+sub_amp_lat.GP60_i60_N1amp(i,1) = mean(sub_sensoi.GP60{i,2}(N1on:N1off));
+clear M I
+
+%find lat and amp for P2, collect in struct
+[M, I] = max(sub_sensoi.GP60{i,2}(P2on:P2off));
+sub_amp_lat.GP60_i60_P2lat(i,1) = mean_sub.time(P2on-1+I) + 0.110; %NB - Compensate t = 0 to first stimulation event (i.e gap onset)
+sub_amp_lat.GP60_i60_P2amp(i,1) = mean(sub_sensoi.GP60{i,2}(P2on:P2off));
+clear M I
+    
+plot(sub_sensoi.GP60{i,2}, 'Color', [0 0 0 0.5])
+tempmean(i,1:165) = sub_sensoi.GP60{i,2};
+end
+
+%Gap patch
+patch('Faces', [1 2 3 4], 'Vertices', [gapon minylim; gapon maxylim; gapoff maxylim; gapoff minylim], 'FaceColor', 'red', 'FaceAlpha', 0.05, 'EdgeAlpha', 0);
+
+%N1 Patch
+patch('Faces', [1 2 3 4], 'Vertices', [N1on minylim; N1on maxylim; N1off maxylim; N1off minylim], 'FaceColor', 'green', 'FaceAlpha', 0.05, 'EdgeAlpha', 0);
+
+%P2 patch
+patch('Faces', [1 2 3 4], 'Vertices', [P2on minylim; P2on maxylim; P2off maxylim; P2off minylim], 'FaceColor', 'yellow', 'FaceAlpha', 0.1, 'EdgeAlpha', 0);
+plot(mean(tempmean), 'Color', [1 0 0], 'LineWidth', 1.5); clear tempmean;
+plot([101 101], [minylim maxylim], 'k --');
+x = gca;
+x.XTick = [1:10:165];
+x.XTickLabel = [-500:50:320];
+x.XMinorTick = 'on';
+x.FontSize = 20;
+x.XTickLabelRotation = 90;
+
+%saveas(gcf, ['../Analysis Output/GP60_i60_subs.svg']);
+%close;
 
 %% Plot amp and latencies
 
-figure; hold on;
-xlim([0 3]);
-plot([1 2], [sub_amp_lat.GO60_90_N1amp sub_amp_lat.PO60_90_N1amp], 'Color', [0 0 0 0.5])
-scatter(ones(1,22), sub_amp_lat.GO60_90_N1amp)
-scatter(ones(1,22)+1, sub_amp_lat.PO60_90_N1amp)
+%Amplitude N1
+figure('Position', [600 400 1200 800]);
+subplot(1,2,1); hold on;
+title('Amplitude N1', 'Interpreter', 'none');
+xlim([0.75 4.25]);
+ylim([0 9*10^-12]);
+
+%N1
+plot([1 2 3 4], [sub_amp_lat.GO60_90_N1amp sub_amp_lat.PO60_90_N1amp sub_amp_lat.GP60_i0_N1amp sub_amp_lat.GP60_i60_N1amp], 'Color', [0 0 0 0.5], 'HandleVisibility', 'off')
+plot([1 2 3 4], [mean(sub_amp_lat.GO60_90_N1amp) mean(sub_amp_lat.PO60_90_N1amp) mean(sub_amp_lat.GP60_i0_N1amp) mean(sub_amp_lat.GP60_i60_N1amp)], 'Color', [1 0 0 0.75], 'LineWidth', 1.5, 'DisplayName', 'mean (n = 22)')
+scatter(ones(1,22), sub_amp_lat.GO60_90_N1amp, 'filled', 'green', 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'DisplayName', 'N1')
+scatter(ones(1,22)+1, sub_amp_lat.PO60_90_N1amp, 'filled', 'green', 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+scatter(ones(1,22)+2, sub_amp_lat.GP60_i0_N1amp, 'filled', 'green', 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+scatter(ones(1,22)+3, sub_amp_lat.GP60_i60_N1amp, 'filled', 'green', 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+
+ylabel('Mean amplitude within TOI');
+
+x = gca;
+x.XTickLabel = ({'Gap Only', 'Pulse Only', 'ISI 0ms', 'ISI 60ms'});
+x.FontSize = 20;
+x.XTickLabelRotation = -90;
+x.YMinorTick = 'on';
+
+%Amplitude P2
+subplot(1,2,2); hold on;
+title('Amplitude P2', 'Interpreter', 'none');
+xlim([0.75 4.25]);
+ylim([0 9*10^-12]);
+
+%P2
+plot([1 2 3 4], [sub_amp_lat.GO60_90_P2amp sub_amp_lat.PO60_90_P2amp sub_amp_lat.GP60_i0_P2amp sub_amp_lat.GP60_i60_P2amp], 'Color', [0 0 0 0.5], 'HandleVisibility', 'off')
+plot([1 2 3 4], [mean(sub_amp_lat.GO60_90_P2amp) mean(sub_amp_lat.PO60_90_P2amp) mean(sub_amp_lat.GP60_i0_P2amp) mean(sub_amp_lat.GP60_i60_P2amp)], 'Color', [1 0 0 0.75], 'LineWidth', 1.5, 'HandleVisibility', 'off')
+scatter(ones(1,22), sub_amp_lat.GO60_90_P2amp, 'filled', 'yellow', 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'DisplayName', 'P2')
+scatter(ones(1,22)+1, sub_amp_lat.PO60_90_P2amp, 'filled', 'yellow', 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+scatter(ones(1,22)+2, sub_amp_lat.GP60_i0_P2amp, 'filled', 'yellow', 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+scatter(ones(1,22)+3, sub_amp_lat.GP60_i60_P2amp, 'filled', 'yellow', 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+
+x = gca;
+x.XTickLabel = ({'Gap Only', 'Pulse Only', 'ISI 0ms', 'ISI 60ms'});
+x.FontSize = 20;
+x.XTickLabelRotation = -90;
+x.YMinorTick = 'on';
+
+%saveas(gcf, ['../Analysis Output/amp_subs.svg']);
+%close;
+
+%Latency Plot
+figure('Position', [600 400 1200 800]);
+subplot(1,2,1); hold on;
+title('Latency N1', 'Interpreter', 'none');
+xlim([0.75 4.25]);
+ylim([0 0.3]);
+
+%N1
+plot([1 2 3 4], [sub_amp_lat.GO60_90_N1lat sub_amp_lat.PO60_90_N1lat sub_amp_lat.GP60_i0_N1lat sub_amp_lat.GP60_i60_N1lat], 'Color', [0 0 0 0.5], 'HandleVisibility', 'off')
+plot([1 2 3 4], [mean(sub_amp_lat.GO60_90_N1lat) mean(sub_amp_lat.PO60_90_N1lat) mean(sub_amp_lat.GP60_i0_N1lat) mean(sub_amp_lat.GP60_i60_N1lat)], 'Color', [1 0 0 0.75], 'LineWidth', 1.5, 'DisplayName', 'mean (n = 22)')
+scatter(ones(1,22), sub_amp_lat.GO60_90_N1lat, 'filled', 'green', 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'DisplayName', 'N1')
+scatter(ones(1,22)+1, sub_amp_lat.PO60_90_N1lat, 'filled', 'green', 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+scatter(ones(1,22)+2, sub_amp_lat.GP60_i0_N1lat, 'filled', 'green', 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+scatter(ones(1,22)+3, sub_amp_lat.GP60_i60_N1lat, 'filled', 'green', 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+
+ylabel('Latency relative first stimulus onset (ms)');
+
+x = gca;
+x.XTickLabel = ({'Gap Only', 'Pulse Only', 'ISI 0ms', 'ISI 60ms'});
+x.FontSize = 20;
+x.XTickLabelRotation = -90;
+x.YMinorTick = 'on';
+
+%P2
+subplot(1,2,2); hold on;
+title('Latency P2', 'Interpreter', 'none');
+xlim([0.75 4.25]);
+ylim([0 0.3]);
+plot([1 2 3 4], [sub_amp_lat.GO60_90_P2lat sub_amp_lat.PO60_90_P2lat sub_amp_lat.GP60_i0_P2lat sub_amp_lat.GP60_i60_P2lat], 'Color', [0 0 0 0.5], 'HandleVisibility', 'off')
+plot([1 2 3 4], [mean(sub_amp_lat.GO60_90_P2lat) mean(sub_amp_lat.PO60_90_P2lat) mean(sub_amp_lat.GP60_i0_P2lat) mean(sub_amp_lat.GP60_i60_P2lat)], 'Color', [1 0 0 0.75], 'LineWidth', 1.5, 'HandleVisibility', 'off')
+scatter(ones(1,22), sub_amp_lat.GO60_90_P2lat, 'filled', 'yellow', 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'DisplayName', 'P2')
+scatter(ones(1,22)+1, sub_amp_lat.PO60_90_P2lat, 'filled', 'yellow', 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+scatter(ones(1,22)+2, sub_amp_lat.GP60_i0_P2lat, 'filled', 'yellow', 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+scatter(ones(1,22)+3, sub_amp_lat.GP60_i60_P2lat, 'filled', 'yellow', 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+
+x = gca;
+x.XTickLabel = ({'Gap Only', 'Pulse Only', 'ISI 0ms', 'ISI 60ms'});
+x.FontSize = 20;
+x.XTickLabelRotation = -90;
+x.YMinorTick = 'on';
+x.YTickLabel = ([0:50:300]);
+
+%saveas(gcf, ['../Analysis Output/lat_subs.svg']);
+%close;
 
 
 %% TopoplotER
