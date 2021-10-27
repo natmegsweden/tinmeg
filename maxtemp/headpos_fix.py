@@ -9,12 +9,11 @@ raw_path = '/archive/20061_tinnitus/MEG'
 out_path = '/home/nikedv/TinMEG1/headpos_output'        #### ! CHANGE THIS !
 
 # ADD SUBJECTS/DATES HERE
+
+#Subject 0859 gives maxfilter error (signal 11) for tinmeg1b.fif and script can't find all quat-files?
+
 subj_dates = [
-	'NatMEG_0858/210609',
-    'NatMEG_0859/210609',
-    'NatMEG_0861/210614',
-    'NatMEG_0862/210615',
-    'NatMEG_0863/210615'
+	'NatMEG_0859/210609'
 ]
 
 # ADD FILENAME
