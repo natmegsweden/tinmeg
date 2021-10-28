@@ -1,9 +1,24 @@
 %% Load conditions for subjects, average trials via ft_timelockanalysis
 
-all_cmb_avg = struct();
-gravg_cmb = struct ();
+%NB, fs_ds = 200 is hardcoded in for adapting TOI to gap in identifying amp and lat
+
+all_cmb_avg = load('../mat_data/timelockeds/all_cmb_avg.mat');
+all_cmb_avg = all_cmb_avg.all_cmb_avg;
+
+gravg_cmb = load('../mat_data/timelockeds/grand_avg_cmb.mat');
+gravg_cmb = gravg_cmb.gravg_cmb;
+
+mean_sub = load(['../mat_data/timelockeds/mean_sub.mat']);
+mean_sub = mean_sub.timelockeds_cmb;
+mean_sub.time = round(mean_sub.time,3); %Round to avoid issues with floating point precision in plots
+
+%top_chan are 6 unique highest response channels in combined grads in all PO60 conditions (i.e. unique(max_grad) except 'MEG2022+2023', 'MEG2042+2043' (superior parietal)
+top_chan = {'MEG0242+0243', 'MEG1222+1223', 'MEG1322+1323', 'MEG1332+1333', 'MEG1342+1343', 'MEG1442+1443', 'MEG1522+1523', 'MEG1612+1613',  'MEG2422+2423', 'MEG2612+2613',  'MEG2642+2643'};
 
 %% Process timelockeds per condition, gather subject- and grand average
+
+all_cmb_avg = struct();
+gravg_cmb = struct ();
 
 for ii = 1:length(conditions)
 
@@ -80,26 +95,12 @@ clear i ii iii trig nstim
 
 %% Butterfly with selected sensors
 
-all_cmb_avg = load('../mat_data/timelockeds/all_cmb_avg.mat');
-all_cmb_avg = all_cmb_avg.all_cmb_avg;
-
-gravg_cmb = load('../mat_data/timelockeds/grand_avg_cmb.mat');
-gravg_cmb = gravg_cmb.gravg_cmb;
-
-mean_sub = load(['../mat_data/timelockeds/mean_sub.mat']);
-mean_sub = mean_sub.timelockeds_cmb;
-mean_sub.time = round(mean_sub.time,3); %Round to avoid issues with floating point precision in plots
-
 %Old, hand-picked sensors from MultiPlotER
 %l_mag_chan = {'MEG1611', 'MEG1621', 'MEG1811', 'MEG1641', 'MEG1631', 'MEG1841', 'MEG1731', 'MEG1941', 'MEG1911'};
 %r_mag_chan = {'MEG2421', 'MEG2411', 'MEG2221', 'MEG2431', 'MEG2441', 'MEG2231', 'MEG2511', 'MEG2321', 'MEG2311'};
 %l_grad_chan = {'MEG1612+1613', 'MEG1622+1623', 'MEG1812+1813', 'MEG1642+1643', 'MEG1632+1633', 'MEG1842+1843', 'MEG1732+1733', 'MEG1942+1943', 'MEG1912+1913'};
 %r_grad_chan = {'MEG2422+2423', 'MEG2412+2413', 'MEG2222+2223', 'MEG2432+2433', 'MEG2442+2443', 'MEG2232+2233', 'MEG2512+2513', 'MEG2322+2323', 'MEG2312+2313'};
 %other_chan = {'MEG1332+1333', 'MEG1342+1343', 'MEG2612+2613', 'MEG0242+0243', 'MEG1322+1323'};
-
-%top_chan are 6 unique highest response channels in combined grads in all PO60 conditions (i.e. unique(max_grad) except 'MEG2022+2023', 'MEG2042+2043' (superior parietal)
-top_chan = {'MEG0242+0243', 'MEG1222+1223', 'MEG1322+1323', 'MEG1332+1333', 'MEG1342+1343', 'MEG1442+1443', 'MEG1522+1523', 'MEG1612+1613',  'MEG2422+2423', 'MEG2612+2613',  'MEG2642+2643'};
-
 
 %GRAD-PLOTS PO60
 for j = 1:6
@@ -384,7 +385,7 @@ end
 %save('../mat_data/timelockeds/subjects_sensoi_avg.mat', 'sub_sensoi', '-v7.3');
 
 %% Inspect and plot PO60_90 (i.e. pulse only control). Also write latency of max and mean amplitude within TOI to struct.
-%NB mean_sub loads for butterfly plots
+%NB mean_sub loads up top
 
 %Load average sensors of interest for subjects
 sub_sensoi = load('../mat_data/timelockeds/subjects_sensoi_avg.mat');
@@ -408,7 +409,7 @@ P2on = find(mean_sub.time == 0.150);
 P2off = find(mean_sub.time == 0.250);
 
 figure('Position', [400 400 1800 400]); hold on;
-xlim([51 165]);
+xlim([41 165]);
 ylim([minylim maxylim]);
 title('PO60_90', 'Interpreter', 'none');
 for i = 1:numel(sub_date.ID)
@@ -439,8 +440,8 @@ x.XMinorTick = 'on';
 x.FontSize = 20;
 x.XTickLabelRotation = 90;
 
-%saveas(gcf, ['../Analysis Output/PO60_90_subs.svg']);
-%close;
+% saveas(gcf, ['../Analysis Output/PO60_90_subs.svg']);
+% close;
 
 %% GO_60: Extract and plot amplitude and latencies
 
@@ -454,7 +455,7 @@ gapon = find(mean_sub.time == 0);
 gapoff = find(mean_sub.time == 0.05);
 
 figure('Position', [400 400 1800 400]); hold on;
-xlim([51 165]);
+xlim([41 165]);
 ylim([0*10^-12 14*10^-12]);
 title('GO_60', 'Interpreter', 'none');
 for i = 1:numel(sub_date.ID)
@@ -486,114 +487,71 @@ x.XMinorTick = 'on';
 x.FontSize = 20;
 x.XTickLabelRotation = 90;
 
-%saveas(gcf, ['../Analysis Output/GO60_subs.svg']);
-%close;
+% saveas(gcf, ['../Analysis Output/GO60_subs.svg']);
+% close;
 
-%% GO_i0 & GO_i60: Extract and plot amplitude and latencies
+%% GP60-trials: Extract and plot amplitude and latencies
 
-% GP60_i0!!
-%Adapt N1 & P2 window to gap i0 (-50ms)
-N1on = find(mean_sub.time == round(0.050 - 0.050, 3));
-N1off = find(mean_sub.time == round(0.150 - 0.050, 3));
-P2on = find(mean_sub.time == round(0.150 - 0.050, 3));
-P2off = find(mean_sub.time == round(0.250 - 0.050, 3));
-
-gapon = find(mean_sub.time == -0.050);
-gapoff = find(mean_sub.time == 0);
-
-figure('Position', [400 400 1800 400]); hold on;
-xlim([51 165]);
-ylim([0*10^-12 14*10^-12]);
-title('GP_i0', 'Interpreter', 'none');
-for i = 1:numel(sub_date.ID)
+for ii = 1:numel(cond.GP60label)
     
-%find lat and amp for N1, collect in struct
-[M, I] = max(sub_sensoi.GP60{i,1}(N1on:N1off));
-sub_amp_lat.GP60_i0_N1lat(i,1) = mean_sub.time(N1on-1+I) + 0.050; %NB - Compensate t = 0 to first stimulation event (i.e gap onset)
-sub_amp_lat.GP60_i0_N1amp(i,1) = mean(sub_sensoi.GP60{i,1}(N1on:N1off));
-clear M I
+    %Specify list of times needed to correct for adapting TOI to shifting ISI (i.e ISI + GAP duration)
+    gapcomp = [0.050 0.110 0.170 0.290];
 
-%find lat and amp for P2, collect in struct
-[M, I] = max(sub_sensoi.GP60{i,1}(P2on:P2off));
-sub_amp_lat.GP60_i0_P2lat(i,1) = mean_sub.time(P2on-1+I) + 0.050; %NB - Compensate t = 0 to first stimulation event (i.e gap onset)
-sub_amp_lat.GP60_i0_P2amp(i,1) = mean(sub_sensoi.GP60{i,1}(P2on:P2off));
-clear M I
+    %Adapt N1 & P2 window to gap ISI
+    N1on = find(mean_sub.time == round(0.050 - gapcomp(ii), 3));
+    N1off = find(mean_sub.time == round(0.150 - gapcomp(ii), 3));
+    P2on = find(mean_sub.time == round(0.150 - gapcomp(ii), 3));
+    P2off = find(mean_sub.time == round(0.250 - gapcomp(ii), 3));
+
+    gapon = find(mean_sub.time == -gapcomp(ii));
+    gapoff = gapon + 10; %10 samples = 50ms, hardcoded fs_ds = 200;
+
+
+    figure('Position', [400 400 1800 400]); hold on;
+    xlim([41 165]);
+    ylim([0*10^-12 14*10^-12]);
+    title(cond.GP60label{ii}, 'Interpreter', 'none');
+    for i = 1:numel(sub_date.ID)
+
+    %find lat and amp for N1, collect in struct
+    [M, I] = max(sub_sensoi.GP60{i,ii}(N1on:N1off));
+    sub_amp_lat.([cond.GP60label{ii} '_N1lat'])(i,1) = mean_sub.time(N1on-1+I) + gapcomp(ii); %NB - Compensate t = 0 to first stimulation event (i.e gap onset)
+    sub_amp_lat.([cond.GP60label{ii} '_N1amp'])(i,1) = mean(sub_sensoi.GP60{i,ii}(N1on:N1off));
+    clear M I
+
+    %find lat and amp for P2, collect in struct
+    [M, I] = max(sub_sensoi.GP60{i,ii}(P2on:P2off));
+    sub_amp_lat.([cond.GP60label{ii} '_P2lat'])(i,1) = mean_sub.time(P2on-1+I) + gapcomp(ii); %NB - Compensate t = 0 to first stimulation event (i.e gap onset)
+    sub_amp_lat.([cond.GP60label{ii} '_P2amp'])(i,1) = mean(sub_sensoi.GP60{i,ii}(P2on:P2off));
+    clear M I
+
+    plot(sub_sensoi.GP60{i,ii}, 'Color', [0 0 0 0.5])
+    tempmean(i,1:165) = sub_sensoi.GP60{i,ii};
+    end
+
+    %Gap patch
+    patch('Faces', [1 2 3 4], 'Vertices', [gapon minylim; gapon maxylim; gapoff maxylim; gapoff minylim], 'FaceColor', 'red', 'FaceAlpha', 0.05, 'EdgeAlpha', 0);
+
+    %N1 Patch
+    patch('Faces', [1 2 3 4], 'Vertices', [N1on minylim; N1on maxylim; N1off maxylim; N1off minylim], 'FaceColor', 'green', 'FaceAlpha', 0.05, 'EdgeAlpha', 0);
+
+    %P2 patch
+    patch('Faces', [1 2 3 4], 'Vertices', [P2on minylim; P2on maxylim; P2off maxylim; P2off minylim], 'FaceColor', 'yellow', 'FaceAlpha', 0.1, 'EdgeAlpha', 0);
+    plot(mean(tempmean), 'Color', [1 0 0], 'LineWidth', 1.5); clear tempmean;
+    plot([101 101], [minylim maxylim], 'k --');
+    x = gca;
+    x.XTick = [1:10:165];
+    x.XTickLabel = [-500:50:320];
+    x.XMinorTick = 'on';
+    x.FontSize = 20;
+    x.XTickLabelRotation = 90;
+
+    saveas(gcf, ['../Analysis Output/' cond.GP60label{ii} '_subs.svg']);
+    close;
     
-plot(sub_sensoi.GP60{i,1}, 'Color', [0 0 0 0.5])
-tempmean(i,1:165) = sub_sensoi.GP60{i,1};
+    clear gapcomp
+
 end
-
-%Gap patch
-patch('Faces', [1 2 3 4], 'Vertices', [gapon minylim; gapon maxylim; gapoff maxylim; gapoff minylim], 'FaceColor', 'red', 'FaceAlpha', 0.05, 'EdgeAlpha', 0);
-
-%N1 Patch
-patch('Faces', [1 2 3 4], 'Vertices', [N1on minylim; N1on maxylim; N1off maxylim; N1off minylim], 'FaceColor', 'green', 'FaceAlpha', 0.05, 'EdgeAlpha', 0);
-
-%P2 patch
-patch('Faces', [1 2 3 4], 'Vertices', [P2on minylim; P2on maxylim; P2off maxylim; P2off minylim], 'FaceColor', 'yellow', 'FaceAlpha', 0.1, 'EdgeAlpha', 0);
-plot(mean(tempmean), 'Color', [1 0 0], 'LineWidth', 1.5); clear tempmean;
-plot([101 101], [minylim maxylim], 'k --');
-x = gca;
-x.XTick = [1:10:165];
-x.XTickLabel = [-500:50:320];
-x.XMinorTick = 'on';
-x.FontSize = 20;
-x.XTickLabelRotation = 90;
-
-%saveas(gcf, ['../Analysis Output/GP60_i0_subs.svg']);
-%close;
-
-% GP60_i60!!
-%Adapt N1 & P2 window to gap i0 (-50ms)
-N1on = find(mean_sub.time == round(0.050 - 0.110, 3));
-N1off = find(mean_sub.time == round(0.150 - 0.110, 3));
-P2on = find(mean_sub.time == round(0.150 - 0.110, 3));
-P2off = find(mean_sub.time == round(0.250 - 0.110, 3));
-
-gapon = find(mean_sub.time == -0.110);
-gapoff = find(mean_sub.time == -0.060);
-
-figure('Position', [400 400 1800 400]); hold on;
-xlim([51 165]);
-ylim([0*10^-12 14*10^-12]);
-title('GP_i60', 'Interpreter', 'none');
-for i = 1:numel(sub_date.ID)
-    
-%find lat and amp for N1, collect in struct
-[M, I] = max(sub_sensoi.GP60{i,2}(N1on:N1off));
-sub_amp_lat.GP60_i60_N1lat(i,1) = mean_sub.time(N1on-1+I) + 0.110; %NB - Compensate t = 0 to first stimulation event (i.e gap onset)
-sub_amp_lat.GP60_i60_N1amp(i,1) = mean(sub_sensoi.GP60{i,2}(N1on:N1off));
-clear M I
-
-%find lat and amp for P2, collect in struct
-[M, I] = max(sub_sensoi.GP60{i,2}(P2on:P2off));
-sub_amp_lat.GP60_i60_P2lat(i,1) = mean_sub.time(P2on-1+I) + 0.110; %NB - Compensate t = 0 to first stimulation event (i.e gap onset)
-sub_amp_lat.GP60_i60_P2amp(i,1) = mean(sub_sensoi.GP60{i,2}(P2on:P2off));
-clear M I
-    
-plot(sub_sensoi.GP60{i,2}, 'Color', [0 0 0 0.5])
-tempmean(i,1:165) = sub_sensoi.GP60{i,2};
-end
-
-%Gap patch
-patch('Faces', [1 2 3 4], 'Vertices', [gapon minylim; gapon maxylim; gapoff maxylim; gapoff minylim], 'FaceColor', 'red', 'FaceAlpha', 0.05, 'EdgeAlpha', 0);
-
-%N1 Patch
-patch('Faces', [1 2 3 4], 'Vertices', [N1on minylim; N1on maxylim; N1off maxylim; N1off minylim], 'FaceColor', 'green', 'FaceAlpha', 0.05, 'EdgeAlpha', 0);
-
-%P2 patch
-patch('Faces', [1 2 3 4], 'Vertices', [P2on minylim; P2on maxylim; P2off maxylim; P2off minylim], 'FaceColor', 'yellow', 'FaceAlpha', 0.1, 'EdgeAlpha', 0);
-plot(mean(tempmean), 'Color', [1 0 0], 'LineWidth', 1.5); clear tempmean;
-plot([101 101], [minylim maxylim], 'k --');
-x = gca;
-x.XTick = [1:10:165];
-x.XTickLabel = [-500:50:320];
-x.XMinorTick = 'on';
-x.FontSize = 20;
-x.XTickLabelRotation = 90;
-
-%saveas(gcf, ['../Analysis Output/GP60_i60_subs.svg']);
-%close;
 
 %% Plot amp and latencies
 
@@ -601,21 +559,25 @@ x.XTickLabelRotation = 90;
 figure('Position', [600 400 1200 800]);
 subplot(1,2,1); hold on;
 title('Amplitude N1', 'Interpreter', 'none');
-xlim([0.75 4.25]);
+xlim([0.75 6.25]);
 ylim([0 9*10^-12]);
 
 %N1
-plot([1 2 3 4], [sub_amp_lat.GO60_90_N1amp sub_amp_lat.PO60_90_N1amp sub_amp_lat.GP60_i0_N1amp sub_amp_lat.GP60_i60_N1amp], 'Color', [0 0 0 0.5], 'HandleVisibility', 'off')
-plot([1 2 3 4], [mean(sub_amp_lat.GO60_90_N1amp) mean(sub_amp_lat.PO60_90_N1amp) mean(sub_amp_lat.GP60_i0_N1amp) mean(sub_amp_lat.GP60_i60_N1amp)], 'Color', [1 0 0 0.75], 'LineWidth', 1.5, 'DisplayName', 'mean (n = 22)')
-scatter(ones(1,22), sub_amp_lat.GO60_90_N1amp, 'filled', 'green', 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'DisplayName', 'N1')
-scatter(ones(1,22)+1, sub_amp_lat.PO60_90_N1amp, 'filled', 'green', 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+plot([1 2 3 4 5 6], [sub_amp_lat.PO60_90_N1amp sub_amp_lat.GO60_90_N1amp sub_amp_lat.GP60_i0_N1amp sub_amp_lat.GP60_i60_N1amp sub_amp_lat.GP60_i120_N1amp sub_amp_lat.GP60_i240_N1amp], 'Color', [0 0 0 0.5], 'HandleVisibility', 'off')
+plot([1 2 3 4 5 6], [mean(sub_amp_lat.PO60_90_N1amp) mean(sub_amp_lat.GO60_90_N1amp) mean(sub_amp_lat.GP60_i0_N1amp) mean(sub_amp_lat.GP60_i60_N1amp) mean(sub_amp_lat.GP60_i120_N1amp) mean(sub_amp_lat.GP60_i240_N1amp)], 'Color', [1 0 0 0.75], 'LineWidth', 1.5, 'DisplayName', 'mean (n = 22)')
+
+scatter(ones(1,22), sub_amp_lat.PO60_90_N1amp, 'filled', 'green', 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+scatter(ones(1,22)+1, sub_amp_lat.GO60_90_N1amp, 'filled', 'green', 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'DisplayName', 'N1')
 scatter(ones(1,22)+2, sub_amp_lat.GP60_i0_N1amp, 'filled', 'green', 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
 scatter(ones(1,22)+3, sub_amp_lat.GP60_i60_N1amp, 'filled', 'green', 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+scatter(ones(1,22)+4, sub_amp_lat.GP60_i120_N1amp, 'filled', 'green', 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+scatter(ones(1,22)+5, sub_amp_lat.GP60_i240_N1amp, 'filled', 'green', 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
 
 ylabel('Mean amplitude within TOI');
 
 x = gca;
-x.XTickLabel = ({'Gap Only', 'Pulse Only', 'ISI 0ms', 'ISI 60ms'});
+x.XTick = [1:6]
+x.XTickLabel = ({'Pulse Only', 'Gap Only', 'ISI 0ms', 'ISI 60ms', 'ISI120', 'ISI240'});
 x.FontSize = 20;
 x.XTickLabelRotation = -90;
 x.YMinorTick = 'on';
@@ -623,45 +585,53 @@ x.YMinorTick = 'on';
 %Amplitude P2
 subplot(1,2,2); hold on;
 title('Amplitude P2', 'Interpreter', 'none');
-xlim([0.75 4.25]);
+xlim([0.75 6.25]);
 ylim([0 9*10^-12]);
 
 %P2
-plot([1 2 3 4], [sub_amp_lat.GO60_90_P2amp sub_amp_lat.PO60_90_P2amp sub_amp_lat.GP60_i0_P2amp sub_amp_lat.GP60_i60_P2amp], 'Color', [0 0 0 0.5], 'HandleVisibility', 'off')
-plot([1 2 3 4], [mean(sub_amp_lat.GO60_90_P2amp) mean(sub_amp_lat.PO60_90_P2amp) mean(sub_amp_lat.GP60_i0_P2amp) mean(sub_amp_lat.GP60_i60_P2amp)], 'Color', [1 0 0 0.75], 'LineWidth', 1.5, 'HandleVisibility', 'off')
-scatter(ones(1,22), sub_amp_lat.GO60_90_P2amp, 'filled', 'yellow', 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'DisplayName', 'P2')
-scatter(ones(1,22)+1, sub_amp_lat.PO60_90_P2amp, 'filled', 'yellow', 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+plot([1 2 3 4 5 6], [sub_amp_lat.PO60_90_P2amp sub_amp_lat.GO60_90_P2amp sub_amp_lat.GP60_i0_P2amp sub_amp_lat.GP60_i60_P2amp sub_amp_lat.GP60_i120_P2amp sub_amp_lat.GP60_i240_P2amp], 'Color', [0 0 0 0.5], 'HandleVisibility', 'off')
+plot([1 2 3 4 5 6], [mean(sub_amp_lat.PO60_90_P2amp) mean(sub_amp_lat.GO60_90_P2amp) mean(sub_amp_lat.GP60_i0_P2amp) mean(sub_amp_lat.GP60_i60_P2amp) mean(sub_amp_lat.GP60_i120_P2amp) mean(sub_amp_lat.GP60_i240_P2amp)], 'Color', [1 0 0 0.75], 'LineWidth', 1.5, 'HandleVisibility', 'off')
+
+scatter(ones(1,22), sub_amp_lat.PO60_90_P2amp, 'filled', 'yellow', 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+scatter(ones(1,22)+1, sub_amp_lat.GO60_90_P2amp, 'filled', 'yellow', 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'DisplayName', 'P2')
 scatter(ones(1,22)+2, sub_amp_lat.GP60_i0_P2amp, 'filled', 'yellow', 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
 scatter(ones(1,22)+3, sub_amp_lat.GP60_i60_P2amp, 'filled', 'yellow', 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+scatter(ones(1,22)+4, sub_amp_lat.GP60_i120_P2amp, 'filled', 'yellow', 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+scatter(ones(1,22)+5, sub_amp_lat.GP60_i240_P2amp, 'filled', 'yellow', 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
 
 x = gca;
-x.XTickLabel = ({'Gap Only', 'Pulse Only', 'ISI 0ms', 'ISI 60ms'});
+x.XTick = [1:6]
+x.XTickLabel = ({'Pulse Only', 'Gap Only', 'ISI 0ms', 'ISI 60ms', 'ISI120', 'ISI240'});
 x.FontSize = 20;
 x.XTickLabelRotation = -90;
 x.YMinorTick = 'on';
 
-%saveas(gcf, ['../Analysis Output/amp_subs.svg']);
-%close;
+% saveas(gcf, ['../Analysis Output/amp_subs.svg']);
+% close;
 
 %Latency Plot
 figure('Position', [600 400 1200 800]);
 subplot(1,2,1); hold on;
 title('Latency N1', 'Interpreter', 'none');
-xlim([0.75 4.25]);
+xlim([0.75 6.25]);
 ylim([0 0.3]);
 
 %N1
-plot([1 2 3 4], [sub_amp_lat.GO60_90_N1lat sub_amp_lat.PO60_90_N1lat sub_amp_lat.GP60_i0_N1lat sub_amp_lat.GP60_i60_N1lat], 'Color', [0 0 0 0.5], 'HandleVisibility', 'off')
-plot([1 2 3 4], [mean(sub_amp_lat.GO60_90_N1lat) mean(sub_amp_lat.PO60_90_N1lat) mean(sub_amp_lat.GP60_i0_N1lat) mean(sub_amp_lat.GP60_i60_N1lat)], 'Color', [1 0 0 0.75], 'LineWidth', 1.5, 'DisplayName', 'mean (n = 22)')
-scatter(ones(1,22), sub_amp_lat.GO60_90_N1lat, 'filled', 'green', 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'DisplayName', 'N1')
-scatter(ones(1,22)+1, sub_amp_lat.PO60_90_N1lat, 'filled', 'green', 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+plot([1 2 3 4 5 6], [sub_amp_lat.PO60_90_N1lat sub_amp_lat.GO60_90_N1lat sub_amp_lat.GP60_i0_N1lat sub_amp_lat.GP60_i60_N1lat sub_amp_lat.GP60_i120_N1lat sub_amp_lat.GP60_i240_N1lat], 'Color', [0 0 0 0.5], 'HandleVisibility', 'off')
+plot([1 2 3 4 5 6], [mean(sub_amp_lat.PO60_90_N1lat) mean(sub_amp_lat.GO60_90_N1lat) mean(sub_amp_lat.GP60_i0_N1lat) mean(sub_amp_lat.GP60_i60_N1lat) mean(sub_amp_lat.GP60_i120_N1lat) mean(sub_amp_lat.GP60_i240_N1lat)], 'Color', [1 0 0 0.75], 'LineWidth', 1.5, 'DisplayName', 'mean (n = 22)')
+
+scatter(ones(1,22), sub_amp_lat.PO60_90_N1lat, 'filled', 'green', 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+scatter(ones(1,22)+1, sub_amp_lat.GO60_90_N1lat, 'filled', 'green', 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'DisplayName', 'N1')
 scatter(ones(1,22)+2, sub_amp_lat.GP60_i0_N1lat, 'filled', 'green', 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
 scatter(ones(1,22)+3, sub_amp_lat.GP60_i60_N1lat, 'filled', 'green', 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+scatter(ones(1,22)+4, sub_amp_lat.GP60_i120_N1lat, 'filled', 'green', 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+scatter(ones(1,22)+5, sub_amp_lat.GP60_i240_N1lat, 'filled', 'green', 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
 
 ylabel('Latency relative first stimulus onset (ms)');
 
 x = gca;
-x.XTickLabel = ({'Gap Only', 'Pulse Only', 'ISI 0ms', 'ISI 60ms'});
+x.XTick = [1:6]
+x.XTickLabel = ({'Pulse Only', 'Gap Only', 'ISI 0ms', 'ISI 60ms', 'ISI120', 'ISI240'});
 x.FontSize = 20;
 x.XTickLabelRotation = -90;
 x.YMinorTick = 'on';
@@ -669,60 +639,167 @@ x.YMinorTick = 'on';
 %P2
 subplot(1,2,2); hold on;
 title('Latency P2', 'Interpreter', 'none');
-xlim([0.75 4.25]);
+xlim([0.75 6.25]);
 ylim([0 0.3]);
-plot([1 2 3 4], [sub_amp_lat.GO60_90_P2lat sub_amp_lat.PO60_90_P2lat sub_amp_lat.GP60_i0_P2lat sub_amp_lat.GP60_i60_P2lat], 'Color', [0 0 0 0.5], 'HandleVisibility', 'off')
-plot([1 2 3 4], [mean(sub_amp_lat.GO60_90_P2lat) mean(sub_amp_lat.PO60_90_P2lat) mean(sub_amp_lat.GP60_i0_P2lat) mean(sub_amp_lat.GP60_i60_P2lat)], 'Color', [1 0 0 0.75], 'LineWidth', 1.5, 'HandleVisibility', 'off')
-scatter(ones(1,22), sub_amp_lat.GO60_90_P2lat, 'filled', 'yellow', 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'DisplayName', 'P2')
-scatter(ones(1,22)+1, sub_amp_lat.PO60_90_P2lat, 'filled', 'yellow', 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+plot([1 2 3 4 5 6], [sub_amp_lat.PO60_90_P2lat sub_amp_lat.GO60_90_P2lat sub_amp_lat.GP60_i0_P2lat sub_amp_lat.GP60_i60_P2lat sub_amp_lat.GP60_i120_P2lat sub_amp_lat.GP60_i240_P2lat], 'Color', [0 0 0 0.5], 'HandleVisibility', 'off')
+plot([1 2 3 4 5 6], [mean(sub_amp_lat.PO60_90_P2lat) mean(sub_amp_lat.GO60_90_P2lat) mean(sub_amp_lat.GP60_i0_P2lat) mean(sub_amp_lat.GP60_i60_P2lat) mean(sub_amp_lat.GP60_i120_P2lat) mean(sub_amp_lat.GP60_i240_P2lat)], 'Color', [1 0 0 0.75], 'LineWidth', 1.5, 'HandleVisibility', 'off')
+
+scatter(ones(1,22), sub_amp_lat.PO60_90_P2lat, 'filled', 'yellow', 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+scatter(ones(1,22)+1, sub_amp_lat.GO60_90_P2lat, 'filled', 'yellow', 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'DisplayName', 'P2')
 scatter(ones(1,22)+2, sub_amp_lat.GP60_i0_P2lat, 'filled', 'yellow', 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
 scatter(ones(1,22)+3, sub_amp_lat.GP60_i60_P2lat, 'filled', 'yellow', 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+scatter(ones(1,22)+4, sub_amp_lat.GP60_i120_P2lat, 'filled', 'yellow', 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+scatter(ones(1,22)+5, sub_amp_lat.GP60_i240_P2lat, 'filled', 'yellow', 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
 
 x = gca;
-x.XTickLabel = ({'Gap Only', 'Pulse Only', 'ISI 0ms', 'ISI 60ms'});
+x.XTick = [1:6]
+x.XTickLabel = ({'Pulse Only', 'Gap Only', 'ISI 0ms', 'ISI 60ms', 'ISI120', 'ISI240'});
 x.FontSize = 20;
 x.XTickLabelRotation = -90;
 x.YMinorTick = 'on';
-x.YTickLabel = ([0:50:300]);
 
-%saveas(gcf, ['../Analysis Output/lat_subs.svg']);
-%close;
-
+% saveas(gcf, ['../Analysis Output/lat_subs.svg']);
+% close;
 
 %% TopoplotER
 
-for c = 1:numel(conditions);
+%mean_sub, all_cmb_avg & gravg_cmb loads in butterfly plots
 
-mean_sub = sensspace_avg.(conditions{c}){1,1};
+zlimlow = -15*10^-14;
+zlimhigh = 15*10^-14;
 
-    cfg = [];
-    cfg.parameter = 'avg';
-    cfg.layout = 'neuromag306mag.lay';
-    cfg.colorbar = 'no';
-    cfg.zlim = [-7*10^-14 7*10^-14];
-    
-    %cfg.xlim = [0.002 0.3];
-    %cfg.baseline = [-0.35 -0.1];
-    
-    cfg.comment = 'no';
+%% GO N1
+mean_sub.avg = gravg_cmb.GO{1,1};
 
-    figure('Position', [300 500 1400 900]); %From: Left, Down - Width, Height
-    ha = tight_subplot(1,6,[.05 .015],[.2 .1],[.05 .05]);
-    
-    for i = 1:numel(cond.([conditions{c} 'label'])); axes(ha(i))
+cfg = [];
+cfg.parameter = 'avg';
+cfg.layout = 'neuromag306mag.lay';
+cfg.colorbar = 'no';
+cfg.comment = 'no';
+cfg.zlim = [zlimlow zlimhigh];
 
-        mean_sub.avg = gravg.(conditions{c}){i};
+%if here!
+cfg.xlim = [0.050 0.150];
+cfg.baseline = [-0.100 0];
 
-        %subplot(2,3,i);
-        ft_topoplotER(cfg, mean_sub);
-        %title(cond.PO60label{i}, 'Interpreter', 'none');
+ft_topoplotER(cfg, mean_sub);
+title('GO60 N1', 'Interpreter', 'none');
 
-        ft_hastoolbox('brewermap', 1);         % ensure this toolbox is on the path
-        colormap(flipud(brewermap(64,'RdBu'))) % change the colormap
+ft_hastoolbox('brewermap', 1);         % ensure this toolbox is on the path
+colormap(flipud(brewermap(64,'RdBu'))) % change the colormap
 
-    end
-    
-    saveas(gcf, ['../Analysis Output/' 'topoplot_' conditions{c} '.svg']);
-    close
-    
+saveas(gcf, ['../Analysis Output/' 'topo_GO60N1.svg']);
+close
+
+%% GO P2
+mean_sub.avg = gravg_cmb.GO{1,1};
+
+cfg = [];
+cfg.parameter = 'avg';
+cfg.layout = 'neuromag306mag.lay';
+cfg.colorbar = 'no';
+cfg.comment = 'no';
+cfg.zlim = [zlimlow zlimhigh];
+
+%if here!
+cfg.xlim = [0.150 0.250];
+cfg.baseline = [-0.100 0];
+
+ft_topoplotER(cfg, mean_sub);
+title('GO60 P2', 'Interpreter', 'none');
+
+ft_hastoolbox('brewermap', 1);         % ensure this toolbox is on the path
+colormap(flipud(brewermap(64,'RdBu'))) % change the colormap
+
+saveas(gcf, ['../Analysis Output/' 'topo_GO60P2.svg']);
+close
+
+%% PO60_90 N1
+mean_sub.avg = gravg_cmb.PO60{1,5};
+
+cfg = [];
+cfg.parameter = 'avg';
+cfg.layout = 'neuromag306mag.lay';
+cfg.colorbar = 'no';
+cfg.comment = 'no';
+cfg.zlim = [zlimlow zlimhigh];
+
+%if here!
+cfg.xlim = [0.050 0.150];
+cfg.baseline = [-0.100 0];
+
+ft_topoplotER(cfg, mean_sub);
+title('PO60_90 N1', 'Interpreter', 'none');
+
+ft_hastoolbox('brewermap', 1);         % ensure this toolbox is on the path
+colormap(flipud(brewermap(64,'RdBu'))) % change the colormap
+
+saveas(gcf, ['../Analysis Output/' 'topo_PO60_90_N1.svg']);
+close
+
+%% PO60_90 P2
+mean_sub.avg = gravg_cmb.PO60{5};
+
+cfg = [];
+cfg.parameter = 'avg';
+cfg.layout = 'neuromag306mag.lay';
+cfg.colorbar = 'no';
+cfg.comment = 'no';
+cfg.zlim = [zlimlow zlimhigh];
+
+%if here!
+cfg.xlim = [0.150 0.250];
+cfg.baseline = [-0.100 0];
+
+ft_topoplotER(cfg, mean_sub);
+title('PO60_90 P2', 'Interpreter', 'none');
+
+ft_hastoolbox('brewermap', 1);         % ensure this toolbox is on the path
+colormap(flipud(brewermap(64,'RdBu'))) % change the colormap
+
+saveas(gcf, ['../Analysis Output/' 'topo_PO60_90_P2.svg']);
+close
+
+%% Loop for GP60-trials
+
+isicomp = [0 0.060 0.120 0.240]; %Shift x-lim so N1/P2 TOI match gap onset
+
+ft_hastoolbox('brewermap', 1);   % ensure this toolbox is on the path
+
+for i = 1:numel(cond.GP60label);
+
+%N1
+mean_sub.avg = gravg_cmb.GP60{1,i};
+
+cfg = [];
+cfg.parameter = 'avg';
+cfg.layout = 'neuromag306mag.lay';
+cfg.colorbar = 'no';
+cfg.comment = 'no';
+cfg.zlim = [zlimlow zlimhigh];
+
+cfg.xlim = [0-isicomp(i) 0.100-isicomp(i)];
+cfg.baseline = [-0.150-isicomp(i) -0.050-isicomp(i)];
+
+ft_topoplotER(cfg, mean_sub);
+title(([cond.GP60label{i} ' N1']), 'Interpreter', 'none');
+
+colormap(flipud(brewermap(64,'RdBu'))) % change the colormap
+
+saveas(gcf, ['../Analysis Output/topo_' cond.GP60label{i} '_N1.svg']);
+close
+
+%P2
+cfg.xlim = [0.100-isicomp(i) 0.200-isicomp(i)];
+
+ft_topoplotER(cfg, mean_sub);
+title(([cond.GP60label{i} ' P2']), 'Interpreter', 'none');
+
+ft_hastoolbox('brewermap', 1);         % ensure this toolbox is on the path
+colormap(flipud(brewermap(64,'RdBu'))) % change the colormap
+
+saveas(gcf, ['../Analysis Output/topo_' cond.GP60label{i} '_P2.svg']);
+close
+
 end
+
