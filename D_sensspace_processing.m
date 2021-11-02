@@ -398,6 +398,14 @@ sub_amp_lat = struct();
 minylim = 0*10^-12;
 maxylim = 14*10^-12;
 
+%Window/patch colors
+red = [241 88 84]/256;
+orange = [250 164 58]/256;
+green = [96 189 104]/256;
+blue = [93 165 218]/256;
+purple = [178 118 178]/256;
+
+%number of subjects
 n_subs = 1:numel(sub_date.ID);
 
 %% PO60_90: Extract and plot amplitude and latencies
@@ -429,9 +437,14 @@ clear M I
 plot(sub_sensoi.PO60{i,5}, 'Color', [0 0 0 0.5])
 tempmean(i,1:165) = sub_sensoi.PO60{i,5};
 end
-patch('Faces', [1 2 3 4], 'Vertices', [N1on minylim; N1on maxylim; N1off maxylim; N1off minylim], 'FaceColor', 'green', 'FaceAlpha', 0.05, 'EdgeAlpha', 0);
-patch('Faces', [1 2 3 4], 'Vertices', [P2on minylim; P2on maxylim; P2off maxylim; P2off minylim], 'FaceColor', 'yellow', 'FaceAlpha', 0.1, 'EdgeAlpha', 0);
-plot(mean(tempmean), 'Color', [1 0 0], 'LineWidth', 1.5); clear tempmean;
+
+%N1 patch
+patch('Faces', [1 2 3 4], 'Vertices', [N1on minylim; N1on maxylim; N1off maxylim; N1off minylim], 'FaceColor', orange, 'FaceAlpha', 0.1, 'EdgeAlpha', 0);
+
+%P1 patch
+patch('Faces', [1 2 3 4], 'Vertices', [P2on minylim; P2on maxylim; P2off maxylim; P2off minylim], 'FaceColor', green, 'FaceAlpha', 0.1, 'EdgeAlpha', 0);
+
+plot(mean(tempmean), 'Color', [0.75 0 0], 'LineWidth', 1.5); clear tempmean;
 plot([101 101], [minylim maxylim], 'k --');
 x = gca;
 x.XTick = [1:10:165];
@@ -475,10 +488,17 @@ clear M I
 plot(sub_sensoi.GO{i,1}, 'Color', [0 0 0 0.5])
 tempmean(i,1:165) = sub_sensoi.GO{i,1};
 end
-patch('Faces', [1 2 3 4], 'Vertices', [gapon minylim; gapon maxylim; gapoff maxylim; gapoff minylim], 'FaceColor', 'red', 'FaceAlpha', 0.05, 'EdgeAlpha', 0);
-patch('Faces', [1 2 3 4], 'Vertices', [N1on minylim; N1on maxylim; N1off maxylim; N1off minylim], 'FaceColor', 'green', 'FaceAlpha', 0.05, 'EdgeAlpha', 0);
-patch('Faces', [1 2 3 4], 'Vertices', [P2on minylim; P2on maxylim; P2off maxylim; P2off minylim], 'FaceColor', 'yellow', 'FaceAlpha', 0.1, 'EdgeAlpha', 0);
-plot(mean(tempmean), 'Color', [1 0 0], 'LineWidth', 1.5); clear tempmean;
+
+%Gap patch
+patch('Faces', [1 2 3 4], 'Vertices', [gapon minylim; gapon maxylim; gapoff maxylim; gapoff minylim], 'FaceColor', red, 'FaceAlpha', 0.1, 'EdgeAlpha', 0);
+
+%N1 patch
+patch('Faces', [1 2 3 4], 'Vertices', [N1on minylim; N1on maxylim; N1off maxylim; N1off minylim], 'FaceColor', orange, 'FaceAlpha', 0.1, 'EdgeAlpha', 0);
+
+%P2 patch
+patch('Faces', [1 2 3 4], 'Vertices', [P2on minylim; P2on maxylim; P2off maxylim; P2off minylim], 'FaceColor', green, 'FaceAlpha', 0.1, 'EdgeAlpha', 0);
+
+plot(mean(tempmean), 'Color', [0.75 0 0], 'LineWidth', 1.5); clear tempmean;
 %plot([101 101], [minylim maxylim], 'k --');
 x = gca;
 x.XTick = [1:10:165];
@@ -492,12 +512,19 @@ x.XTickLabelRotation = 90;
 
 %% GP60-trials: Extract and plot amplitude and latencies
 
-for ii = 1:numel(cond.GP60label)
+%Pulse time window for i120 and i240
+pulN1on = find(mean_sub.time == 0.050);
+pulN1off = find(mean_sub.time == 0.150);
+
+pulP2on = find(mean_sub.time == 0.150);
+pulP2off = find(mean_sub.time == 0.250);
+
+for ii = 1:numel(cond.GP60label) %order: i0, i60, i120, i240
     
     %Specify list of times needed to correct for adapting TOI to shifting ISI (i.e ISI + GAP duration)
     gapcomp = [0.050 0.110 0.170 0.290];
 
-    %Adapt N1 & P2 window to gap ISI
+    %Adapt GAP N1 & P2 window to gap ISI
     N1on = find(mean_sub.time == round(0.050 - gapcomp(ii), 3));
     N1off = find(mean_sub.time == round(0.150 - gapcomp(ii), 3));
     P2on = find(mean_sub.time == round(0.150 - gapcomp(ii), 3));
@@ -524,20 +551,53 @@ for ii = 1:numel(cond.GP60label)
     sub_amp_lat.([cond.GP60label{ii} '_P2lat'])(i,1) = mean_sub.time(P2on-1+I) + gapcomp(ii); %NB - Compensate t = 0 to first stimulation event (i.e gap onset)
     sub_amp_lat.([cond.GP60label{ii} '_P2amp'])(i,1) = mean(sub_sensoi.GP60{i,ii}(P2on:P2off));
     clear M I
+        
+        %For i120, pick out P2 response to Pulse
+        if ii == 3;
+            %find lat and amp for P2, collect in struct
+            [M, I] = max(sub_sensoi.GP60{i,ii}(pulP2on:pulP2off));
+            sub_amp_lat.([cond.GP60label{ii} '_pulP2lat'])(i,1) = mean_sub.time(pulP2on-1+I);
+            sub_amp_lat.([cond.GP60label{ii} '_pulP2amp'])(i,1) = mean(sub_sensoi.GP60{i,ii}(pulP2on:pulP2off));
+            clear M I
+            
+        elseif ii == 4;
+            %find lat and amp for N1 and P2, collect in struct
+            [M, I] = max(sub_sensoi.GP60{i,ii}(pulN1on:pulN1off));
+            sub_amp_lat.([cond.GP60label{ii} '_pulN1lat'])(i,1) = mean_sub.time(pulN1on-1+I); %pulse is t = 0, no need to compensate
+            sub_amp_lat.([cond.GP60label{ii} '_pulN1amp'])(i,1) = mean(sub_sensoi.GP60{i,ii}(pulN1on:pulN1off));
+            clear M I
+            
+            [M, I] = max(sub_sensoi.GP60{i,ii}(pulP2on:pulP2off));
+            sub_amp_lat.([cond.GP60label{ii} '_pulP2lat'])(i,1) = mean_sub.time(pulP2on-1+I); %pulse is t = 0, no need to compensate
+            sub_amp_lat.([cond.GP60label{ii} '_pulP2amp'])(i,1) = mean(sub_sensoi.GP60{i,ii}(pulP2on:pulP2off));
+            clear M I
+            
+        end
 
     plot(sub_sensoi.GP60{i,ii}, 'Color', [0 0 0 0.5])
     tempmean(i,1:165) = sub_sensoi.GP60{i,ii};
     end
 
     %Gap patch
-    patch('Faces', [1 2 3 4], 'Vertices', [gapon minylim; gapon maxylim; gapoff maxylim; gapoff minylim], 'FaceColor', 'red', 'FaceAlpha', 0.05, 'EdgeAlpha', 0);
+    patch('Faces', [1 2 3 4], 'Vertices', [gapon minylim; gapon maxylim; gapoff maxylim; gapoff minylim], 'FaceColor', red, 'FaceAlpha', 0.1, 'EdgeAlpha', 0);
 
     %N1 Patch
-    patch('Faces', [1 2 3 4], 'Vertices', [N1on minylim; N1on maxylim; N1off maxylim; N1off minylim], 'FaceColor', 'green', 'FaceAlpha', 0.05, 'EdgeAlpha', 0);
+    patch('Faces', [1 2 3 4], 'Vertices', [N1on minylim; N1on maxylim; N1off maxylim; N1off minylim], 'FaceColor', orange, 'FaceAlpha', 0.1, 'EdgeAlpha', 0);
 
     %P2 patch
-    patch('Faces', [1 2 3 4], 'Vertices', [P2on minylim; P2on maxylim; P2off maxylim; P2off minylim], 'FaceColor', 'yellow', 'FaceAlpha', 0.1, 'EdgeAlpha', 0);
-    plot(mean(tempmean), 'Color', [1 0 0], 'LineWidth', 1.5); clear tempmean;
+    patch('Faces', [1 2 3 4], 'Vertices', [P2on minylim; P2on maxylim; P2off maxylim; P2off minylim], 'FaceColor', green, 'FaceAlpha', 0.1, 'EdgeAlpha', 0);
+   
+    if ii == 3; %i120
+        %pulP2 patch
+        patch('Faces', [1 2 3 4], 'Vertices', [pulP2on minylim; pulP2on maxylim; pulP2off maxylim; pulP2off minylim], 'FaceColor', purple, 'FaceAlpha', 0.1, 'EdgeAlpha', 0);
+    elseif ii == 4; %i240
+        %pulN1 patch
+        patch('Faces', [1 2 3 4], 'Vertices', [pulN1on minylim; pulN1on maxylim; pulN1off maxylim; pulN1off minylim], 'FaceColor', blue, 'FaceAlpha', 0.1, 'EdgeAlpha', 0);   
+        %pulP2 patch
+        patch('Faces', [1 2 3 4], 'Vertices', [pulP2on minylim; pulP2on maxylim; pulP2off maxylim; pulP2off minylim], 'FaceColor', purple, 'FaceAlpha', 0.1, 'EdgeAlpha', 0);   
+    end
+    
+    plot(mean(tempmean), 'Color', [0.75 0 0], 'LineWidth', 1.5); clear tempmean;
     plot([101 101], [minylim maxylim], 'k --');
     x = gca;
     x.XTick = [1:10:165];
@@ -546,8 +606,8 @@ for ii = 1:numel(cond.GP60label)
     x.FontSize = 20;
     x.XTickLabelRotation = 90;
 
-    saveas(gcf, ['../Analysis Output/' cond.GP60label{ii} '_subs.svg']);
-    close;
+%     saveas(gcf, ['../Analysis Output/' cond.GP60label{ii} '_subs.svg']);
+%     close;
     
     clear gapcomp
 
@@ -555,111 +615,144 @@ end
 
 %% Plot amp and latencies
 
+%save('../mat_data/timelockeds/sub_amp_lat.mat', 'sub_amp_lat', '-v7.3');
+
+% sub_amp_lat = load('../mat_data/timelockeds/sub_amp_lat.mat');
+% sub_amp_lat = sub_amp_lat.sub_amp_lat;
+
 %Amplitude N1
-figure('Position', [600 400 1200 800]);
+figure('Position', [600 400 1200 600]);
 subplot(1,2,1); hold on;
 title('Amplitude N1', 'Interpreter', 'none');
-xlim([0.75 6.25]);
+xlim([0.75 7.25]);
 ylim([0 9*10^-12]);
 
 %N1
-plot([1 2 3 4 5 6], [sub_amp_lat.PO60_90_N1amp sub_amp_lat.GO60_90_N1amp sub_amp_lat.GP60_i0_N1amp sub_amp_lat.GP60_i60_N1amp sub_amp_lat.GP60_i120_N1amp sub_amp_lat.GP60_i240_N1amp], 'Color', [0 0 0 0.5], 'HandleVisibility', 'off')
-plot([1 2 3 4 5 6], [mean(sub_amp_lat.PO60_90_N1amp) mean(sub_amp_lat.GO60_90_N1amp) mean(sub_amp_lat.GP60_i0_N1amp) mean(sub_amp_lat.GP60_i60_N1amp) mean(sub_amp_lat.GP60_i120_N1amp) mean(sub_amp_lat.GP60_i240_N1amp)], 'Color', [1 0 0 0.75], 'LineWidth', 1.5, 'DisplayName', 'mean (n = 22)')
+plot([1 2 3 4 5 6 7], [sub_amp_lat.PO60_90_N1amp sub_amp_lat.GO60_90_N1amp sub_amp_lat.GP60_i0_N1amp sub_amp_lat.GP60_i60_N1amp sub_amp_lat.GP60_i120_N1amp sub_amp_lat.GP60_i240_N1amp sub_amp_lat.GP60_i240_pulN1amp], 'Color', [0 0 0 0.5], 'HandleVisibility', 'off')
+plot([1 2 3 4 5 6 7], [mean(sub_amp_lat.PO60_90_N1amp) mean(sub_amp_lat.GO60_90_N1amp) mean(sub_amp_lat.GP60_i0_N1amp) mean(sub_amp_lat.GP60_i60_N1amp) mean(sub_amp_lat.GP60_i120_N1amp) mean(sub_amp_lat.GP60_i240_N1amp) mean(sub_amp_lat.GP60_i240_pulN1amp)], 'Color', [0.75 0 0], 'LineWidth', 1.5, 'DisplayName', 'mean')
 
-scatter(ones(1,22), sub_amp_lat.PO60_90_N1amp, 'filled', 'green', 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
-scatter(ones(1,22)+1, sub_amp_lat.GO60_90_N1amp, 'filled', 'green', 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'DisplayName', 'N1')
-scatter(ones(1,22)+2, sub_amp_lat.GP60_i0_N1amp, 'filled', 'green', 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
-scatter(ones(1,22)+3, sub_amp_lat.GP60_i60_N1amp, 'filled', 'green', 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
-scatter(ones(1,22)+4, sub_amp_lat.GP60_i120_N1amp, 'filled', 'green', 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
-scatter(ones(1,22)+5, sub_amp_lat.GP60_i240_N1amp, 'filled', 'green', 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+scatter(ones(1,22), sub_amp_lat.PO60_90_N1amp, 'filled', 'MarkerFaceColor', orange, 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+scatter(ones(1,22)+1, sub_amp_lat.GO60_90_N1amp, 'filled', 'MarkerFaceColor', orange, 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'DisplayName', 'Gap N1')
+scatter(ones(1,22)+2, sub_amp_lat.GP60_i0_N1amp, 'filled', 'MarkerFaceColor', orange, 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+scatter(ones(1,22)+3, sub_amp_lat.GP60_i60_N1amp, 'filled', 'MarkerFaceColor', orange, 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+scatter(ones(1,22)+4, sub_amp_lat.GP60_i120_N1amp, 'filled', 'MarkerFaceColor', orange, 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+scatter(ones(1,22)+5, sub_amp_lat.GP60_i240_N1amp, 'filled', 'MarkerFaceColor', orange, 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+scatter(ones(1,22)+6, sub_amp_lat.GP60_i240_pulN1amp, 'filled', 'MarkerFaceColor', blue, 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'DisplayName', 'Pulse N1')
 
 ylabel('Mean amplitude within TOI');
 
 x = gca;
-x.XTick = [1:6]
-x.XTickLabel = ({'Pulse Only', 'Gap Only', 'ISI 0ms', 'ISI 60ms', 'ISI120', 'ISI240'});
+x.XTick = [1:7]
+x.XTickLabel = ({'Pulse Only', 'Gap Only', 'ISI 0ms', 'ISI 60ms', 'ISI120', 'ISI240', 'ISI240 Pulse'});
 x.FontSize = 20;
 x.XTickLabelRotation = -90;
 x.YMinorTick = 'on';
+
+legend show
+legend boxoff
 
 %Amplitude P2
 subplot(1,2,2); hold on;
 title('Amplitude P2', 'Interpreter', 'none');
-xlim([0.75 6.25]);
+xlim([0.75 8.25]);
 ylim([0 9*10^-12]);
 
 %P2
-plot([1 2 3 4 5 6], [sub_amp_lat.PO60_90_P2amp sub_amp_lat.GO60_90_P2amp sub_amp_lat.GP60_i0_P2amp sub_amp_lat.GP60_i60_P2amp sub_amp_lat.GP60_i120_P2amp sub_amp_lat.GP60_i240_P2amp], 'Color', [0 0 0 0.5], 'HandleVisibility', 'off')
-plot([1 2 3 4 5 6], [mean(sub_amp_lat.PO60_90_P2amp) mean(sub_amp_lat.GO60_90_P2amp) mean(sub_amp_lat.GP60_i0_P2amp) mean(sub_amp_lat.GP60_i60_P2amp) mean(sub_amp_lat.GP60_i120_P2amp) mean(sub_amp_lat.GP60_i240_P2amp)], 'Color', [1 0 0 0.75], 'LineWidth', 1.5, 'HandleVisibility', 'off')
+plot([1 2 3 4 5 6 7 8], [sub_amp_lat.PO60_90_P2amp sub_amp_lat.GO60_90_P2amp sub_amp_lat.GP60_i0_P2amp sub_amp_lat.GP60_i60_P2amp sub_amp_lat.GP60_i120_P2amp sub_amp_lat.GP60_i240_P2amp sub_amp_lat.GP60_i120_pulP2amp sub_amp_lat.GP60_i240_pulP2amp], 'Color', [0 0 0 0.5], 'HandleVisibility', 'off')
+plot([1 2 3 4 5 6 7 8], [mean(sub_amp_lat.PO60_90_P2amp) mean(sub_amp_lat.GO60_90_P2amp) mean(sub_amp_lat.GP60_i0_P2amp) mean(sub_amp_lat.GP60_i60_P2amp) mean(sub_amp_lat.GP60_i120_P2amp) mean(sub_amp_lat.GP60_i240_P2amp) mean(sub_amp_lat.GP60_i120_pulP2amp) mean(sub_amp_lat.GP60_i240_pulP2amp)], 'Color', [0.75 0 0], 'LineWidth', 1.5, 'DisplayName', 'mean')
 
-scatter(ones(1,22), sub_amp_lat.PO60_90_P2amp, 'filled', 'yellow', 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
-scatter(ones(1,22)+1, sub_amp_lat.GO60_90_P2amp, 'filled', 'yellow', 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'DisplayName', 'P2')
-scatter(ones(1,22)+2, sub_amp_lat.GP60_i0_P2amp, 'filled', 'yellow', 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
-scatter(ones(1,22)+3, sub_amp_lat.GP60_i60_P2amp, 'filled', 'yellow', 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
-scatter(ones(1,22)+4, sub_amp_lat.GP60_i120_P2amp, 'filled', 'yellow', 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
-scatter(ones(1,22)+5, sub_amp_lat.GP60_i240_P2amp, 'filled', 'yellow', 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+scatter(ones(1,22), sub_amp_lat.PO60_90_P2amp, 'filled', 'MarkerFaceColor', green, 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+scatter(ones(1,22)+1, sub_amp_lat.GO60_90_P2amp, 'filled', 'MarkerFaceColor', green, 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'DisplayName', 'Gap P2')
+scatter(ones(1,22)+2, sub_amp_lat.GP60_i0_P2amp, 'filled', 'MarkerFaceColor', green, 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+scatter(ones(1,22)+3, sub_amp_lat.GP60_i60_P2amp, 'filled', 'MarkerFaceColor', green, 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+scatter(ones(1,22)+4, sub_amp_lat.GP60_i120_P2amp, 'filled', 'MarkerFaceColor', green, 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+scatter(ones(1,22)+5, sub_amp_lat.GP60_i240_P2amp, 'filled', 'MarkerFaceColor', green, 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+scatter(ones(1,22)+6, sub_amp_lat.GP60_i120_pulP2amp, 'filled', 'MarkerFaceColor', purple, 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'DisplayName', 'Pulse P2')
+scatter(ones(1,22)+7, sub_amp_lat.GP60_i240_pulP2amp, 'filled', 'MarkerFaceColor', purple, 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
 
 x = gca;
-x.XTick = [1:6]
-x.XTickLabel = ({'Pulse Only', 'Gap Only', 'ISI 0ms', 'ISI 60ms', 'ISI120', 'ISI240'});
+x.XTick = [1:8]
+x.XTickLabel = ({'Pulse Only', 'Gap Only', 'ISI 0ms', 'ISI 60ms', 'ISI120', 'ISI240', 'ISI120 Pulse', 'ISI240 Pulse'});
 x.FontSize = 20;
 x.XTickLabelRotation = -90;
 x.YMinorTick = 'on';
+
+legend show
+legend boxoff
 
 % saveas(gcf, ['../Analysis Output/amp_subs.svg']);
 % close;
 
 %Latency Plot
-figure('Position', [600 400 1200 800]);
+figure('Position', [600 400 1200 600]);
 subplot(1,2,1); hold on;
 title('Latency N1', 'Interpreter', 'none');
-xlim([0.75 6.25]);
+xlim([0.75 7.25]);
 ylim([0 0.3]);
 
 %N1
-plot([1 2 3 4 5 6], [sub_amp_lat.PO60_90_N1lat sub_amp_lat.GO60_90_N1lat sub_amp_lat.GP60_i0_N1lat sub_amp_lat.GP60_i60_N1lat sub_amp_lat.GP60_i120_N1lat sub_amp_lat.GP60_i240_N1lat], 'Color', [0 0 0 0.5], 'HandleVisibility', 'off')
-plot([1 2 3 4 5 6], [mean(sub_amp_lat.PO60_90_N1lat) mean(sub_amp_lat.GO60_90_N1lat) mean(sub_amp_lat.GP60_i0_N1lat) mean(sub_amp_lat.GP60_i60_N1lat) mean(sub_amp_lat.GP60_i120_N1lat) mean(sub_amp_lat.GP60_i240_N1lat)], 'Color', [1 0 0 0.75], 'LineWidth', 1.5, 'DisplayName', 'mean (n = 22)')
+plot([1 2 3 4 5 6 7], [sub_amp_lat.PO60_90_N1lat sub_amp_lat.GO60_90_N1lat sub_amp_lat.GP60_i0_N1lat sub_amp_lat.GP60_i60_N1lat sub_amp_lat.GP60_i120_N1lat sub_amp_lat.GP60_i240_N1lat sub_amp_lat.GP60_i240_pulN1lat], 'Color', [0 0 0 0.5], 'HandleVisibility', 'off')
+plot([1 2 3 4 5 6 7], [mean(sub_amp_lat.PO60_90_N1lat) mean(sub_amp_lat.GO60_90_N1lat) mean(sub_amp_lat.GP60_i0_N1lat) mean(sub_amp_lat.GP60_i60_N1lat) mean(sub_amp_lat.GP60_i120_N1lat) mean(sub_amp_lat.GP60_i240_N1lat) mean(sub_amp_lat.GP60_i240_pulN1lat)], 'Color', [0.75 0 0], 'LineWidth', 1.5, 'DisplayName', 'mean (n = 22)')
 
-scatter(ones(1,22), sub_amp_lat.PO60_90_N1lat, 'filled', 'green', 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
-scatter(ones(1,22)+1, sub_amp_lat.GO60_90_N1lat, 'filled', 'green', 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'DisplayName', 'N1')
-scatter(ones(1,22)+2, sub_amp_lat.GP60_i0_N1lat, 'filled', 'green', 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
-scatter(ones(1,22)+3, sub_amp_lat.GP60_i60_N1lat, 'filled', 'green', 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
-scatter(ones(1,22)+4, sub_amp_lat.GP60_i120_N1lat, 'filled', 'green', 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
-scatter(ones(1,22)+5, sub_amp_lat.GP60_i240_N1lat, 'filled', 'green', 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+scatter(ones(1,22), sub_amp_lat.PO60_90_N1lat, 'filled', 'MarkerFaceColor', orange, 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+scatter(ones(1,22)+1, sub_amp_lat.GO60_90_N1lat, 'filled', 'MarkerFaceColor', orange, 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'DisplayName', 'Gap N1')
+scatter(ones(1,22)+2, sub_amp_lat.GP60_i0_N1lat, 'filled', 'MarkerFaceColor', orange, 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+scatter(ones(1,22)+3, sub_amp_lat.GP60_i60_N1lat, 'filled', 'MarkerFaceColor', orange, 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+scatter(ones(1,22)+4, sub_amp_lat.GP60_i120_N1lat, 'filled', 'MarkerFaceColor', orange, 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+scatter(ones(1,22)+5, sub_amp_lat.GP60_i240_N1lat, 'filled', 'MarkerFaceColor', orange, 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+scatter(ones(1,22)+6, sub_amp_lat.GP60_i240_pulN1lat, 'filled', 'MarkerFaceColor', blue, 'MarkerFaceAlpha', 0.5, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'DisplayName', 'Pulse N1')
 
-ylabel('Latency relative first stimulus onset (ms)');
+ylabel('Latency (ms)');
 
 x = gca;
-x.XTick = [1:6]
-x.XTickLabel = ({'Pulse Only', 'Gap Only', 'ISI 0ms', 'ISI 60ms', 'ISI120', 'ISI240'});
+x.XTick = [1:7]
+x.XTickLabel = ({'Pulse Only', 'Gap Only', 'ISI 0ms', 'ISI 60ms', 'ISI120', 'ISI240', 'ISI240 Pulse'});
 x.FontSize = 20;
 x.XTickLabelRotation = -90;
 x.YMinorTick = 'on';
+x.YTickLabel = [0:50:300];
+
+legend show
+legend boxoff
 
 %P2
 subplot(1,2,2); hold on;
 title('Latency P2', 'Interpreter', 'none');
-xlim([0.75 6.25]);
+xlim([0.75 8.25]);
 ylim([0 0.3]);
-plot([1 2 3 4 5 6], [sub_amp_lat.PO60_90_P2lat sub_amp_lat.GO60_90_P2lat sub_amp_lat.GP60_i0_P2lat sub_amp_lat.GP60_i60_P2lat sub_amp_lat.GP60_i120_P2lat sub_amp_lat.GP60_i240_P2lat], 'Color', [0 0 0 0.5], 'HandleVisibility', 'off')
-plot([1 2 3 4 5 6], [mean(sub_amp_lat.PO60_90_P2lat) mean(sub_amp_lat.GO60_90_P2lat) mean(sub_amp_lat.GP60_i0_P2lat) mean(sub_amp_lat.GP60_i60_P2lat) mean(sub_amp_lat.GP60_i120_P2lat) mean(sub_amp_lat.GP60_i240_P2lat)], 'Color', [1 0 0 0.75], 'LineWidth', 1.5, 'HandleVisibility', 'off')
+plot([1 2 3 4 5 6 7 8], [sub_amp_lat.PO60_90_P2lat sub_amp_lat.GO60_90_P2lat sub_amp_lat.GP60_i0_P2lat sub_amp_lat.GP60_i60_P2lat sub_amp_lat.GP60_i120_P2lat sub_amp_lat.GP60_i240_P2lat sub_amp_lat.GP60_i120_pulP2lat sub_amp_lat.GP60_i240_pulP2lat], 'Color', [0 0 0 0.5], 'HandleVisibility', 'off')
+plot([1 2 3 4 5 6 7 8], [mean(sub_amp_lat.PO60_90_P2lat) mean(sub_amp_lat.GO60_90_P2lat) mean(sub_amp_lat.GP60_i0_P2lat) mean(sub_amp_lat.GP60_i60_P2lat) mean(sub_amp_lat.GP60_i120_P2lat) mean(sub_amp_lat.GP60_i240_P2lat) mean(sub_amp_lat.GP60_i120_pulP2lat) mean(sub_amp_lat.GP60_i240_pulP2lat)], 'Color', [0.75 0 0], 'LineWidth', 1.5, 'DisplayName', 'mean')
 
-scatter(ones(1,22), sub_amp_lat.PO60_90_P2lat, 'filled', 'yellow', 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
-scatter(ones(1,22)+1, sub_amp_lat.GO60_90_P2lat, 'filled', 'yellow', 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'DisplayName', 'P2')
-scatter(ones(1,22)+2, sub_amp_lat.GP60_i0_P2lat, 'filled', 'yellow', 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
-scatter(ones(1,22)+3, sub_amp_lat.GP60_i60_P2lat, 'filled', 'yellow', 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
-scatter(ones(1,22)+4, sub_amp_lat.GP60_i120_P2lat, 'filled', 'yellow', 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
-scatter(ones(1,22)+5, sub_amp_lat.GP60_i240_P2lat, 'filled', 'yellow', 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+scatter(ones(1,22), sub_amp_lat.PO60_90_P2lat, 'filled', 'MarkerFaceColor', green, 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+scatter(ones(1,22)+1, sub_amp_lat.GO60_90_P2lat, 'filled', 'MarkerFaceColor', green, 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'DisplayName', 'Gap P2')
+scatter(ones(1,22)+2, sub_amp_lat.GP60_i0_P2lat, 'filled', 'MarkerFaceColor', green, 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+scatter(ones(1,22)+3, sub_amp_lat.GP60_i60_P2lat, 'filled', 'MarkerFaceColor', green, 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+scatter(ones(1,22)+4, sub_amp_lat.GP60_i120_P2lat, 'filled', 'MarkerFaceColor', green, 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+scatter(ones(1,22)+5, sub_amp_lat.GP60_i240_P2lat, 'filled', 'MarkerFaceColor', green, 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
+scatter(ones(1,22)+6, sub_amp_lat.GP60_i120_pulP2lat, 'filled', 'MarkerFaceColor', purple, 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'DisplayName', 'Pulse P2')
+scatter(ones(1,22)+7, sub_amp_lat.GP60_i240_pulP2lat, 'filled', 'MarkerFaceColor', purple, 'MarkerFaceAlpha', 0.8, 'MarkerEdgeColor', [0 0 0], 'MarkerEdgeAlpha', 0.5, 'HandleVisibility', 'off')
 
 x = gca;
-x.XTick = [1:6]
-x.XTickLabel = ({'Pulse Only', 'Gap Only', 'ISI 0ms', 'ISI 60ms', 'ISI120', 'ISI240'});
+x.XTick = [1:8]
+x.XTickLabel = ({'Pulse Only', 'Gap Only', 'ISI 0ms', 'ISI 60ms', 'ISI120', 'ISI240', 'ISI120 Pulse', 'ISI240 Pulse'});
 x.FontSize = 20;
 x.XTickLabelRotation = -90;
 x.YMinorTick = 'on';
+x.YTickLabel = [0:50:300];
+
+legend show
+legend('Location', 'southeast');
+legend boxoff
 
 % saveas(gcf, ['../Analysis Output/lat_subs.svg']);
 % close;
+
+%% Export amps and lats as csv
+
+sub_amp_lat_csv = struct2table(sub_amp_lat);
+
+%writetable(sub_amp_lat_csv);
+
 
 %% TopoplotER
 
@@ -798,8 +891,76 @@ title(([cond.GP60label{i} ' P2']), 'Interpreter', 'none');
 ft_hastoolbox('brewermap', 1);         % ensure this toolbox is on the path
 colormap(flipud(brewermap(64,'RdBu'))) % change the colormap
 
-saveas(gcf, ['../Analysis Output/topo_' cond.GP60label{i} '_P2.svg']);
-close
+% saveas(gcf, ['../Analysis Output/topo_' cond.GP60label{i} '_P2.svg']);
+% close
 
 end
 
+%% Pulse components - WIP - Be careful - static!
+
+i = 4;
+
+%i240 N1
+mean_sub.avg = gravg_cmb.GP60{1,i};
+
+cfg = [];
+cfg.parameter = 'avg';
+cfg.layout = 'neuromag306mag.lay';
+cfg.colorbar = 'no';
+cfg.comment = 'no';
+cfg.zlim = [zlimlow zlimhigh];
+
+cfg.xlim = [0.050 0.150];
+cfg.baseline = [-0.390 -0.290];
+
+ft_topoplotER(cfg, mean_sub);
+title(([cond.GP60label{i} ' Pulse N1']), 'Interpreter', 'none');
+
+colormap(flipud(brewermap(64,'RdBu'))) % change the colormap
+
+% saveas(gcf, ['../Analysis Output/topo_' cond.GP60label{i} '_pulN1.svg']);
+% close
+
+%i240 P2
+mean_sub.avg = gravg_cmb.GP60{1,i};
+
+cfg = [];
+cfg.parameter = 'avg';
+cfg.layout = 'neuromag306mag.lay';
+cfg.colorbar = 'no';
+cfg.comment = 'no';
+cfg.zlim = [zlimlow zlimhigh];
+
+cfg.xlim = [0.150 0.250];
+cfg.baseline = [-0.390 -0.290];
+
+ft_topoplotER(cfg, mean_sub);
+title(([cond.GP60label{i} ' Pulse P2']), 'Interpreter', 'none');
+
+colormap(flipud(brewermap(64,'RdBu'))) % change the colormap
+
+% saveas(gcf, ['../Analysis Output/topo_' cond.GP60label{i} '_pulP2.svg']);
+% close
+
+
+i = 3;
+%i120 P2
+mean_sub.avg = gravg_cmb.GP60{1,i};
+
+cfg = [];
+cfg.parameter = 'avg';
+cfg.layout = 'neuromag306mag.lay';
+cfg.colorbar = 'no';
+cfg.comment = 'no';
+cfg.zlim = [zlimlow zlimhigh];
+
+cfg.xlim = [0.150 0.250];
+cfg.baseline = [-0.270 -0.170];
+
+ft_topoplotER(cfg, mean_sub);
+title(([cond.GP60label{i} ' Pulse P2']), 'Interpreter', 'none');
+
+colormap(flipud(brewermap(64,'RdBu'))) % change the colormap
+
+% saveas(gcf, ['../Analysis Output/topo_' cond.GP60label{i} '_pulP2.svg']);
+% close
