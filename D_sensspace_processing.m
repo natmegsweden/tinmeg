@@ -20,12 +20,12 @@ top_chan = {'MEG0242+0243', 'MEG1222+1223', 'MEG1322+1323', 'MEG1332+1333', 'MEG
 all_cmb_avg = struct();
 gravg_cmb = struct ();
 
-for ii = 1:length(conditions)
+for ii = 1%:length(conditions)
 
 nstim = length(eval(['cond.' char(conditions(ii)) 'trig']));
 trig = eval(['cond.' char(conditions(ii)) 'trig']);
 
-    for iii = 1:nstim
+    for iii = 5%1:nstim
 
         for i = 1:length(sub_date.ID)
 
@@ -65,10 +65,14 @@ trig = eval(['cond.' char(conditions(ii)) 'trig']);
         
         clear tempdat
         
-        cfg = [];
-        timelockeds_cmb = ft_combineplanar(cfg, timelockeds);
+        %save individual timelockeds
+        %save(['../mat_data/timelockeds/ID' sub_date.ID{i} '/' (cond.(([conditions{ii} 'label'])){iii}) '_tlks.mat'], 'timelockeds', '-v7.3');
         
-        all_cmb_avg.(conditions{ii}){i, iii} = timelockeds_cmb.avg;
+        
+        cfg = [];
+%        timelockeds_cmb = ft_combineplanar(cfg, timelockeds);
+        
+%        all_cmb_avg.(conditions{ii}){i, iii} = timelockeds_cmb.avg;
         
         %Grab only 'avg' parameter in struct compatible with cat(mean())
         %all_avg.(conditions{ii}){i, iii} = timelockeds.avg;
@@ -78,7 +82,7 @@ trig = eval(['cond.' char(conditions(ii)) 'trig']);
         clear timelockeds timelockeds_cmb
         
         %Calculate grand average over trial and subject per condition
-        gravg_cmb.(conditions{ii}){iii} = mean(cat(3, all_cmb_avg.(conditions{ii}){:, iii}), 3);
+%        gravg_cmb.(conditions{ii}){iii} = mean(cat(3, all_cmb_avg.(conditions{ii}){:, iii}), 3);
 
         end
 
