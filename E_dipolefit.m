@@ -1,10 +1,10 @@
 
 %https://github.com/natmegsweden/meeg_course/blob/master/tutorial_04a_dipole_fitting.md
 
-all_dip_pos = struct();
-all_virtch = struct();
+%all_dip_pos = struct();
+%all_virtch = struct();
 
-for i = 1%:length(sub_date.ID)
+for i = 22%1:length(sub_date.ID)
 
     %load leadfield (from E_beamformer) - Subject to change
     %leadfield = load(['../mat_data/source_reconstruction/' 'ID' sub_date.ID{i} '/leadfield.mat']);
@@ -14,10 +14,14 @@ for i = 1%:length(sub_date.ID)
     headmodel = load(['../mat_data/MRI_mat/ID' sub_date.ID{i} '/meg_headmodel.mat']);
     headmodel = headmodel.headmodel_meg;
     
-    % Convert to SI units
+    % Convert units
     headmodel = ft_convert_units(headmodel, 'cm');
     
     %ft_plot_headmodel(headmodel);
+    
+    %Load sourcemodel (created in E_beamform script)
+    load(['../mat_data/source_reconstruction/ID' sub_date.ID{i} '/source_org.mat']);
+    source_org = ft_convert_units(source_org, 'cm')
     
     %load reslice MRI for plot
     mri = load(['../mat_data/MRI_mat/ID' sub_date.ID{i} '/mri_resliced.mat']);
@@ -47,9 +51,6 @@ for i = 1%:length(sub_date.ID)
         ICAdat = ft_selectdata(cfg, ICAdat);
         
         
-        %timelockeds = load(['../mat_data/timelockeds/ID' sub_date.ID{i} '/' (cond.(([conditions{ii} 'label'])){iii}) '_tlks.mat']);
-        %timelockeds = timelockeds.timelockeds;
-        
         % Whiten
         cfg = [];
         cfg.covariance          = 'yes';
@@ -67,6 +68,7 @@ for i = 1%:length(sub_date.ID)
         cfg.kappa      = kappa;
         dataw_meg      = ft_denoise_prewhiten(cfg, ICAdat, data_cov);
         
+        clear ICAdat data_cov
        
         %implement adaptive baseline window and trigger
    
@@ -80,6 +82,7 @@ for i = 1%:length(sub_date.ID)
         
         evoked_wht = ft_timelockanalysis(cfg, dataw_meg);
         
+        clear dataw_meg
         
         toiN1 = [0.050 0.150];
         
@@ -128,10 +131,7 @@ for i = 1%:length(sub_date.ID)
         
         save(['../mat_data/source_reconstruction/ID' sub_date.ID{i} '/' name{3} '_dipolefit.mat'], 'dips')
         
-        %clear dips
-        
-        %Load sourcemodel (created in E_beamform script)
-        load(['../mat_data/source_reconstruction/ID' sub_date.ID{i} '/source_org.mat']);
+        clear dips
         
         %calculate corresponding closest source from dip.pos
         %Left
@@ -168,19 +168,14 @@ for i = 1%:length(sub_date.ID)
         all_virtch.([name{1}])(i,:) = virtchL.avg
         clear virtchL
         
-        clear source_org
-            
-        %For subject
         end
         
-    %For stim    
     end
     
-%For condition    
 end
 
-save(['../mat_data/source_reconstruction/all_dip_pos.mat'], 'all_dip_pos')
-save(['../mat_data/source_reconstruction/all_virtch.mat'], 'all_virtch')
+%save(['../mat_data/source_reconstruction/all_dip_pos.mat'], 'all_dip_pos')
+%save(['../mat_data/source_reconstruction/all_virtch.mat'], 'all_virtch')
 
 %% Plot dip.pos on template brain
 
@@ -196,36 +191,106 @@ mri = ft_convert_units(mri, 'cm');
 figure; hold on
 pos = all_dip_pos.PO60_90L(1,:);
 
-ft_plot_slice(mri.anatomy, 'transform', mri.transform, 'orientation', [0 1 0]); hold on
+ft_plot_slice(mri.anatomy, 'transform', mri.transform,'location', [0 0 0.5], 'orientation', [0 0 1]); hold on
+ft_plot_slice(mri.anatomy, 'transform', mri.transform,'location', [0 0 0], 'orientation', [1 0 0]); hold on
 
 for j = 1:22
-ft_plot_dipole(all_dip_pos.PO60_90Lsource(j,:), [0 0 0], 'diameter', 1, 'unit', 'cm', 'color','r', 'alpha', 0.5); hold on
-ft_plot_dipole(all_dip_pos.PO60_90Rsource(j,:), [0 0 0], 'diameter', 1, 'unit', 'cm', 'color','g', 'alpha', 0.5); hold on
+ft_plot_dipole(all_dip_pos.PO60_90L(j,:), [0 0 0], 'diameter', 0.5, 'unit', 'cm', 'color','b', 'alpha', 0.5); hold on
+ft_plot_dipole(all_dip_pos.PO60_90Lsource(j,:), [0 0 0], 'diameter', 0.5, 'unit', 'cm', 'color','g', 'alpha', 0.5); hold on
+
+
+ft_plot_dipole(all_dip_pos.PO60_90R(j,:), [0 0 0], 'diameter', 0.5, 'unit', 'cm', 'color','r', 'alpha', 0.5); hold on
+ft_plot_dipole(all_dip_pos.PO60_90Rsource(j,:), [0 0 0], 'diameter', 0.5, 'unit', 'cm', 'color','g', 'alpha', 0.5); hold on
 end
-view([0 1 0])
+view([0 0 1])
+
+%% Mesh brain
+
+%Standard headmodel from running standard_mri throught MRI_prep2 pipeline
+load('../mat_data/MRI_mat/standard_headmodel.mat');
+
+headmodel_std = ft_convert_units(headmodel_std, 'cm');
+
+figure; hold on;
+ft_plot_headmodel(headmodel_std, 'facealpha', 0.5, 'edgecolor', [0.5 0.5 0.5]);
+
+for j = 1:21
+ft_plot_dipole(all_dip_pos.PO60_90L(j,:), [0 0 0], 'diameter', 0.5, 'unit', 'cm', 'color','b', 'alpha', 0.5); hold on
+ft_plot_dipole(all_dip_pos.PO60_90Lsource(j,:), [0 0 0], 'diameter', 0.5, 'unit', 'cm', 'color','g', 'alpha', 0.5); hold on
+
+
+ft_plot_dipole(all_dip_pos.PO60_90R(j,:), [0 0 0], 'diameter', 0.5, 'unit', 'cm', 'color','r', 'alpha', 0.5); hold on
+ft_plot_dipole(all_dip_pos.PO60_90Rsource(j,:), [0 0 0], 'diameter', 0.5, 'unit', 'cm', 'color','g', 'alpha', 0.5); hold on
+end
+
 
 
 
 %%
 
+%Window/patch colors
+red = [241 88 84]/256;
+orange = [250 164 58]/256;
+green = [96 189 104]/256;
+blue = [93 165 218]/256;
+purple = [178 118 178]/256;
+
+
+% PULSE ONLY
 figure('Position', [400 400 1800 400]); hold on;
 xlim([41 165]);
 %ylim([minylim maxylim]);
-title('PO60_90', 'Interpreter', 'none');
-for i = 1:22%numel(sub_date.ID)
+title('Pulse', 'Interpreter', 'none');
+for i = 1:21%numel(sub_date.ID)
     
-    plot(all_virtch.GO_60R(i,:), 'Color', [0 0 0 0.5])
-    tempmean(i,1:165) = all_virtch.PO60_90L(i,:);
+    plot(all_virtch.PO60_90R(i,:), 'Color', [0 0 0 0.5])
+    tempmeanR(i,1:165) = all_virtch.PO60_90R(i,:);
+    
+    plot(all_virtch.PO60_90L(i,:), 'Color', [0 0 0 0.5])
+    tempmeanL(i,1:165) = all_virtch.PO60_90L(i,:);
     
 end
 
 %N1 patch
-%patch('Faces', [1 2 3 4], 'Vertices', [N1on minylim; N1on maxylim; N1off maxylim; N1off minylim], 'FaceColor', orange, 'FaceAlpha', 0.1, 'EdgeAlpha', 0);
+patch('Faces', [1 2 3 4], 'Vertices', [111 -2; 111 2; 131 2; 131 -2], 'FaceColor', orange, 'FaceAlpha', 0.1, 'EdgeAlpha', 0);
 
 %P1 patch
 %patch('Faces', [1 2 3 4], 'Vertices', [P2on minylim; P2on maxylim; P2off maxylim; P2off minylim], 'FaceColor', green, 'FaceAlpha', 0.1, 'EdgeAlpha', 0);
 
-plot(mean(tempmean), 'Color', [0.75 0 0], 'LineWidth', 1.5); clear tempmean;
+plot(mean(tempmeanR), 'Color', [0.75 0 0], 'LineWidth', 1.5); clear tempmean;
+plot(mean(tempmeanL), 'Color', [0 0 0.75], 'LineWidth', 1.5); clear tempmean;
+%plot([101 101], [minylim maxylim], 'k --');
+x = gca;
+x.XTick = [1:10:165];
+x.XTickLabel = [-500:50:320];
+x.XMinorTick = 'on';
+x.FontSize = 20;
+x.XTickLabelRotation = 90;
+
+
+%GAP ONLY
+figure('Position', [400 400 1800 400]); hold on;
+xlim([41 165]);
+%ylim([minylim maxylim]);
+title('Gap', 'Interpreter', 'none');
+for i = 1:21%numel(sub_date.ID)
+    
+    plot(all_virtch.GO_60R(i,:), 'Color', [0 0 0 0.5])
+    tempmeanR(i,1:165) = all_virtch.GO_60R(i,:);
+    
+    plot(all_virtch.GO_60L(i,:), 'Color', [0 0 0 0.5])
+    tempmeanL(i,1:165) = all_virtch.GO_60L(i,:);
+    
+end
+
+%N1 patch
+patch('Faces', [1 2 3 4], 'Vertices', [111 -2; 111 2; 131 2; 131 -2], 'FaceColor', orange, 'FaceAlpha', 0.1, 'EdgeAlpha', 0);
+
+%P1 patch
+%patch('Faces', [1 2 3 4], 'Vertices', [P2on minylim; P2on maxylim; P2off maxylim; P2off minylim], 'FaceColor', green, 'FaceAlpha', 0.1, 'EdgeAlpha', 0);
+
+plot(mean(tempmeanR), 'Color', [0.75 0 0], 'LineWidth', 1.5); clear tempmean;
+plot(mean(tempmeanL), 'Color', [0 0 0.75], 'LineWidth', 1.5); clear tempmean;
 %plot([101 101], [minylim maxylim], 'k --');
 x = gca;
 x.XTick = [1:10:165];
