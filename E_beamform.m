@@ -210,7 +210,7 @@ for i = 6:22%length(sub_date.ID);
     %For condition
     end
 
-clear appended_pw;    
+clear appended_pw;
 
 %For subject
 end
