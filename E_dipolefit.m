@@ -1,10 +1,10 @@
 
 %https://github.com/natmegsweden/meeg_course/blob/master/tutorial_04a_dipole_fitting.md
 
-%all_dip_pos = struct();
-%all_virtch = struct();
+all_dip_pos = struct();
+all_virtch = struct();
 
-for i = 22%1:length(sub_date.ID)
+for i = 1:length(sub_date.ID)
 
     %load leadfield (from E_beamformer) - Subject to change
     %leadfield = load(['../mat_data/source_reconstruction/' 'ID' sub_date.ID{i} '/leadfield.mat']);
@@ -82,6 +82,8 @@ for i = 22%1:length(sub_date.ID)
         
         evoked_wht = ft_timelockanalysis(cfg, dataw_meg);
         
+        save(['../mat_data/source_reconstruction/ID' sub_date.ID{i} '/' cond.([conditions{ii} 'label']){stim} 'dip_timelockeds.mat'], 'evoked_wht')
+        
         clear dataw_meg
         
         toiN1 = [0.050 0.150];
@@ -100,7 +102,7 @@ for i = 22%1:length(sub_date.ID)
         cfg.resolution = 1;
                 
         dips = ft_dipolefitting(cfg, evoked_wht);
-        
+                
         %Convert units for plotting
         %dip_all_bil_wht.dip = ft_convert_units(dip_all_bil_wht.dip, 'mm');
 
@@ -174,8 +176,72 @@ for i = 22%1:length(sub_date.ID)
     
 end
 
-%save(['../mat_data/source_reconstruction/all_dip_pos.mat'], 'all_dip_pos')
-%save(['../mat_data/source_reconstruction/all_virtch.mat'], 'all_virtch')
+save(['../mat_data/source_reconstruction/all_dip_pos.mat'], 'all_dip_pos')
+save(['../mat_data/source_reconstruction/all_virtch.mat'], 'all_virtch')
+
+%% Regressing blinks/other processing errors
+
+%To do: load identified subjects, rename dips.mat for book-keeping and write new dips.mat below
+
+% Blinks:
+% 0756 PO - 4 - dips2 ok
+% 0835 PO - 6 - dips2 ok
+% 0863 PO - 22 - dips2 ok
+
+% Other:
+% 0853 PO outside above/motor? - 16 - dips2 ok
+
+dips = load(['../mat_data/source_reconstruction/ID0853/PO60_90_dipolefit.mat']);
+dips = dips.dips;
+
+%load subject evoked_wht and headmodel
+
+load standard_mri;
+mri = ft_convert_units(mri, 'cm');
+
+%Plot
+figure; hold on
+pos = dips.dip.pos(1,:);
+ft_plot_slice(mri.anatomy, 'transform', mri.transform,'location', [0 0 0.5], 'orientation', [0 0 1]); hold on
+ft_plot_slice(mri.anatomy, 'transform', mri.transform,'location', [0 0 0], 'orientation', [1 0 0]); hold on
+
+ft_plot_dipole(dips.dip.pos(1,:), [0 0 0], 'diameter', 0.5, 'unit', 'cm', 'color','g', 'alpha', 0.5); hold on
+ft_plot_dipole(dips.dip.pos(2,:), [0 0 0], 'diameter', 0.5, 'unit', 'cm', 'color','g', 'alpha', 0.5); hold on
+
+%Remove Vmodel from Vdata for subjects with dipoles fitted to blinks
+dif = dips.Vdata - dips.Vmodel;
+
+evoked_2 = evoked_wht; %Copy timelockeds
+evoked_2.avg(:, 111:131) = dif; %Overwrite TOI with Vdata-Vmodel data
+
+%New dipolefit
+toiN1 = [0.050 0.150];
+
+cfg = [];
+cfg.gridsearch          = 'yes';
+cfg.dipfit.metric       = 'rv';
+cfg.model               = 'regional';
+cfg.nonlinear           = 'yes';
+cfg.latency             = toiN1; % FIRST COMPONENT
+cfg.symmetry            = [];
+cfg.headmodel           = headmodel;
+cfg.numdipoles          = 2;              % we expect bilateral activity
+cfg.symmetry            = 'x';
+cfg.channel             = 'meg';
+cfg.resolution = 1;
+
+dips2 = ft_dipolefitting(cfg, evoked_2);
+
+%Plot 2
+figure; hold on
+pos = dips2.dip.pos(1,:);
+ft_plot_slice(mri.anatomy, 'transform', mri.transform,'location', [0 0 0.5], 'orientation', [0 0 1]); hold on
+ft_plot_slice(mri.anatomy, 'transform', mri.transform,'location', [0 0 0], 'orientation', [1 0 0]); hold on
+
+ft_plot_dipole(dips2.dip.pos(1,:), [0 0 0], 'diameter', 0.5, 'unit', 'cm', 'color','g', 'alpha', 0.5); hold on
+ft_plot_dipole(dips2.dip.pos(2,:), [0 0 0], 'diameter', 0.5, 'unit', 'cm', 'color','g', 'alpha', 0.5); hold on
+
+
 
 %% Plot dip.pos on template brain
 
