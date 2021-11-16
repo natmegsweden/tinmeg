@@ -443,10 +443,10 @@ tempmean(i,1:165) = sub_sensoi.PO60{i,5};
 end
 
 %N1 patch
-patch('Faces', [1 2 3 4], 'Vertices', [N1on minylim; N1on maxylim; N1off maxylim; N1off minylim], 'FaceColor', orange, 'FaceAlpha', 0.1, 'EdgeAlpha', 0);
+patch('Faces', [1 2 3 4], 'Vertices', [N1on minylim; N1on maxylim; N1off maxylim; N1off minylim], 'FaceColor', blue, 'FaceAlpha', 0.1, 'EdgeAlpha', 0);
 
 %P1 patch
-patch('Faces', [1 2 3 4], 'Vertices', [P2on minylim; P2on maxylim; P2off maxylim; P2off minylim], 'FaceColor', green, 'FaceAlpha', 0.1, 'EdgeAlpha', 0);
+patch('Faces', [1 2 3 4], 'Vertices', [P2on minylim; P2on maxylim; P2off maxylim; P2off minylim], 'FaceColor', purple, 'FaceAlpha', 0.1, 'EdgeAlpha', 0);
 
 plot(mean(tempmean), 'Color', [0.75 0 0], 'LineWidth', 1.5); clear tempmean;
 plot([101 101], [minylim maxylim], 'k --');
