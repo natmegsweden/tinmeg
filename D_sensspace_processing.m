@@ -20,12 +20,12 @@ top_chan = {'MEG0242+0243', 'MEG1222+1223', 'MEG1322+1323', 'MEG1332+1333', 'MEG
 all_cmb_avg = struct();
 gravg_cmb = struct ();
 
-for ii = 1%:length(conditions)
+for ii = 3%:length(conditions)
 
 nstim = length(eval(['cond.' char(conditions(ii)) 'trig']));
 trig = eval(['cond.' char(conditions(ii)) 'trig']);
 
-    for iii = 5%1:nstim
+    for iii = 4%1:nstim
 
         for i = 1:length(sub_date.ID)
 
@@ -58,7 +58,11 @@ trig = eval(['cond.' char(conditions(ii)) 'trig']);
         end
         
         cfg.preproc.lpfilter = 'yes';
-        cfg.preproc.lpfreq = 70;
+        cfg.preproc.lpfreq = 30; %original  : 70
+        
+        cfg.preproc.hpfilter = 'yes';
+        cfg.preproc.hpfreq = 1; %original: no hpfilter
+        
         cfg.trials = tempdat.trialinfo == trig(iii);
         
         timelockeds = ft_timelockanalysis(cfg, tempdat);
@@ -70,9 +74,9 @@ trig = eval(['cond.' char(conditions(ii)) 'trig']);
         
         
         cfg = [];
-%        timelockeds_cmb = ft_combineplanar(cfg, timelockeds);
+        timelockeds_cmb = ft_combineplanar(cfg, timelockeds);
         
-%        all_cmb_avg.(conditions{ii}){i, iii} = timelockeds_cmb.avg;
+        all_cmb_avg.(conditions{ii}){i, iii} = timelockeds_cmb.avg;
         
         %Grab only 'avg' parameter in struct compatible with cat(mean())
         %all_avg.(conditions{ii}){i, iii} = timelockeds.avg;
@@ -368,12 +372,12 @@ top_chan_idx = find(ismember(mean_sub.label, top_chan));
 sub_sensoi = struct();
 
 %Gather mean of sensors of interest (from top_chan) for all subjects and trials
-for i = 1:numel(conditions)
+for i = 3%1:numel(conditions)
     n_stim = length(cond.([conditions{i} 'label']));
     
     for ii = 1:numel(sub_date.ID)
         
-        for iii = 1:n_stim
+        for iii = 4%1:n_stim
            
         sub_sensoi.(conditions{i}){ii,iii} = mean(all_cmb_avg.(conditions{i}){ii,iii}(top_chan_idx,:));
             
@@ -448,7 +452,7 @@ patch('Faces', [1 2 3 4], 'Vertices', [N1on minylim; N1on maxylim; N1off maxylim
 %P1 patch
 patch('Faces', [1 2 3 4], 'Vertices', [P2on minylim; P2on maxylim; P2off maxylim; P2off minylim], 'FaceColor', purple, 'FaceAlpha', 0.1, 'EdgeAlpha', 0);
 
-plot(mean(tempmean), 'Color', [0.75 0 0], 'LineWidth', 1.5); clear tempmean;
+plot(mean(tempmean), 'Color', [0.75 0 0], 'LineWidth', 1.5); %clear tempmean;
 plot([101 101], [minylim maxylim], 'k --');
 x = gca;
 x.XTick = [1:10:165];
@@ -523,7 +527,7 @@ pulN1off = find(mean_sub.time == 0.150);
 pulP2on = find(mean_sub.time == 0.150);
 pulP2off = find(mean_sub.time == 0.250);
 
-for ii = 1:numel(cond.GP60label) %order: i0, i60, i120, i240
+for ii = 4%1:numel(cond.GP60label) %order: i0, i60, i120, i240
     
     %Specify list of times needed to correct for adapting TOI to shifting ISI (i.e ISI + GAP duration)
     gapcomp = [0.050 0.110 0.170 0.290];
@@ -601,7 +605,7 @@ for ii = 1:numel(cond.GP60label) %order: i0, i60, i120, i240
         patch('Faces', [1 2 3 4], 'Vertices', [pulP2on minylim; pulP2on maxylim; pulP2off maxylim; pulP2off minylim], 'FaceColor', purple, 'FaceAlpha', 0.1, 'EdgeAlpha', 0);   
     end
     
-    plot(mean(tempmean), 'Color', [0.75 0 0], 'LineWidth', 1.5); clear tempmean;
+    plot(mean(tempmean), 'Color', [0.75 0 0], 'LineWidth', 1.5); %clear tempmean;
     plot([101 101], [minylim maxylim], 'k --');
     x = gca;
     x.XTick = [1:10:165];

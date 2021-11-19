@@ -131,6 +131,8 @@ for i = 1:length(sub_date.ID)
     
 end
 
+clear i ii label destdirectory fname_in fname_out fpath_in nstim res4mat_ds stim_index trigger trigs
+
 %% ICA
 
 %Warning: Modified ft_artefact_ecg to assume 'y' for inspection 2021-09-17
@@ -158,7 +160,7 @@ end
 %% MR step 1
 %  Require some manual input for fiducials and coordsys
 
-for i = 1:4%length(sub_date.ID);
+for i = 1:length(sub_date.ID);
     
     mri_path_in = ['../MRI/' 'NatMEG_' sub_date.ID{i}];
     mri_path_out = ['../mat_data/MRI_mat/ID' sub_date.ID{i} '/'];
@@ -179,10 +181,10 @@ end
 
 clear('mri_coordsys', 'mri_realigned_1', 'mri_realigned_vol_2', 'mri_realigned_vol_3', 'submri', 'sensshape', 'headshape', 'dcmfile', 'dicom_path', 'MEGfile', 'mri_path_in', 'mri_path_out', 'i');
 
-%% MR Step 2
+%% MR Step 2 - TO DO cfg.spmmetthod <- spelling error in ft_prepare_sourcemodel
 %  Re-slice and segment, time-conusming (5 min per subject) not requiring manual inputs
 
-for i = 1:4%length(sub_date.ID);
+for i = 1:length(sub_date.ID);
     
     %Note paths change from MR step 1 - in/out same here
     sub_mri_path = ['../mat_data/MRI_mat/ID' sub_date.ID{i} '/'];
