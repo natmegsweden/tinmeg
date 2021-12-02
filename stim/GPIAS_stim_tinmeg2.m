@@ -1,23 +1,42 @@
 % Create GPIAS trials in broadband noise
 % Author: Niklas Edvall, niklas.edvall@ki.se
 
+%tinmeg2 is updated with options for NBN carrier noise and pure tones to "simulate tinnitus" in silent gaps.
+
+%some code for HP/LP-filter designs are different from tinmeg1 that was mainly ran on Matlab R2019-2020 (local PC Biomedicum).
+%tinmeg2 is made to run on Matlab v9.0 (R2016a) on the NatMEG compute server.
+
 % soundfile is saved to cd/output as 44.1kHz, 16bit (default) wav as filename
 
-outpath = [cd '/Output/'];
 
-% Variables to specify:
-fs = 44100;         % Hz, samplerate
-lowpf = 18000;      %Lowpass filter cutoff
+%To do:
+%recreate lowpass from tinmeg (minimum order stop band 60dB, fpass = 18000, fstop: unknown (check stim)
 
-predur = 0.750;     %sec, pre-duration
-fallt = 0.000;      %sec, fall-time before
-gapdur = 0.000;     %sec, gap duration
-riset = 0.000;      %sec, rise-time after silent gap
-ISI = 0.000;        %sec, Inter-stimulus interval (end of risetime to pulse)
-pulsedur = 0.020;   %sec, instantaneous rise and fall 
-postdur = 4;        %sec, post-duration
+addpath('stim');
+
+outpath = ['../../stim_output/'];
 
 filename = 'B_C70_P95.wav';
+
+%Load filters
+
+
+% Variables to specify:
+fs = 44100;         % Hz, samplerate (samples per second)
+lowpf = 12000;      %Lowpass filter cutoff
+dt = 1/fs;          % seconds per sample
+
+gaptone = 'yes';    %Fill gap with pure tone? yes or no
+gaptonef = 3000;    %frequency of gap pure tone
+gaptonelvlv = 45;   %level of tone in gap
+
+predur = 0.750;     %sec, pre-duration
+fallt = 0.052;      %sec, fall-time before
+gapdur = 0.050;     %sec, gap duration
+riset = 0.002;      %sec, rise-time after silent gap
+ISI = 0.120;        %sec, Inter-stimulus interval (end of risetime to pulse)
+pulsedur = 0.020;   %sec, instantaneous rise and fall 
+postdur = 4;        %sec, post-duration
 
 bkglvl = 60;        %dB, level of carrier noise
 pulselvl = 80;      %dB, level of startle pulse
@@ -40,8 +59,15 @@ gap = zeros(1, round(gapdur*fs));                  %duration and level of gap wi
 pulse = ones(1, round(pulsedur*fs)) .* pulsediff;  %duration and level of pulse window
 ISI2 = ones(1, round(ISI*fs)) .* bkgdiff;          %duration and level of ISI
 
+%If gaptone, create pure tone att gaptonef and replace in silent gap
+if gaptone == 'yes';
+    pt = sin(2*pi*gaptonef*(0:dt:gapdur));
+    
+    
+    %gap = pt;
+end
+
 rffreq = 1/(fallt * 2);  %Frequency that has period of 2 fallt
-dt = 1/fs;               %seconds per sample
 t = (0:dt:fallt);        %vector for rise/fall
 
 %General sine is = Amplitude * sin(2*pi*f*t + phase) + Amp shift
@@ -57,16 +83,43 @@ t = (0:dt:riset);        %vector for rise/fall
 rise = (0.5*bkgdiff) * sin(2*pi*rffreq*t + pi/2) + 0.5*bkgdiff; %fall window
 rise = flip(rise); %rise window
 
+% n for noise
+pren_falln = rand(1, length(pre) + length(fall));
+pren_falln = (pren_falln - 0.5) * 2; 
+
+% fileter here
+% pren_falln = lowpass(pren_falln, lowpf, fs);
+
+%plot spectrum (test)
+[pxx,f] = pspectrum(xTable);
+
+plot(f,pow2db(pxx))
+xlim([1000 20000]);
+ylim([-80 0]);
+grid on
+
+set(gca, 'XScale', 'log');
+
+xlabel('Frequency (Hz)')
+set(gca, 'XTick', [1000 10000]);
+set(gca, 'XTickLabel', [1000 10000]);
+
+ylabel('Power Spectrum (dB)')
+title('Default Frequency Resolution')
+
+
+pren_falln = pren_falln .* [pre fall];
+
 window = [pre fall gap rise ISI2 pulse post];
 
 n = rand(1, length(window));  %Create rand vector of same length as window
 n = (n - 0.5) * 2;            %Shift vector to center on zero
 
 %Lowpass
-n = lowpass(n, lowpf, fs);      %LP filter of noise
+n = lowpass(n, lowpf, fs);     %LP filter of noise
 n = n/max(abs(n(:)));           %Limit to 0 +/- 1 range by dividing signal by max()
                                 %else LP-filter introduces clipping
-                                
+
 %Headroom                                
 n = n .* 0.95;                  %Uncomment for 5% headroom
 noise = n .* window;
@@ -88,7 +141,9 @@ plot(noise)
 axis([0 length(noise) min(noise)-0.05 max(noise)+0.05]);
 hold off
 
-%audiowrite([outpath filename], noise, fs)
+
+%audiowrite([outpath 'filnoise2.wav'], filnoise, fs)
+
 %% 15 sec Calibration noise - pulsediff and bkgdiff needed! NB: Levels are set as callvl, pulselvl and bkglvl up top!!
 
 caldur = 15;  %sec, Duration of calibration noise
