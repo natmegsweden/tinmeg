@@ -23,8 +23,13 @@ filename = 'B_C70_P95.wav';
 
 % Variables to specify:
 fs = 44100;         % Hz, samplerate (samples per second)
-lowpf = 12000;      %Lowpass filter cutoff
 dt = 1/fs;          % seconds per sample
+
+lowpf = 18000;      %Lowpass filter cutoff
+
+%Bandpass filters for NBN carrier noise
+thirdoct_CF8 = octaveFilter(8000, '1/3 octave','SampleRate', fs);
+thirdoct_CF3 = octaveFilter(3000, '1/3 octave','SampleRate', fs);
 
 gaptone = 'yes';    %Fill gap with pure tone? yes or no
 gaptonef = 3000;    %frequency of gap pure tone
@@ -62,8 +67,6 @@ ISI2 = ones(1, round(ISI*fs)) .* bkgdiff;          %duration and level of ISI
 %If gaptone, create pure tone att gaptonef and replace in silent gap
 if gaptone == 'yes';
     pt = sin(2*pi*gaptonef*(0:dt:gapdur));
-    
-    
     %gap = pt;
 end
 
@@ -83,32 +86,22 @@ t = (0:dt:riset);        %vector for rise/fall
 rise = (0.5*bkgdiff) * sin(2*pi*rffreq*t + pi/2) + 0.5*bkgdiff; %fall window
 rise = flip(rise); %rise window
 
-% n for noise
+%Create noise of length pre-duartion + fall time
 pren_falln = rand(1, length(pre) + length(fall));
-pren_falln = (pren_falln - 0.5) * 2; 
+pren_falln = (pren_falln - 0.5) * 2;
 
-% fileter here
-% pren_falln = lowpass(pren_falln, lowpf, fs);
+%pren_falln = bandpass(pren_falln, [0.25 0.75]);
 
-%plot spectrum (test)
-[pxx,f] = pspectrum(xTable);
+pren_falln = pren_falln'; %octFilt requires signal in column
+pren_falln = thirdoct_CF3(pren_falln); %Apply NBN filter
+%pren_falln = pren_falln .* [pre fall]; %Multiply by envelope
 
-plot(f,pow2db(pxx))
-xlim([1000 20000]);
-ylim([-80 0]);
-grid on
-
+pspectrum(pren_falln, fs)
 set(gca, 'XScale', 'log');
+xlim([0.1 20]);
+set(gca, 'XTickLabel', [100 1000 20000]);
+xlabel('Frequency (Hz)');
 
-xlabel('Frequency (Hz)')
-set(gca, 'XTick', [1000 10000]);
-set(gca, 'XTickLabel', [1000 10000]);
-
-ylabel('Power Spectrum (dB)')
-title('Default Frequency Resolution')
-
-
-pren_falln = pren_falln .* [pre fall];
 
 window = [pre fall gap rise ISI2 pulse post];
 
