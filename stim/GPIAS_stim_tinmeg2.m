@@ -6,6 +6,12 @@
 
 % soundfile is saved to cd/output as 44.1kHz, 16bit (default) wav as filename
 
+%% To do
+
+% Paste PT in BB noise to replace gap
+% fall/rise for PT and/or crossfade with carrier
+
+%%
 filename = 'BP3_GPi240.wav';
 
 % Variables to specify:
@@ -17,13 +23,13 @@ lowpf = 18000;      %Lowpass filter cutoff
 useNBN = 1;         %1 to use narrow band noise as carrier - default is white noise
 bpfiltfreq = 3000;  %Center frequency of band pass filter
 
-gaptone = 'yes';    %'yes' to fill gap with pure tone - default is silent gap
-gaptonef = 3000;    %frequency of gap pure tone
-gaptonelvlv = 45;   %level of tone in gap
+gaptone = 1;        %1 to fill gap with pure tone - default is silent gap
+gaptonef = 500;    %frequency of gap pure tone
+gaptonelvl = 60;   %level of tone in gap
 
 predur = 0.750;     %sec, pre-duration
 fallt = 0.002;      %sec, fall-time before
-gapdur = 0.050;     %sec, gap duration
+gapdur = 0.050;     %sec, gap duration (or tone if gaptone = 1)
 riset = 0.002;      %sec, rise-time after silent gap
 ISI = 0.240;        %sec, Inter-stimulus interval (end of risetime to pulse)
 pulsedur = 0.020;   %sec, instantaneous rise and fall 
@@ -42,6 +48,7 @@ octfilter = octaveFilter(bpfiltfreq, '1/3 octave','SampleRate', fs);
 % Signal created from variables above
 pulsediff = db2mag((callvl - pulselvl)*-1); 
 bkgdiff = db2mag((callvl - bkglvl)*-1); 
+gaptonediff = db2mag((callvl - gaptonelvl)*-1);
 % minus one as the calibration level is the reference at outpath 0dB or magnitude 1,
 % i.e callvl is unmodified at magnitude 1 and other amplitudes are lowered by level difference (pulsediff or bkgdiff)
 % Calibrate to callvl accordingly.
@@ -54,9 +61,13 @@ pulse = ones(1, round(pulsedur*fs)) .* pulsediff;  %duration and level of pulse 
 ISI2 = ones(1, round(ISI*fs)) .* bkgdiff;          %duration and level of ISI
 
 % WIP - If gaptone, create pure tone att gaptonef and replace in silent gap
-if gaptone == 'yes';
-    pt = sin(2*pi*gaptonef*(0:dt:gapdur));
-    %gap = pt;
+if gaptone == 1;
+    
+    %pure tone with same duration as specified for gap
+    pt = sin(2*pi*gaptonef*(0+dt:dt:gapdur));
+    %pure tone envelope
+    ptenv = ones(1, round(gapdur*fs)) .* gaptonediff;  %duration and level of gaptone window
+    ptn = pt .* ptenv;      %Multiply by envelope
 end
 
 rffreq = 1/(fallt * 2);  %Frequency that has period of 2 fallt
@@ -105,6 +116,12 @@ end
 if useNBN == 1;
     noise = [pren_falln gap risen_ISI2n pulsen postn];
     window = [pre fall gap rise ISI2 pulse post];
+    
+    if gaptone == 1;
+        noise = [pren_falln ptn risen_ISI2n pulsen postn];
+        window = [pre fall ptenv rise ISI2 pulse post];
+    end
+    
 else
     window = [pre fall gap rise ISI2 pulse post];
     n = rand(1, length(window));  %Create rand vector of same length as window
@@ -136,12 +153,12 @@ set(gca, 'XTick', [0:fs/10:length(noise)]);
 set(gca, 'XTickLabel', [0:1/10:5]);
 set(gca, 'XGrid', 'on');
 
-saveas(gcf, ['output/' filename '_timespec.svg']);
-close;
+%saveas(gcf, ['output/' filename '_timespec.svg']);
+%close;
 
 if useNBN == 1;
     figure('Position', [100 100 1000 400]);
-    pspectrum(postn, fs)
+    pspectrum(postn, fs) %noise(1:46042)
     set(gca, 'XScale', 'log');
     xlim([0.1 20]);
     set(gca, 'XTickLabel', [100 1000 10000]);
@@ -149,7 +166,7 @@ if useNBN == 1;
     title('Power spectrum (carrier, post pulse)');
 
     %saveas(gcf, ['output/' filename '_freqspec.svg']);
-    close;
+    %close;
 else
     figure('Position', [100 100 1000 400]);
     pspectrum(noise(length(noise)-length(post):end), fs)
@@ -160,7 +177,7 @@ else
     title('Power spectrum (carrier, post pulse)');
 
     %saveas(gcf, ['output/' filename '_freqspec.svg']);
-    close;
+    %close;
 end
     
 
