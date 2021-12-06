@@ -20,12 +20,12 @@ dt = 1/fs;          % seconds per sample
 
 lowpf = 18000;      %Lowpass filter cutoff
 
-useNBN = 1;         %1 to use narrow band noise as carrier - default is white noise
+useNBN = 0;         %1 to use narrow band noise as carrier - default is white noise
 bpfiltfreq = 3000;  %Center frequency of band pass filter
 
 gaptone = 1;        %1 to fill gap with pure tone - default is silent gap
 gaptonef = 500;    %frequency of gap pure tone
-gaptonelvl = 60;   %level of tone in gap
+gaptonelvl = 45;   %level of tone in gap
 
 predur = 0.750;     %sec, pre-duration
 fallt = 0.002;      %sec, fall-time before
@@ -65,9 +65,24 @@ if gaptone == 1;
     
     %pure tone with same duration as specified for gap
     pt = sin(2*pi*gaptonef*(0+dt:dt:gapdur));
+    
+    %Rise and fall envelopes for puretone (same duration/variable as rise/fall-time
+    %for carrier noise
+    rffreq = 1/(riset * 2);  %Frequency that has period of 2 riset
+    t = (0:dt:riset);        %vector for rise/fall
+    ptrise = flip((0.5*gaptonediff) * sin(2*pi*rffreq*t + pi/2) + 0.5*gaptonediff); %PT rise window
+    
+    rffreq = 1/(fallt * 2);  %Frequency that has period of 2 riset
+    t = (0:dt:fallt);        %vector for rise/fall
+    ptfall = (0.5*gaptonediff) * sin(2*pi*rffreq*t + pi/2) + 0.5*gaptonediff; %PT fall window
+    
     %pure tone envelope
     ptenv = ones(1, round(gapdur*fs)) .* gaptonediff;  %duration and level of gaptone window
+    ptenv = ptenv(1:end-(length(ptrise) + length(ptfall)));
+    ptenv = [ptrise ptenv ptfall];
+        
     ptn = pt .* ptenv;      %Multiply by envelope
+    
 end
 
 rffreq = 1/(fallt * 2);  %Frequency that has period of 2 fallt
@@ -78,7 +93,6 @@ t = (0:dt:fallt);        %vector for rise/fall
 fall = (0.5*bkgdiff) * sin(2*pi*rffreq*t + pi/2) + 0.5*bkgdiff; %fall window
 
 rffreq = 1/(riset * 2);  %Frequency that has period of 2 riset
-dt = 1/fs;               %seconds per sample
 t = (0:dt:riset);        %vector for rise/fall
 
 %General sine is = Amplitude * sin(2*pi*f*t + phase) + Amp shift
@@ -110,31 +124,45 @@ if useNBN == 1;
     pulsen = lowpass(pulsen, lowpf, fs);    %LP filter of noise
     pulsen = pulsen/max(abs(pulsen(:)));    %Limit to 0 +/- 1 range by dividing signal by max()else LP-filter introduces clipping
     pulsen = pulsen .* [pulse];             %Multiply by envelope
+    
+else %default: use white noise
+    pren_falln = rand(1, length(pre) + length(fall));
+    pren_falln = (pren_falln - 0.5) * 2;
+    pren_falln = lowpass(pren_falln, lowpf, fs);     %LP filter of noise
+    pren_falln = pren_falln/max(abs(pren_falln(:))); %Limit to 0 +/- 1 range by dividing signal by max(), else LP-filter introduce clipping                            
+    pren_falln = pren_falln .* 0.95;                 % 5% headroom
+    pren_falln = pren_falln .* [pre fall];           % Multiply by envelope
+
+    risen_ISI2n = rand(1, length(rise) + length(ISI2));
+    risen_ISI2n = (risen_ISI2n - 0.5) * 2;
+    risen_ISI2n = lowpass(risen_ISI2n, lowpf, fs);      %LP filter of noise
+    risen_ISI2n = risen_ISI2n/max(abs(risen_ISI2n(:))); %Limit to 0 +/- 1 range by dividing signal by max(), else LP-filter introduce clipping                            
+    risen_ISI2n = risen_ISI2n .* 0.95;                  % 5% headroom
+    risen_ISI2n = risen_ISI2n .* [rise ISI2];           % Multiply by envelope
+
+    postn = rand(1, length(post));
+    postn = (postn - 0.5) * 2;
+    postn = lowpass(postn, lowpf, fs);      %LP filter of noise
+    postn = postn/max(abs(postn(:)));       %Limit to 0 +/- 1 range by dividing signal by max(), else LP-filter introduce clipping                            
+    postn = postn .* 0.95;                  % 5% headroom
+    postn = postn .* [post];                % Multiply by envelope
+
+    pulsen = rand(1, length(pulse));
+    pulsen = (pulsen - 0.5) * 2;            
+    pulsen = lowpass(pulsen, lowpf, fs);      %LP filter of noise
+    pulsen = pulsen/max(abs(pulsen(:)));       %Limit to 0 +/- 1 range by dividing signal by max(), else LP-filter introduce clipping                            
+    pulsen = pulsen .* 0.95;                  % 5% headroom
+    pulsen = pulsen .* [pulse];                % Multiply by envelope
+    
 end
 
-%Assemble noise if NBN or create noise and fit in window if white carrier
-if useNBN == 1;
-    noise = [pren_falln gap risen_ISI2n pulsen postn];
-    window = [pre fall gap rise ISI2 pulse post];
+%Assemble noise
+noise = [pren_falln gap risen_ISI2n pulsen postn];
+window = [pre fall gap rise ISI2 pulse post];
     
-    if gaptone == 1;
-        noise = [pren_falln ptn risen_ISI2n pulsen postn];
-        window = [pre fall ptenv rise ISI2 pulse post];
-    end
-    
-else
-    window = [pre fall gap rise ISI2 pulse post];
-    n = rand(1, length(window));  %Create rand vector of same length as window
-    n = (n - 0.5) * 2;            %Shift vector to center on zero
-
-    %Lowpass
-    n = lowpass(n, lowpf, fs);     %LP filter of noise
-    n = n/max(abs(n(:)));          %Limit to 0 +/- 1 range by dividing signal by max()
-                                   %else LP-filter introduces clipping
-
-    %Headroom                                
-    n = n .* 0.95;                 %Uncomment for 5% headroom
-    noise = n .* window;
+if gaptone == 1;
+    noise = [pren_falln ptn risen_ISI2n pulsen postn];
+    window = [pre fall ptenv rise ISI2 pulse post];
 end
 
 %Output and graph
@@ -179,7 +207,7 @@ else
     %saveas(gcf, ['output/' filename '_freqspec.svg']);
     %close;
 end
-    
+
 
 %audiowrite(['output/' filename], noise, fs);
 
