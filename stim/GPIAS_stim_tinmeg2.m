@@ -20,22 +20,25 @@ dt = 1/fs;          % seconds per sample
 
 lowpf = 18000;      %Lowpass filter cutoff
 
-useNBN = 0;         %1 to use narrow band noise as carrier - default is white noise
+useNBN = 1;         %1 to use narrow band noise as carrier - default is white noise
 bpfiltfreq = 3000;  %Center frequency of band pass filter
 
 gaptone = 1;        %1 to fill gap with pure tone - default is silent gap
 gaptonef = 500;    %frequency of gap pure tone
-gaptonelvl = 45;   %level of tone in gap
+gaptonelvl = 50;    %level of tone in gap
+
+crossrisefall = 1;  %1 to overlap rise/falltime for carrier and gaptone. Requires fallt and riset to be same
+overlap = 0.005;    %Overlap of fall/rise window in sec
 
 predur = 0.750;     %sec, pre-duration
-fallt = 0.002;      %sec, fall-time before
+fallt = 0.010;      %sec, fall-time before
 gapdur = 0.050;     %sec, gap duration (or tone if gaptone = 1)
-riset = 0.002;      %sec, rise-time after silent gap
-ISI = 0.240;        %sec, Inter-stimulus interval (end of risetime to pulse)
+riset = 0.010;      %sec, rise-time after silent gap
+ISI = 0.060;        %sec, Inter-stimulus interval (end of risetime to pulse)
 pulsedur = 0.020;   %sec, instantaneous rise and fall 
-postdur = 4;        %sec, post-duration
+postdur = 1;        %sec, post-duration
 
-bkglvl = 60;        %dB, level of carrier noise
+bkglvl = 70;        %dB, level of carrier noise
 pulselvl = 90;      %dB, level of startle pulse
 
 callvl = 95;        %Calibration (i.e maximum level to be presented)
@@ -120,10 +123,11 @@ if useNBN == 1;
     postn = postn' .* [post];     %Multiply by envelope to row vector
 
     pulsen = rand(1, length(pulse));
-    pulsen = (pulsen - 0.5) * 2;          %1.9 for 95% headroom
-    pulsen = lowpass(pulsen, lowpf, fs);    %LP filter of noise
-    pulsen = pulsen/max(abs(pulsen(:)));    %Limit to 0 +/- 1 range by dividing signal by max()else LP-filter introduces clipping
-    pulsen = pulsen .* [pulse];             %Multiply by envelope
+    pulsen = (pulsen - 0.5) * 2;            
+    pulsen = lowpass(pulsen, lowpf, fs);      %LP filter of noise
+    pulsen = pulsen/max(abs(pulsen(:)));       %Limit to 0 +/- 1 range by dividing signal by max(), else LP-filter introduce clipping                            
+    pulsen = pulsen .* 0.95;                  % 5% headroom
+    pulsen = pulsen .* [pulse];                % Multiply by envelope
     
 else %default: use white noise
     pren_falln = rand(1, length(pre) + length(fall));
@@ -159,11 +163,33 @@ end
 %Assemble noise
 noise = [pren_falln gap risen_ISI2n pulsen postn];
 window = [pre fall gap rise ISI2 pulse post];
-    
+
+
 if gaptone == 1;
     noise = [pren_falln ptn risen_ISI2n pulsen postn];
     window = [pre fall ptenv rise ISI2 pulse post];
+    
+    %if specified, assemble noise with crossfade of rise/fall (require symmetric rise and fall times)
+    if fallt == riset && crossrisefall == 1;
+    ol = round(overlap*fs); %number of samples to overlap
+    cf1 = pren_falln(end-ol:end) + ptn(1:ol+1); %First overlap region (gap onset, pt start)
+    cf2 = ptn(end-ol:end-1) + risen_ISI2n(1:ol); %Second overlap region  (gap offset, pt end)
+    
+    pren_falln = pren_falln(1:end-ol); %cut the bit getting replaced with cf1
+    ptn = ptn(ol+2:end-ol-1); % +2 ?
+    risen_ISI2n = risen_ISI2n(ol:end); %cut the bit getting replaced with cf2
+    
+    noise = [pren_falln cf1 ptn cf2 risen_ISI2n pulsen postn];
+    window = [pre fall ptenv rise ISI2 pulse post];
+    
+    end
+    
 end
+
+% figure; hold on;
+% plot([pren_falln cf1 ptn]) %audio
+% plot([pre fall(1:end-ol-1) ptenv(ol+2:end-ol-1)]) %env
+
 
 %Output and graph
 %Prints total duration of final signal 'noise'
@@ -173,10 +199,10 @@ disp(totdur);
 
 %Plot amplitude spectrum of final trial + envelope, mind xlim to inspect
 %gap/pulse in detail
-figure('Position', [100 100 1000 400]); hold on;
-plot(window);
+figure('Position', [100 100 600 400]); hold on;
+%plot(window);
 plot(noise);
-xlim([0.5*fs 1.5*fs]);
+xlim([0.7*fs 0.9*fs]);
 set(gca, 'XTick', [0:fs/10:length(noise)]);
 set(gca, 'XTickLabel', [0:1/10:5]);
 set(gca, 'XGrid', 'on');
@@ -185,7 +211,7 @@ set(gca, 'XGrid', 'on');
 %close;
 
 if useNBN == 1;
-    figure('Position', [100 100 1000 400]);
+    figure('Position', [100 100 600 400]);
     pspectrum(postn, fs) %noise(1:46042)
     set(gca, 'XScale', 'log');
     xlim([0.1 20]);
@@ -196,7 +222,7 @@ if useNBN == 1;
     %saveas(gcf, ['output/' filename '_freqspec.svg']);
     %close;
 else
-    figure('Position', [100 100 1000 400]);
+    figure('Position', [100 100 600 400]);
     pspectrum(noise(length(noise)-length(post):end), fs)
     set(gca, 'XScale', 'log');
     xlim([0.1 20]);
