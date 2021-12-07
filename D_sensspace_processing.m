@@ -433,13 +433,15 @@ for i = 1:numel(sub_date.ID)
 %find lat and amp for N1, collect in struct
 [M, I] = max(sub_sensoi.PO60{i,5}(N1on:N1off));
 sub_amp_lat.PO60_90_N1lat(i,1) = mean_sub.time(N1on-1+I);
-sub_amp_lat.PO60_90_N1amp(i,1) = mean(sub_sensoi.PO60{i,5}(N1on:N1off));
+sub_amp_lat.PO60_90_N1amp(i,1) = mean(sub_sensoi.PO60{i,5}(N1on:N1off)); %Mean amp
+sub_amp_lat.PO60_90_N1amp_peak(i,1) = max(sub_sensoi.PO60{i,5}(N1on:N1off)); %Peak amp
 clear M I
 
 %find lat and amp for P2, collect in struct
 [M, I] = max(sub_sensoi.PO60{i,5}(P2on:P2off));
 sub_amp_lat.PO60_90_P2lat(i,1) = mean_sub.time(P2on-1+I);
-sub_amp_lat.PO60_90_P2amp(i,1) = mean(sub_sensoi.PO60{i,5}(P2on:P2off));
+sub_amp_lat.PO60_90_P2amp(i,1) = mean(sub_sensoi.PO60{i,5}(P2on:P2off)); %Mean amp
+sub_amp_lat.PO60_90_P2amp_peak(i,1) = max(sub_sensoi.PO60{i,5}(P2on:P2off)); %Peak amp
 clear M I
     
 plot(sub_sensoi.PO60{i,5}, 'Color', [0 0 0 0.5])
@@ -484,15 +486,17 @@ for i = 1:numel(sub_date.ID)
 %find lat and amp for N1, collect in struct
 [M, I] = max(sub_sensoi.GO{i,1}(N1on:N1off));
 sub_amp_lat.GO60_90_N1lat(i,1) = mean_sub.time(N1on-1+I);
-sub_amp_lat.GO60_90_N1amp(i,1) = mean(sub_sensoi.GO{i,1}(N1on:N1off));
+sub_amp_lat.GO60_90_N1amp(i,1) = mean(sub_sensoi.GO{i,1}(N1on:N1off)); %mean amp
+sub_amp_lat.GO60_90_N1amp_peak(i,1) = max(sub_sensoi.GO{i,1}(N1on:N1off)); %peak amp
 clear M I
 
 %find lat and amp for P2, collect in struct
 [M, I] = max(sub_sensoi.GO{i,1}(P2on:P2off));
 sub_amp_lat.GO60_90_P2lat(i,1) = mean_sub.time(P2on-1+I);
-sub_amp_lat.GO60_90_P2amp(i,1) = mean(sub_sensoi.GO{i,1}(P2on:P2off));
+sub_amp_lat.GO60_90_P2amp(i,1) = mean(sub_sensoi.GO{i,1}(P2on:P2off)); %mean amp
+sub_amp_lat.GO60_90_P2amp_peak(i,1) = max(sub_sensoi.GO{i,1}(P2on:P2off)); %peak amp
 clear M I
-    
+
 plot(sub_sensoi.GO{i,1}, 'Color', [0 0 0 0.5])
 tempmean(i,1:165) = sub_sensoi.GO{i,1};
 end
@@ -527,7 +531,7 @@ pulN1off = find(mean_sub.time == 0.150);
 pulP2on = find(mean_sub.time == 0.150);
 pulP2off = find(mean_sub.time == 0.250);
 
-for ii = 4%1:numel(cond.GP60label) %order: i0, i60, i120, i240
+for ii = 1:numel(cond.GP60label) %order: i0, i60, i120, i240
     
     %Specify list of times needed to correct for adapting TOI to shifting ISI (i.e ISI + GAP duration)
     gapcomp = [0.050 0.110 0.170 0.290];
@@ -551,13 +555,15 @@ for ii = 4%1:numel(cond.GP60label) %order: i0, i60, i120, i240
     %find lat and amp for N1, collect in struct
     [M, I] = max(sub_sensoi.GP60{i,ii}(N1on:N1off));
     sub_amp_lat.([cond.GP60label{ii} '_N1lat'])(i,1) = mean_sub.time(N1on-1+I) + gapcomp(ii); %NB - Compensate t = 0 to first stimulation event (i.e gap onset)
-    sub_amp_lat.([cond.GP60label{ii} '_N1amp'])(i,1) = mean(sub_sensoi.GP60{i,ii}(N1on:N1off));
+    sub_amp_lat.([cond.GP60label{ii} '_N1amp'])(i,1) = mean(sub_sensoi.GP60{i,ii}(N1on:N1off)); %mean amp
+    sub_amp_lat.([cond.GP60label{ii} '_N1amp_peak'])(i,1) = max(sub_sensoi.GP60{i,ii}(N1on:N1off)); %peak amp
     clear M I
 
     %find lat and amp for P2, collect in struct
     [M, I] = max(sub_sensoi.GP60{i,ii}(P2on:P2off));
     sub_amp_lat.([cond.GP60label{ii} '_P2lat'])(i,1) = mean_sub.time(P2on-1+I) + gapcomp(ii); %NB - Compensate t = 0 to first stimulation event (i.e gap onset)
-    sub_amp_lat.([cond.GP60label{ii} '_P2amp'])(i,1) = mean(sub_sensoi.GP60{i,ii}(P2on:P2off));
+    sub_amp_lat.([cond.GP60label{ii} '_P2amp'])(i,1) = mean(sub_sensoi.GP60{i,ii}(P2on:P2off)); %mean amp
+    sub_amp_lat.([cond.GP60label{ii} '_P2amp_peak'])(i,1) = max(sub_sensoi.GP60{i,ii}(P2on:P2off)); %peak amp
     clear M I
         
         %For i120, pick out P2 response to Pulse
@@ -565,19 +571,22 @@ for ii = 4%1:numel(cond.GP60label) %order: i0, i60, i120, i240
             %find lat and amp for P2, collect in struct
             [M, I] = max(sub_sensoi.GP60{i,ii}(pulP2on:pulP2off));
             sub_amp_lat.([cond.GP60label{ii} '_pulP2lat'])(i,1) = mean_sub.time(pulP2on-1+I);
-            sub_amp_lat.([cond.GP60label{ii} '_pulP2amp'])(i,1) = mean(sub_sensoi.GP60{i,ii}(pulP2on:pulP2off));
+            sub_amp_lat.([cond.GP60label{ii} '_pulP2amp'])(i,1) = mean(sub_sensoi.GP60{i,ii}(pulP2on:pulP2off)); %mean amp
+            sub_amp_lat.([cond.GP60label{ii} '_pulP2amp_peak'])(i,1) = max(sub_sensoi.GP60{i,ii}(pulP2on:pulP2off)); %peak amp
             clear M I
             
         elseif ii == 4;
             %find lat and amp for N1 and P2, collect in struct
             [M, I] = max(sub_sensoi.GP60{i,ii}(pulN1on:pulN1off));
             sub_amp_lat.([cond.GP60label{ii} '_pulN1lat'])(i,1) = mean_sub.time(pulN1on-1+I); %pulse is t = 0, no need to compensate
-            sub_amp_lat.([cond.GP60label{ii} '_pulN1amp'])(i,1) = mean(sub_sensoi.GP60{i,ii}(pulN1on:pulN1off));
+            sub_amp_lat.([cond.GP60label{ii} '_pulN1amp'])(i,1) = mean(sub_sensoi.GP60{i,ii}(pulN1on:pulN1off)); %mean amp
+            sub_amp_lat.([cond.GP60label{ii} '_pulN1amp_peak'])(i,1) = max(sub_sensoi.GP60{i,ii}(pulN1on:pulN1off)); %peak amp
             clear M I
             
             [M, I] = max(sub_sensoi.GP60{i,ii}(pulP2on:pulP2off));
             sub_amp_lat.([cond.GP60label{ii} '_pulP2lat'])(i,1) = mean_sub.time(pulP2on-1+I); %pulse is t = 0, no need to compensate
-            sub_amp_lat.([cond.GP60label{ii} '_pulP2amp'])(i,1) = mean(sub_sensoi.GP60{i,ii}(pulP2on:pulP2off));
+            sub_amp_lat.([cond.GP60label{ii} '_pulP2amp'])(i,1) = mean(sub_sensoi.GP60{i,ii}(pulP2on:pulP2off)); %mean amp
+            sub_amp_lat.([cond.GP60label{ii} '_pulP2amp_peak'])(i,1) = max(sub_sensoi.GP60{i,ii}(pulP2on:pulP2off)); %peak amp
             clear M I
             
         end
