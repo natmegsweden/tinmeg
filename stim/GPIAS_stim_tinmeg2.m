@@ -8,8 +8,9 @@
 
 %% To do
 
-% Paste PT in BB noise to replace gap
-% fall/rise for PT and/or crossfade with carrier
+% Print time constants to table
+% Automate filename
+% Calibration for NBNs
 
 %%
 filename = 'BP3_GPi240.wav';
@@ -20,25 +21,24 @@ dt = 1/fs;          % seconds per sample
 
 lowpf = 18000;      %Lowpass filter cutoff
 
-useNBN = 1;         %1 to use narrow band noise as carrier - default is white noise
-bpfiltfreq = 3000;  %Center frequency of band pass filter
+useNBN = 0;         %1 to use narrow band noise as carrier - default is white noise
+bpfiltfreq = 750;  %Center frequency of band pass filter
 
 gaptone = 1;        %1 to fill gap with pure tone - default is silent gap
-gaptonef = 500;    %frequency of gap pure tone
+gaptonef = 2800;    %frequency of gap pure tone
 gaptonelvl = 50;    %level of tone in gap
 
-crossrisefall = 1;  %1 to overlap rise/falltime for carrier and gaptone. Requires fallt and riset to be same
-overlap = 0.005;    %Overlap of fall/rise window in sec
+crossrisefall = 1;  %1 to overlap rise/falltime for carrier and gaptone 50%. Requires fallt and riset to be same
 
-predur = 0.750;     %sec, pre-duration
-fallt = 0.010;      %sec, fall-time before
-gapdur = 0.050;     %sec, gap duration (or tone if gaptone = 1)
-riset = 0.010;      %sec, rise-time after silent gap
+predur = 0.1;     %sec, pre-duration
+fallt = 0.002;      %sec, fall-time before
+gapdur = 0.055;     %sec, gap duration (or tone if gaptone = 1)
+riset = 0.002;      %sec, rise-time after silent gap
 ISI = 0.060;        %sec, Inter-stimulus interval (end of risetime to pulse)
 pulsedur = 0.020;   %sec, instantaneous rise and fall 
-postdur = 1;        %sec, post-duration
+postdur = 0.12;        %sec, post-duration
 
-bkglvl = 70;        %dB, level of carrier noise
+bkglvl = 65;        %dB, level of carrier noise
 pulselvl = 90;      %dB, level of startle pulse
 
 callvl = 95;        %Calibration (i.e maximum level to be presented)
@@ -84,6 +84,11 @@ if gaptone == 1;
     ptenv = ptenv(1:end-(length(ptrise) + length(ptfall)));
     ptenv = [ptrise ptenv ptfall];
         
+    %Pad ptenv if dimensions mismatch
+    if length(ptenv) > length(pt)
+        ptenv = [ptenv(1:length(ptenv)/2) ptenv(length(ptenv)/2+1+(length(ptenv)-length(pt)):end)]
+    end
+    
     ptn = pt .* ptenv;      %Multiply by envelope
     
 end
@@ -125,9 +130,9 @@ if useNBN == 1;
     pulsen = rand(1, length(pulse));
     pulsen = (pulsen - 0.5) * 2;            
     pulsen = lowpass(pulsen, lowpf, fs);      %LP filter of noise
-    pulsen = pulsen/max(abs(pulsen(:)));       %Limit to 0 +/- 1 range by dividing signal by max(), else LP-filter introduce clipping                            
+    pulsen = pulsen/max(abs(pulsen(:)));      %Limit to 0 +/- 1 range by dividing signal by max(), else LP-filter introduce clipping                            
     pulsen = pulsen .* 0.95;                  % 5% headroom
-    pulsen = pulsen .* [pulse];                % Multiply by envelope
+    pulsen = pulsen .* [pulse];               % Multiply by envelope
     
 else %default: use white noise
     pren_falln = rand(1, length(pre) + length(fall));
@@ -157,27 +162,32 @@ else %default: use white noise
     pulsen = pulsen/max(abs(pulsen(:)));       %Limit to 0 +/- 1 range by dividing signal by max(), else LP-filter introduce clipping                            
     pulsen = pulsen .* 0.95;                  % 5% headroom
     pulsen = pulsen .* [pulse];                % Multiply by envelope
-    
+
 end
+
+% figure; hold on;
+% plot([pre fall ptenv])
+% plot([pren_falln ptn])
 
 %Assemble noise
 noise = [pren_falln gap risen_ISI2n pulsen postn];
 window = [pre fall gap rise ISI2 pulse post];
-
 
 if gaptone == 1;
     noise = [pren_falln ptn risen_ISI2n pulsen postn];
     window = [pre fall ptenv rise ISI2 pulse post];
     
     %if specified, assemble noise with crossfade of rise/fall (require symmetric rise and fall times)
-    if fallt == riset && crossrisefall == 1;
-    ol = round(overlap*fs); %number of samples to overlap
-    cf1 = pren_falln(end-ol:end) + ptn(1:ol+1); %First overlap region (gap onset, pt start)
-    cf2 = ptn(end-ol:end-1) + risen_ISI2n(1:ol); %Second overlap region  (gap offset, pt end)
+    if fallt ~= riset
+        warning(['Fall and Rise times are different (' num2str(fallt) ' vs ' num2str(riset) ') - not compatible with crossfade of gap']);
+    elseif fallt == riset && crossrisefall == 1;
+    ol = round(riset/2*fs); %number of samples to overlap, 50% of riset/fallt
+    cf1 = pren_falln(end-ol+1:end) + ptn(1:ol); %First overlap region (gap onset, pt start)
+    cf2 = ptn(end-ol+1:end) + risen_ISI2n(1:ol); %Second overlap region  (gap offset, pt end)
     
     pren_falln = pren_falln(1:end-ol); %cut the bit getting replaced with cf1
-    ptn = ptn(ol+2:end-ol-1); % +2 ?
-    risen_ISI2n = risen_ISI2n(ol:end); %cut the bit getting replaced with cf2
+    ptn = ptn(ol+1:end-ol); % +2 ?
+    risen_ISI2n = risen_ISI2n(ol+1:end); %cut the bit getting replaced with cf2
     
     noise = [pren_falln cf1 ptn cf2 risen_ISI2n pulsen postn];
     window = [pre fall ptenv rise ISI2 pulse post];
@@ -185,10 +195,6 @@ if gaptone == 1;
     end
     
 end
-
-% figure; hold on;
-% plot([pren_falln cf1 ptn]) %audio
-% plot([pre fall(1:end-ol-1) ptenv(ol+2:end-ol-1)]) %env
 
 
 %Output and graph
@@ -202,7 +208,10 @@ disp(totdur);
 figure('Position', [100 100 600 400]); hold on;
 %plot(window);
 plot(noise);
-xlim([0.7*fs 0.9*fs]);
+xline(length(pren_falln) + length(cf1)/2);
+xline(length(pren_falln) + length(cf1) + length(ptn) + length(cf2)/2)
+
+%xlim([0.7*fs 0.9*fs]);
 set(gca, 'XTick', [0:fs/10:length(noise)]);
 set(gca, 'XTickLabel', [0:1/10:5]);
 set(gca, 'XGrid', 'on');
@@ -210,29 +219,28 @@ set(gca, 'XGrid', 'on');
 %saveas(gcf, ['output/' filename '_timespec.svg']);
 %close;
 
-if useNBN == 1;
-    figure('Position', [100 100 600 400]);
-    pspectrum(postn, fs) %noise(1:46042)
-    set(gca, 'XScale', 'log');
-    xlim([0.1 20]);
-    set(gca, 'XTickLabel', [100 1000 10000]);
-    xlabel('Frequency (Hz)');
-    title('Power spectrum (carrier, post pulse)');
 
-    %saveas(gcf, ['output/' filename '_freqspec.svg']);
-    %close;
-else
-    figure('Position', [100 100 600 400]);
-    pspectrum(noise(length(noise)-length(post):end), fs)
-    set(gca, 'XScale', 'log');
-    xlim([0.1 20]);
-    set(gca, 'XTickLabel', [100 1000 10000]);
-    xlabel('Frequency (Hz)');
-    title('Power spectrum (carrier, post pulse)');
+figure('Position', [100 100 600 400]);
+pspectrum(postn, fs) %noise(1:46042)
+set(gca, 'XScale', 'log');
+xlim([0.1 20]);
+set(gca, 'XTickLabel', [100 1000 10000]);
+xlabel('Frequency (Hz)');
+title('Power spectrum (carrier, post pulse)');
 
-    %saveas(gcf, ['output/' filename '_freqspec.svg']);
-    %close;
-end
+%saveas(gcf, ['output/' filename '_freqspec.svg']);
+%close;
+
+%All variables of final noise in different colors
+figure; hold on;
+plot(pren_falln);
+plot(length(pren_falln)+1:length([pren_falln cf1]), cf1);
+plot(length([pren_falln cf1])+1:length([pren_falln cf1 ptn]), ptn);
+plot(length([pren_falln cf1 ptn])+1:length([pren_falln cf1 ptn cf2]), cf2);
+plot(length([pren_falln cf1 ptn cf2])+1:length([pren_falln cf1 ptn cf2 risen_ISI2n]), risen_ISI2n);
+plot(length([pren_falln cf1 ptn cf2 risen_ISI2n])+1:length([pren_falln cf1 ptn cf2 risen_ISI2n pulsen]), pulsen);
+plot(length([pren_falln cf1 ptn cf2 risen_ISI2n pulsen])+1:length([pren_falln cf1 ptn cf2 risen_ISI2n pulsen postn]), postn);
+xline(length(pren_falln) + length(cf1)/2);
 
 
 %audiowrite(['output/' filename], noise, fs);
