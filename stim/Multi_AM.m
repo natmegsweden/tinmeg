@@ -6,14 +6,14 @@ ptf = 1000;          % Carrier tone frequency (Hz)
 
 totdur = 1;          % total duration of stimuli (sec)
 
-modfreq1 = 31;        % Frequency for amplitude modulation 1
-moddepth1 = 1;        % Modulation depth of amplitude modulation 1
+modfreq1 = 8;        % Frequency for amplitude modulation 1
+moddepth1 = 0.5;        % Modulation depth of amplitude modulation 1
 
-modfreq2 = 41;        % Frequency for amplitude modulation 1
-moddepth2 = 1;        % Modulation depth of amplitude modulation 1
+modfreq2 = 16;        % Frequency for amplitude modulation 1
+moddepth2 = 0.5;        % Modulation depth of amplitude modulation 1
 
-modfreq3 = 47;        % Frequency for amplitude modulation 1
-moddepth3 = 1;        % Modulation depth of amplitude modulation 1
+modfreq3 = 32;        % Frequency for amplitude modulation 1
+moddepth3 = 0.5;        % Modulation depth of amplitude modulation 1
 
 riset = 0.1;            % rise time at start of stimuli (sec)
 fallt = 0.1;            % fall time at end of stimuli (sec)
@@ -42,10 +42,13 @@ ptam = carrieramp*(1+moddepth2*sin(2*pi*modfreq2*t)) .* ptam;
 ptam = carrieramp*(1+moddepth3*sin(2*pi*modfreq3*t)) .* ptam;
 ptam = ptam .* RFenv;
 
-figure; hold on;
+figure('Position', [100 100 1200 500]); hold on;
 plot(ptam);
 plot(carrieramp*(1+moddepth2*sin(2*pi*modfreq2*t)))
 plot(carrieramp*(1+moddepth1*sin(2*pi*modfreq1*t)))
 plot(carrieramp*(1+moddepth3*sin(2*pi*modfreq3*t)))
 plot(RFenv)
-legend('Signal (1000 Hz)', 'AM envelope 1 (31 Hz)', 'AM envelope 2 (41 Hz)', 'AM envelope 3 (47 Hz)', 'Rise/Fall envelope')
+legend('Signal (1000 Hz)', 'AM envelope 1 (8 Hz)', 'AM envelope 2 (16 Hz)', 'AM envelope 3 (32 Hz)', 'Rise/Fall envelope')
+
+%Limit max output to -1/+1
+ptam = ptam/max(abs(ptam(:))); 
