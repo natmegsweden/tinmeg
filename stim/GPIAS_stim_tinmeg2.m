@@ -21,40 +21,44 @@ dt = 1/fs;          % seconds per sample
 
 lowpf = 18000;      %Lowpass filter cutoff
 
-useNBN = 0;         %1 to use narrow band noise as carrier - default is white noise
-bpfiltfreq = 750;  %Center frequency of band pass filter
+useNBN = 1;         %1 to use narrow band noise as carrier - default is white noise
+bpfiltfreq = 3000;  %Center frequency of band pass filter
 
 gaptone = 1;        %1 to fill gap with pure tone - default is silent gap
-gaptonef = 2800;    %frequency of gap pure tone
+gaptonef = 3000;    %frequency of gap pure tone
 gaptonelvl = 50;    %level of tone in gap
 
 crossrisefall = 1;  %1 to overlap rise/falltime for carrier and gaptone 50%. Requires fallt and riset to be same
 
-predur = 0.1;     %sec, pre-duration
+predur = 3;       %sec, pre-duration
 fallt = 0.002;      %sec, fall-time before
-gapdur = 0.055;     %sec, gap duration (or tone if gaptone = 1)
+gapdur = 0.052;     %sec, gap duration (or tone if gaptone = 1)
 riset = 0.002;      %sec, rise-time after silent gap
 ISI = 0.060;        %sec, Inter-stimulus interval (end of risetime to pulse)
 pulsedur = 0.020;   %sec, instantaneous rise and fall 
-postdur = 0.12;        %sec, post-duration
+postdur = 0.12;     %sec, post-duration
 
-bkglvl = 65;        %dB, level of carrier noise
+bkglvl = 60;        %dB, level of carrier noise
 pulselvl = 90;      %dB, level of startle pulse
 
+calrefdur = 5;     %Calibation noise duration to use as reference - WIP
 callvl = 95;        %Calibration (i.e maximum level to be presented)
                     %Magnitude = 1, dB = 0
                     %All other levels relative to this
 
-%Bandpass filter for NBN carrier noise
-octfilter = octaveFilter(bpfiltfreq, '1/3 octave','SampleRate', fs);
+%Bandpass filter for NBN carrier noise (slope in dB/oct = FilterOrder * 6)
+octfilter = octaveFilter(bpfiltfreq, '1/3 octave','SampleRate', fs, 'FilterOrder', 8);
 
-% Signal created from variables above
-pulsediff = db2mag((callvl - pulselvl)*-1); 
-bkgdiff = db2mag((callvl - bkglvl)*-1); 
+% Level differences created from variables above
+pulsediff = db2mag((callvl - pulselvl)*-1);
+bkgdiff = db2mag((callvl - bkglvl)*-1);
 gaptonediff = db2mag((callvl - gaptonelvl)*-1);
 % minus one as the calibration level is the reference at outpath 0dB or magnitude 1,
 % i.e callvl is unmodified at magnitude 1 and other amplitudes are lowered by level difference (pulsediff or bkgdiff)
 % Calibrate to callvl accordingly.
+
+%Create reference calibration noise
+calref = (rand(1, calrefdur*fs) - 0.5) * 2; %HEADROOM?? <<--
 
 % Create amplitude-window/envelope
 pre = ones(1, round(predur*fs)) .* bkgdiff;        %duration and level of prestim window
@@ -83,8 +87,8 @@ if gaptone == 1;
     ptenv = ones(1, round(gapdur*fs)) .* gaptonediff;  %duration and level of gaptone window
     ptenv = ptenv(1:end-(length(ptrise) + length(ptfall)));
     ptenv = [ptrise ptenv ptfall];
-        
-    %Pad ptenv if dimensions mismatch
+
+    %Pad ptenv if dimensions mismatch (may occur with short rise/fall due to rounding errors)
     if length(ptenv) > length(pt)
         ptenv = [ptenv(1:length(ptenv)/2) ptenv(length(ptenv)/2+1+(length(ptenv)-length(pt)):end)]
     end
@@ -111,12 +115,31 @@ rise = flip(rise); %rise window
 %if NBN - create filtered sections of carrier separately as pulse is always
 %white
 if useNBN == 1;
+    
     %Create noise of length pre-duartion + fall time
     pren_falln = rand(1, length(pre) + length(fall));
     pren_falln = (pren_falln - 0.5) * 2;
     pren_falln = octfilter(pren_falln');    %Apply NBN filter, octFilt requires signal in column
     pren_falln = pren_falln' .* [pre fall]; %Multiply by envelope to row vector
 
+    % WIP - Create noise of length pre-duartion + fall time
+    pren_falln = rand(1, length(pre));
+    pren_falln = (pren_falln - 0.5) * 2;
+    
+    pren = pren_falln .* [pre];
+    
+    pren_falln = octfilter(pren_falln');    %Apply NBN filter, octFilt requires signal in column
+    
+    pren_falln = (rms(pren)/rms(pren_falln)) .* pren_falln;
+    
+%     figure; hold on;
+%     plot(pren, 'Color', [1 0 0 0.2])
+%     plot(pren_falln, 'Color', [0 0 1 0.2])
+%     legend('60 dB BBN', '60 dB NBN')
+    
+%      audiowrite('BBN_bkg.wav', pren, fs)
+%      audiowrite('BBN_nbn.wav', pren_falln, fs)
+    
     risen_ISI2n = rand(1, length(rise) + length(ISI2));
     risen_ISI2n = (risen_ISI2n - 0.5) * 2;
     risen_ISI2n = octfilter(risen_ISI2n');    %Apply NBN filter, octFilt requires signal in column
@@ -232,20 +255,22 @@ title('Power spectrum (carrier, post pulse)');
 %close;
 
 %All variables of final noise in different colors
-figure; hold on;
-plot(pren_falln);
-plot(length(pren_falln)+1:length([pren_falln cf1]), cf1);
-plot(length([pren_falln cf1])+1:length([pren_falln cf1 ptn]), ptn);
-plot(length([pren_falln cf1 ptn])+1:length([pren_falln cf1 ptn cf2]), cf2);
-plot(length([pren_falln cf1 ptn cf2])+1:length([pren_falln cf1 ptn cf2 risen_ISI2n]), risen_ISI2n);
-plot(length([pren_falln cf1 ptn cf2 risen_ISI2n])+1:length([pren_falln cf1 ptn cf2 risen_ISI2n pulsen]), pulsen);
-plot(length([pren_falln cf1 ptn cf2 risen_ISI2n pulsen])+1:length([pren_falln cf1 ptn cf2 risen_ISI2n pulsen postn]), postn);
-xline(length(pren_falln) + length(cf1)/2);
+% figure; hold on;
+% plot(pren_falln);
+% plot(length(pren_falln)+1:length([pren_falln cf1]), cf1);
+% plot(length([pren_falln cf1])+1:length([pren_falln cf1 ptn]), ptn);
+% plot(length([pren_falln cf1 ptn])+1:length([pren_falln cf1 ptn cf2]), cf2);
+% plot(length([pren_falln cf1 ptn cf2])+1:length([pren_falln cf1 ptn cf2 risen_ISI2n]), risen_ISI2n);
+% plot(length([pren_falln cf1 ptn cf2 risen_ISI2n])+1:length([pren_falln cf1 ptn cf2 risen_ISI2n pulsen]), pulsen);
+% plot(length([pren_falln cf1 ptn cf2 risen_ISI2n pulsen])+1:length([pren_falln cf1 ptn cf2 risen_ISI2n pulsen postn]), postn);
+% xline(length(pren_falln) + length(cf1)/2);
 
 
 %audiowrite(['output/' filename], noise, fs);
 
 %% 15 sec Calibration noise - pulsediff and bkgdiff needed! NB: Levels are set as callvl, pulselvl and bkglvl up top!!
+
+% rms(pren_falln .* (rms(calbkg)/rms(pren_falln)))
 
 caldur = 15;  %sec, Duration of calibration noise
 
@@ -268,11 +293,12 @@ calmax = caln .* calwinlvl;           %15 sec of noise at max level
 calpulse = caln .* calwinpulse;       %15 sec of noise at pulse level
 calbkg = caln .* calwinbkg;           %15 sec of noise at background level
 
-plot(calmax)
+%plot(calmax)
 axis([0 length(calpulse) min(calpulse)-0.05 max(calpulse)+0.05]);
-hold on
-plot(calpulse)
+figure; hold on;
+%plot(calpulse)
 plot(calbkg)
+plot(test)
 hold off
 
 % audiowrite([outpath 'LP10_Calnoise_max' ' (' num2str(callvl) ')' '.wav'], calmax, fs)
