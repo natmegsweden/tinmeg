@@ -8,8 +8,12 @@
 
 %% To do
 
+% CF1 and CF2 does not integrate properly with NBN carriers? - Compensating
+% for cut twice?
+
+% Tone only - T3, T8
 % loop to create files?
-% if gaptone == 1; gapdur + riset/2 + fallt/2 <- Needs checking
+% if gaptone == 1; gapdur + riset/2 + fallt/2 <- Needs checking #132
 % Print time constants to table
 % Automate filename
 % Calibration files
@@ -28,7 +32,7 @@ t = table(trig1, stimname);
 
 %Stimulus variables/labels to loop
 bkg_type = {'BBN', 'NB3', 'NB8'}; %Carrier noise types
-stim_type = {'GO', 'PO', 'GP', 'T3P', 'T8P'};   %Stimulus type (gap only, pulse only, gap + pulse, tone+pulse)
+stim_type = {'GO', 'PO', 'GP', 'T3P', 'T8P'};  %'T3', 'T8',    %Stimulus type (gap only, pulse only, gap + pulse, tone+pulse)
 
 for i = 1:numel(bkg_type);
 
@@ -56,20 +60,20 @@ for i = 1:numel(bkg_type);
     end
     
     gaptone = 0;        %1 to fill gap with pure tone - default is silent gap
-    gaptonef = 5000;    %frequency of gap pure tone
+    gaptonef = 3000;    %frequency of gap pure tone
     gaptonelvl = 50;    %level of tone in gap
 
-    crossrisefall = 1;  %1 to overlap rise/falltime for carrier and gaptone 50%.
+    crossrisefall = 0;  %1 to overlap rise/falltime for carrier and gaptone 50%.
                         %Requires fallt and riset to be same
     
-    if strcmp(stim_type{ii}, 'T3P')
+    if strcmp(stim_type{ii}, 'T3') | strcmp(stim_type{ii}, 'T3P')
         gaptone = 1;        %1 to fill gap with pure tone - default is silent gap
         gaptonef = 3000;    %frequency of gap pure tone
         gaptonelvl = 50;    %level of tone in gap
 
         crossrisefall = 1;  %1 to overlap rise/falltime for carrier and gaptone 50%.
                             %Requires fallt and riset to be same
-    elseif strcmp(stim_type{ii}, 'T8P')
+    elseif strcmp(stim_type{ii}, 'T8') | strcmp(stim_type{ii}, 'T8P')
         gaptone = 1;        %1 to fill gap with pure tone - default is silent gap
         gaptonef = 8000;    %frequency of gap pure tone
         gaptonelvl = 50;    %level of tone in gap
@@ -86,25 +90,13 @@ for i = 1:numel(bkg_type);
     pulsedur = 0.020;   %sec, instantaneous rise and fall 
     postdur = 1;        %sec, post-duration
 
-    bkglvl = 60;        %dB, level of carrier noise
+    bkglvl = 75;        %dB, level of carrier noise
     pulselvl = 90;      %dB, level of startle pulse
 
     calrefdur = 5;      %Calibation noise duration to use as reference - WIP
     callvl = 90;        %Calibration (i.e maximum level to be presented)
                         %Magnitude = 1, dB = 0
                         %All other levels relative to this
-	
-   	%No pulse if stim_type is gap only
-	if strcmp(stim_type{ii}, 'GO')
-        pulsedur = 0;
-    end
-
-   	%No gap if stim_type is pulse only
-    if strcmp(stim_type{ii}, 'PO')
-        fallt = 0;
-        riset = 0;
-        gapdur = 0;
-    end
 
     %Only allow crossfade if gaptone is used (or rise/fall times will be shifted)
     if gaptone == 0
@@ -143,14 +135,13 @@ for i = 1:numel(bkg_type);
         else tonedur = gapdur;
         end
 
-        %pure tone with same duration as specified for gap
+        %pure tone with tonedur (compensated for crossfade)
         pt = sin(2*pi*gaptonef*(0+dt:dt:tonedur));
 
         %Scale to match RMS of gap-tone reference
         pt = (rms(calref .* gaptonediff)/rms(pt)) .* pt;
-
-        %Rise and fall envelopes for puretone (same duration/variable as rise/fall-time
-        %for carrier noise
+        
+        %Rise and fall envelopes for puretone
         rffreq = 1/(riset * 2);  %Frequency that has period of 2 riset
         t = (0:dt:riset);        %vector for rise/fall
         ptrise = flip(0.5 * sin(2*pi*rffreq*t + pi/2) + 0.5); %PT rise window
@@ -196,6 +187,10 @@ for i = 1:numel(bkg_type);
         pren_falln = (rms(calref .* bkgdiff)/rms(pren_falln)) .* pren_falln; %Scale to match RMS of bakground level reference
         pren_falln = pren_falln';                               %Pivot back to columns
         pren_falln = pren_falln .* [pre fall];                  %Multiply by envelope
+        
+        %Split to simplify assembly (i.e of GO trials)
+        pren = pren_falln(1:length(pre));
+        falln = pren_falln(end-length(fall)+1:end);
 
         risen_ISI2n = rand(1, length(rise) + length(ISI2));     %Create noise of length pre-duartion + fall time
         risen_ISI2n = (risen_ISI2n - 0.5) * 2;                  %Set noise level
@@ -203,6 +198,10 @@ for i = 1:numel(bkg_type);
         risen_ISI2n = (rms(calref .* bkgdiff)/rms(risen_ISI2n)) .* risen_ISI2n; %Scale to match RMS of bakground level reference
         risen_ISI2n = risen_ISI2n';                             %Pivot back to columns
         risen_ISI2n = risen_ISI2n .* [rise ISI2];               %Multiply by envelope
+        
+        %Split to simplify assembly (i.e of GO trials)
+        risen = risen_ISI2n(1:length(rise));
+        ISI2n = risen_ISI2n(end-length(ISI2)+1:end);
 
         postn = rand(1, length(post));             %Create noise of length pre-duartion + fall time
         postn = (postn - 0.5) * 2;                 %Set noise level
@@ -225,6 +224,10 @@ for i = 1:numel(bkg_type);
         pren_falln = pren_falln/max(abs(pren_falln(:))); %Limit to 0 +/- 1 range by dividing signal by max(), else LP-filter introduce clipping                            
         pren_falln = (rms(calref .* bkgdiff)/rms(pren_falln)) .* pren_falln; %Scale to match RMS of bakground level reference
         pren_falln = pren_falln .* [pre fall];           %Multiply by envelope
+        
+        %Split to simplify assembly (i.e of GO trials)
+        pren = pren_falln(1:length(pre));
+        falln = pren_falln(end-length(fall)+1:end);
 
         risen_ISI2n = rand(1, length(rise) + length(ISI2));
         risen_ISI2n = (risen_ISI2n - 0.5) * 2;
@@ -233,6 +236,10 @@ for i = 1:numel(bkg_type);
         risen_ISI2n = (rms(calref .* bkgdiff)/rms(risen_ISI2n)) .* risen_ISI2n; %Scale to match RMS of bakground level reference
         risen_ISI2n = risen_ISI2n .* [rise ISI2];           % Multiply by envelope
 
+        %Split to simplify assembly (i.e of GO trials)
+        risen = risen_ISI2n(1:length(rise));
+        ISI2n = risen_ISI2n(end-length(ISI2)+1:end);
+        
         postn = rand(1, length(post));
         postn = (postn - 0.5) * 2;
         postn = lowpass(postn, lowpf, fs);      %LP filter of noise
@@ -250,15 +257,32 @@ for i = 1:numel(bkg_type);
     end
 
     %Assemble stimuli
-    stim = [pren_falln gap risen_ISI2n pulsen postn];
+    if gaptone == 0;
+        stim = [pren falln gap risen ISI2n pulsen postn];
 
-    gapontrig = length(pren_falln);
-    gapofftrig = length([pren_falln gap]);
-    pulseontrig = length([pren_falln gap risen_ISI2n]);
+        gapontrig = length([pren falln]);
+        gapofftrig = length([pren falln gap]);
+        pulseontrig = length([pren_falln gap risen ISI2n]);
+    end
+    
+    if strcmp(stim_type{ii}, 'PO')
+        stim = [pren pulsen postn];
+        
+        gapontrig = NaN;
+        gapofftrig = NaN;
+        pulseontrig = length([pren]);
+    end
+    
+    if strcmp(stim_type{ii}, 'GO')
+        stim = [pren falln gap risen postn];
+        
+        gapontrig = length([pren falln]);
+        gapofftrig = length([pren falln gap]);
+        pulseontrig = NaN;
+    end
 
     if gaptone == 1;
-
-        stim = [pren_falln ptn risen_ISI2n pulsen postn];
+        stim = [pren falln ptn risen ISI2n pulsen postn];
 
         gapontrig = length(pren_falln);
         gapofftrig = length([pren_falln ptn]);
@@ -268,19 +292,18 @@ for i = 1:numel(bkg_type);
         if fallt ~= riset
             warning(['Fall and Rise times are different (' num2str(fallt) ' vs ' num2str(riset) ') - not compatible with crossfade of gap']);
         elseif fallt == riset && crossrisefall == 1;
-        ol = round(riset/2*fs); %number of samples to overlap, 50% of riset/fallt
-        cf1 = pren_falln(end-ol+1:end) + ptn(1:ol); %First overlap region (gap onset, pt start)
-        cf2 = ptn(end-ol+1:end) + risen_ISI2n(1:ol); %Second overlap region  (gap offset, pt end)
+            ol = round(riset/2*fs); %number of samples to overlap, 50% of riset/fallt
+            
+            cf1 = falln(end-ol+1:end) + ptn(1:ol); %First overlap region (gap onset, pt start)
+            cf2 = ptn(end-ol+1:end) + risen(1:ol); %Second overlap region  (gap offset, pt end)
 
-        pren_falln = pren_falln(1:end-ol); %cut the bit getting replaced with cf1
-        ptn = ptn(ol+1:end-ol); %cut overlapping ends of ptn
-        risen_ISI2n = risen_ISI2n(ol+1:end); %cut the bit getting replaced with cf2
+            ptn = ptn(ol+1:end-ol); %cut overlapping ends of ptn
+            
+            stim = [pren cf1 ptn cf2 ISI2n pulsen postn];
 
-        stim = [pren_falln cf1 ptn cf2 risen_ISI2n pulsen postn];
-
-        gapontrig = length(pren_falln) + (length(cf1)/2);
-        gapofftrig = length([pren_falln cf1 ptn]) + (length(cf2)/2);
-        pulseontrig = length([pren_falln cf1 ptn cf2 risen_ISI2n]);
+            gapontrig = length(pren) + (length(cf1)/2);
+            gapofftrig = length([pren cf1 ptn]) + (length(cf2)/2);
+            pulseontrig = length([pren cf1 ptn cf2 ISI2n]);
 
         end
 
@@ -299,9 +322,12 @@ for i = 1:numel(bkg_type);
     plot(stim);
     xlim([0 length(stim)]);
     ylim([-1 1]);
-    xline(gapontrig);
-    xline(gapofftrig);
-    xline(pulseontrig);
+    if ~isnan(gapontrig)
+        xline(gapontrig); end
+    if ~isnan(gapofftrig)
+        xline(gapofftrig); end
+    if ~isnan(pulseontrig)
+        xline(pulseontrig); end
 
     set(gca, 'XTick', [0:fs/10:length(stim)]);
     set(gca, 'XTickLabel', [0:1/10:5]);
@@ -311,9 +337,12 @@ for i = 1:numel(bkg_type);
     subplot(3,1,2); plot(stim);
     xlim([length(pren_falln)-fs/20 length(stim)-length(postn)+fs/20]);
     ylim([-1 1]);
-    xline(gapontrig);
-    xline(gapofftrig);
-    xline(pulseontrig);
+    if ~isnan(gapontrig)
+        xline(gapontrig); end
+    if ~isnan(gapofftrig)
+        xline(gapofftrig); end
+    if ~isnan(pulseontrig)
+        xline(pulseontrig); end
 
     set(gca, 'XTick', [0:fs/10:length(stim)]);
     set(gca, 'XTickLabel', [0:1/10:5]);
