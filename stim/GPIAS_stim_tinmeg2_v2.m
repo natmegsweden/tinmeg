@@ -8,31 +8,17 @@
 
 %% To do
 
-% CF1 and CF2 does not integrate properly with NBN carriers? - Compensating
-% for cut twice?
+% Same pren length for all stim - simple cut?
+% ISI length adapt to triggerdiff?
 
-% Tone only - T3, T8
-% loop to create files?
-% if gaptone == 1; gapdur + riset/2 + fallt/2 <- Needs checking #132
-% Print time constants to table
-% Automate filename
+% Tone level?
 % Calibration files
 
-%%
-
-%Toy example for table
-for k = 1:3
- trig1(k,1) = 1 + k;
- stimname{k,1} = 'GO';
- if k > 2
-     stimname{k,1} = 'PO';
- end
-end
-t = table(trig1, stimname);
+%% Loop to create TinMEG2 stimuli
 
 %Stimulus variables/labels to loop
 bkg_type = {'BBN', 'NB3', 'NB8'}; %Carrier noise types
-stim_type = {'GO', 'PO', 'GP', 'T3P', 'T8P'};  %'T3', 'T8',    %Stimulus type (gap only, pulse only, gap + pulse, tone+pulse)
+stim_type = {'GO', 'PO', 'GP', 'T3P', 'T8P', 'T3', 'T8'}; %Stimulus type (gap only, pulse only, gap + pulse, tone+pulse)
 
 for i = 1:numel(bkg_type);
 
@@ -41,7 +27,7 @@ for i = 1:numel(bkg_type);
     filename = [bkg_type{i} '_' stim_type{ii} '.wav'];
 
     disp(filename)
-
+    
     % Variables to specify:
     fs = 44100;         % Hz, samplerate (samples per second)
     dt = 1/fs;          % seconds per sample
@@ -126,13 +112,14 @@ for i = 1:numel(bkg_type);
     pulse = ones(1, round(pulsedur*fs));               %duration of pulse window
     ISI2 = ones(1, round(ISI*fs));                     %duration of ISI
 
-    %If gaptone, create pure tone att gaptonef and replace in silent gap
+    %If gaptone, create pure tone att gaptonef to replace in silent gap
     if gaptone == 1;
-
-        %Compensate duration for 50% overlap if crossfading tone and background noise
-        if crossrisefall == 1;
-           tonedur = gapdur + (fallt + riset)/2;
-        else tonedur = gapdur;
+        
+        tonedur = gapdur;
+        
+        %if crossrisefall, compensate for crossover
+        if crossrisefall == 1
+            tonedur = gapdur + (riset + fallt)/4; 
         end
 
         %pure tone with tonedur (compensated for crossfade)
@@ -281,39 +268,38 @@ for i = 1:numel(bkg_type);
         pulseontrig = NaN;
     end
 
-    if gaptone == 1;
-        stim = [pren falln ptn risen ISI2n pulsen postn];
+    %if specified, assemble noise with crossfade of rise/fall (require symmetric rise and fall times)
+    if fallt ~= riset
+        warning(['Fall and Rise times are different (' num2str(fallt) ' vs ' num2str(riset) ') - not compatible with crossfade of gap-tone']);
+    elseif fallt == riset && crossrisefall == 1;
+        ol = round(riset/2*fs); %number of samples to overlap, 50% of riset/fallt
+        
+        %figure; hold on; plot(falln); plot(length(falln)+1:length([falln ptn(1:44)]+1), ptn(1:44));
+        
+        cf1 = falln(end-ol+1:end) + ptn(1:ol); %First overlap region (gap onset, pt start)
+        cf2 = ptn(end-ol+1:end) + risen(1:ol); %Second overlap region  (gap offset, pt end)
+        
+        %figure; hold on; plot(falln(end-ol+1:end)); plot(ptn(1:ol)); plot(cf1);
+        
+        ptn = ptn(ol+1:end-ol); %cut overlapping ends of ptn
+        falln = falln(1:end-ol); %cut overlapping end of pren
+        risen = risen(ol+1:end); %cut overlapping beginning of ISI2n
 
-        gapontrig = length(pren_falln);
-        gapofftrig = length([pren_falln ptn]);
-        pulseontrig = length([pren_falln ptn risen_ISI2n]);
+        stim = [pren falln cf1 ptn cf2 risen ISI2n pulsen postn];
 
-        %if specified, assemble noise with crossfade of rise/fall (require symmetric rise and fall times)
-        if fallt ~= riset
-            warning(['Fall and Rise times are different (' num2str(fallt) ' vs ' num2str(riset) ') - not compatible with crossfade of gap']);
-        elseif fallt == riset && crossrisefall == 1;
-            ol = round(riset/2*fs); %number of samples to overlap, 50% of riset/fallt
-            
-            cf1 = falln(end-ol+1:end) + ptn(1:ol); %First overlap region (gap onset, pt start)
-            cf2 = ptn(end-ol+1:end) + risen(1:ol); %Second overlap region  (gap offset, pt end)
+        gapontrig = length([pren falln]) + length(cf1)/2;
+        gapofftrig = length([pren falln cf1 ptn]) + length(cf2)/2;
+        pulseontrig = length([pren falln cf1 ptn cf2 risen ISI2n]);
+        
+        if strcmp(stim_type{ii}, 'T3') | strcmp(stim_type{ii}, 'T8');
+            stim = [pren falln cf1 ptn cf2 risen ISI2n postn];
 
-            ptn = ptn(ol+1:end-ol); %cut overlapping ends of ptn
-            
-            stim = [pren cf1 ptn cf2 ISI2n pulsen postn];
-
-            gapontrig = length(pren) + (length(cf1)/2);
-            gapofftrig = length([pren cf1 ptn]) + (length(cf2)/2);
-            pulseontrig = length([pren cf1 ptn cf2 ISI2n]);
-
+            gapontrig = length([pren falln]) + length(cf1)/2;
+            gapofftrig = length([pren falln cf1 ptn]) + length(cf2)/2;
+            pulseontrig = NaN;
         end
-
+        
     end
-
-    %Output and graph
-    %Prints total duration of final signal 'noise'
-    totdur = length(stim)/fs;
-    totdur = ['Duration of stimuli is ', num2str(round(totdur,4)), ' sec'];
-    disp(totdur);
 
     %% Plot amplitude spectrum of final trial + envelope, mind xlim to inspect
 
@@ -335,7 +321,7 @@ for i = 1:numel(bkg_type);
     xlabel('Time (sec)');
 
     subplot(3,1,2); plot(stim);
-    xlim([length(pren_falln)-fs/20 length(stim)-length(postn)+fs/20]);
+    xlim([length([pren falln])-fs/100 length(stim)-length(postn)+fs/100]);
     ylim([-1 1]);
     if ~isnan(gapontrig)
         xline(gapontrig); end
@@ -344,8 +330,8 @@ for i = 1:numel(bkg_type);
     if ~isnan(pulseontrig)
         xline(pulseontrig); end
 
-    set(gca, 'XTick', [0:fs/10:length(stim)]);
-    set(gca, 'XTickLabel', [0:1/10:5]);
+    set(gca, 'XTick', [0:fs/100:length(stim)]);
+    set(gca, 'XTickLabel', [0:1/100:5]);
     set(gca, 'XGrid', 'on');
     xlabel('Time (sec)');
 
@@ -358,25 +344,36 @@ for i = 1:numel(bkg_type);
     xlabel('Frequency (Hz)');
     title(['Power spectrum (carrier, post pulse)' filename], 'Interpreter', 'none');
 
-    %saveas(gcf, ['output/' filename '_freqspec.svg']);
-    %close;
+    saveas(gcf, ['output/' filename(1:end-4) '.svg']);
+    close;
 
-    %All variables of final noise in different colors
-    % figure; hold on;
-    % plot(pren_falln);
-    % plot(length(pren_falln)+1:length([pren_falln cf1]), cf1);
-    % plot(length([pren_falln cf1])+1:length([pren_falln cf1 ptn]), ptn);
-    % plot(length([pren_falln cf1 ptn])+1:length([pren_falln cf1 ptn cf2]), cf2);
-    % plot(length([pren_falln cf1 ptn cf2])+1:length([pren_falln cf1 ptn cf2 risen_ISI2n]), risen_ISI2n);
-    % plot(length([pren_falln cf1 ptn cf2 risen_ISI2n])+1:length([pren_falln cf1 ptn cf2 risen_ISI2n pulsen]), pulsen);
-    % plot(length([pren_falln cf1 ptn cf2 risen_ISI2n pulsen])+1:length([pren_falln cf1 ptn cf2 risen_ISI2n pulsen postn]), postn);
-    % xline(length(pren_falln) + length(cf1)/2);
-
-    %audiowrite(['output/' filename], noise, fs);
-
+    %audiowrite(['output/' filename], stim, fs);
+    
+    %% Output table
+    
+    %Row number
+    if i == 1;
+        r = ii;
+    elseif i == 2;
+        r = ii +(length(stim_type));
+    elseif i == 3;
+        r = ii +(length(stim_type)*2);
+    end;
+    
+    totdur(r,1) = length(stim)/fs;
+    stimname{r,1} = filename;
+    gaponlat(r,1) = gapontrig/fs;
+    gapofflat(r,1) = gapofftrig/fs;
+    pulseonlat(r,1) = pulseontrig/fs;
+    gaptrigdiff(r,1) = (gapofftrig - gapontrig)/fs;
+    pulsegapdiff(r,1) = (pulseontrig - gapofftrig)/fs;
+    
     end
 end
-    
+
+%Assmeble table of trigger times
+stimtable = table(stimname, totdur, gaponlat, gapofflat, gaptrigdiff, pulseonlat, pulsegapdiff);
+writetable(stimtable, 'output/stimtable.xlsx');
     %% 15 sec Calibration noise - pulsediff and bkgdiff needed! NB: Levels are set as callvl, pulselvl and bkglvl up top!!
 
     % rms(pren_falln .* (rms(calbkg)/rms(pren_falln)))
