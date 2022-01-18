@@ -16,21 +16,26 @@ function noise = makenoise(duration, samplerate, risetime, falltime, nbn_cf, low
     dt = 1/samplerate;
     lvl_diff = db2mag((cal_lvl - output_lvl)*-1);
     
+    %Create 15 sec reference calibration noise
+    calref = (rand(1, 15*samplerate) - 0.5) * 2;
+    calref = lowpass(calref, lowpassf, samplerate);     %LP filter of noise
+    calref = calref/max(abs(calref(:)));     %Scale to max or LP may introduce clipping
+    
     if nbn_cf > 0;
         octfilter = octaveFilter(nbn_cf, '1/3 octave','SampleRate', samplerate, 'FilterOrder', 8);
     end
     
-    noise = rand(1, duration*samplerate);
+    noise = rand(1, round(duration*samplerate));
     noise = (noise - 0.5) * 2 * (1-headroom);
     
     if nbn_cf > 0;
         noise = octfilter(noise'); %Apply NBN filter, octFilt requires signal in column
-        noise = (rms(cal_lvl .* lvl_diff)/rms(noise)) .* noise; %Scale to match RMS of bakground level reference
+        noise = (rms(calref .* lvl_diff)/rms(noise)) .* noise; %Scale to match RMS of bakground level reference
         noise = noise'; %Pivot back to row vector
     elseif nbn_cf == 0;
         noise = lowpass(noise, lowpassf, samplerate); %LP filter of noise
         noise = noise/max(abs(noise(:))); %Limit to 0 +/- 1 range by dividing signal by max(), else LP-filter introduce clipping                            
-        noise = (rms(cal_lvl .* lvl_diff)/rms(noise)) .* noise; %Scale to match RMS of bakground level reference
+        noise = (rms(calref .* lvl_diff)/rms(noise)) .* noise; %Scale to match RMS of bakground level reference
     end
     
     if risetime > 0;
