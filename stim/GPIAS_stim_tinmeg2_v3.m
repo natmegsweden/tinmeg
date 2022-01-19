@@ -1,7 +1,7 @@
 
 %To do:
 
-%gather in table
+%gather in table (trig-points variables and max(n))
 %audiowrite
 
 %"Tinnitus" conditions
@@ -94,7 +94,7 @@ for i = 1:numel(tin);
             
             subplot(3, 2, [1 2]); hold on
             plot(n);
-            if ~isnan(pt); plot(pt); end
+            if exist('pt', 'var') == 1; plot(pt); end
             title(['Full trial: ' fname], 'Interpreter', 'none');
             xlim([0 length(n)]);
             ylim([-1 1]);
@@ -109,7 +109,7 @@ for i = 1:numel(tin);
             if ~strcmp(stim{iii}, 'PO')
                 subplot(3, 2, 3); hold on;
                 plot(n);
-                if ~isnan(pt); plot(pt); end
+                if exist('pt', 'var') == 1; plot(pt); end
                 xlim([length(pre)-(fallt*fs*2) length([pre gap])+fallt*fs*2]);
                 set(gca, 'XTick', [0:fs/100:length(n)]);
                 set(gca, 'XTickLabel', [0:1/100:stimdur]);
@@ -124,7 +124,7 @@ for i = 1:numel(tin);
             if ~strcmp(stim{iii}, 'GO')
                 subplot(3, 2, 4); hold on;
                 plot(n);
-                if ~isnan(pt); plot(pt); end
+                if exist('pt', 'var') == 1; plot(pt); end
                 xlim([pulseontrig-(fallt*fs*2) pulseontrig+(length(pulse))+fallt*fs*2]);
                 set(gca, 'XTick', [0:fs/100:length(n)]);
                 set(gca, 'XTickLabel', [0:1/100:stimdur]);
@@ -144,33 +144,14 @@ for i = 1:numel(tin);
             title('Frequency spectrum - post pulse');
             xlabel('Frequency (Hz)');
             
-            clear temptin tempbkg fname i ii iii n pt pre isi pulse post gap
+            clear temptin tempbkg fname n pt pre isi pulse post gap
             
         end
     end
 end
 
+clear i ii iii
 
 %% WIP
 %integer number of periods of pt using %fplot(@(x) 1/x/dt, [2800 3200]) and
 %nextprime();
-
-pt = sin(2*pi*tonef*(0:dt:(length(n)-1)/fs));
-pt = (rms(calref .* gaptonediff)/rms(pt)) .* pt;
-
-stim = n + pt;
-
-figure; subplot(2,1,1); hold on;
-plot(stim);
-plot(pt);
-ylim([-0.05 0.05]);
-legend('BBN Carrier + 3kHz Tone', '3kHz Tone');
-
-subplot(2,1,2);
-pspectrum(stim, fs);
-set(gca, 'XScale', 'log');
-xlim([0.1 20]);
-set(gca, 'XTickLabel', [100 1000 10000]);
-title('Frequency spectrum - full trial');
-xlabel('Frequency (Hz)');
-
