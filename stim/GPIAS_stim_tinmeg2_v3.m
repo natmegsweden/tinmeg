@@ -1,8 +1,7 @@
 
 %To do:
 
-%gather in table (trig-points variables and max(n))
-%audiowrite
+%calibration files
 
 %"Tinnitus" conditions
 tin = [0 3000 8000];
@@ -21,7 +20,7 @@ plvl = 90;      % pulse level
 bkglvl = 60;    % bakground carrier level
 clvl = 90;      % reference calibration level
 gapdur = 0.050; % gap duration
-isidur = 0.249; % ISI duration
+isidur = 0.240; % ISI duration
 riset = 0.002;  % rise time
 pdur = 0.020;   % pulse duration
 fallt = 0.002;  % fall time
@@ -86,11 +85,16 @@ for i = 1:numel(tin);
             fname = ['tin' temptin '_bkg' tempbkg '_' stim{iii}];
             disp(fname);
             
-            stimdur = length(n)/fs;
-            
-            %figure; plot(n); title(fname, 'Interpreter', 'none');
-            
-            figure;
+            %Gather variables for overview in table
+            name{1, r} = fname;
+            stimdur(r) = length(n)/fs;
+            gapon(r) = gapontrig/fs;
+            gapoff(r) = gapofftrig/fs;
+            pulseon(r) = pulseontrig/fs;
+            maxmag(r) = max(n);
+                                    
+            %% output figure
+            figure('units','normalized','outerposition',[0 0 1 1]);
             
             subplot(3, 2, [1 2]); hold on
             plot(n);
@@ -144,13 +148,27 @@ for i = 1:numel(tin);
             title('Frequency spectrum - post pulse');
             xlabel('Frequency (Hz)');
             
+            %save figures
+            saveas(gcf, ['output/figures/' fname '.svg']);
+            saveas(gcf, ['output/figures/' fname '.png']);
+            close;
+            
+            %save audiofile
+            audiowrite(['output/audio/' fname '.wav'], n, fs);
+            
             clear temptin tempbkg fname n pt pre isi pulse post gap
             
         end
     end
 end
 
-clear i ii iii
+%Assemble table with variables of interest (i.e. for trigger timings)
+varnames = {'Stimulus', 'trial_duration', 'gap_on', 'gap_off', 'pulse_on', 'max_mag'};
+stimtab = table(name', stimdur', gapon', gapoff', pulseon', maxmag', 'VariableNames', varnames);
+
+clear i ii iii name stimdur gapon gapoff pulseon maxmag gapofftrig gapontrig r tonelvldiff calref varnames
+
+writetable(stimtab, 'output/stimtable.xlsx');
 
 %% WIP
 %integer number of periods of pt using %fplot(@(x) 1/x/dt, [2800 3200]) and
