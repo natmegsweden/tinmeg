@@ -170,6 +170,6 @@ clear i ii iii name stimdur gapon gapoff pulseon maxmag gapofftrig gapontrig r t
 
 writetable(stimtab, 'output/stimtable.xlsx');
 
-%% WIP
+%% Consider if pre-creating ITI files
 %integer number of periods of pt using %fplot(@(x) 1/x/dt, [2800 3200]) and
 %nextprime();
