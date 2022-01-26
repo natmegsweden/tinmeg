@@ -1,8 +1,4 @@
 
-%To do:
-
-%calibration files
-
 %"Tinnitus" conditions
 tin = [0 3000 8000];
 
@@ -38,6 +34,16 @@ r = 0; %Count output row for variable table
 for i = 1:numel(tin);
 
     for ii = 1:numel(bkg);
+        
+        %Create 15 sec calibration-files for each carrier
+        calnoise60 =   makenoise(15,   fs,  0,    0,  bkg(ii),  lp,  0,  clvl, bkglvl);
+        calnoise70 =   makenoise(15,   fs,  0,    0,  bkg(ii),  lp,  0,  clvl, bkglvl+10);
+        calnoise80 =   makenoise(15,   fs,  0,    0,  bkg(ii),  lp,  0,  clvl, bkglvl+20);
+        
+        audiowrite(['output/audio/bkg_cal60_' num2str(bkg(ii)) '.wav'], calnoise60, fs);
+        audiowrite(['output/audio/bkg_cal70_' num2str(bkg(ii)) '.wav'], calnoise70, fs);
+        audiowrite(['output/audio/bkg_cal80_' num2str(bkg(ii)) '.wav'], calnoise80, fs);
+        clear calnoise60 calnoise70 calnoise80;
 
         for iii = 1:numel(stim)
             
