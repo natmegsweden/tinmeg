@@ -1,0 +1,203 @@
+#Init AudioFile
+begin; #
+	
+# INITIALIZE PARALLELL PORTS
+
+output_port MEGport = output_port_manager.get_port(1);
+output_port audiofile = output_port_manager.get_port(2);
+output_port MEGport2 = output_port_manager.get_port(3);
+
+#output_port audioTrigger = output_port_manager.get_port(3);
+
+###>> Init subject specific vars *****************************
+#Generate unique result file name	
+string thisDate = date_time("yymmdd");	
+string thisTime = date_time("hhnnss");
+string userName = "Niklas" + thisDate + "_" + thisTime;
+
+#Define subject name
+string enterfname = logfile.subject();
+
+#Start presentation with default settings
+default.present();
+parameter_window.remove_all();
+
+#Create an array of stimuli from file
+string fname = "stimlist.txt";
+int nCond = 27; #total n of conditions
+
+int nCol = 13; #n of columns in trigtable (fname)
+
+int nTin = 9;  #n conditions within "tinnitus"
+int nBkg = 3;  #n conditions within "tinnitus" + background
+int nStim = 3; #n conditions in lowest level (i.e. GO, PO, GP)
+
+array<string> allCond[nCond][nCol];
+input_file myfile = new input_file; 
+myfile.open(fname); 
+
+#Parse file
+loop int r = 1 until r == (nCond + 1) begin
+	allCond[r][1] = myfile.get_string();
+	allCond[r][2] = myfile.get_string(); 
+	allCond[r][3] = myfile.get_string();
+	allCond[r][4] = myfile.get_string();
+	allCond[r][5] = myfile.get_string();
+	allCond[r][6] = myfile.get_string();
+	allCond[r][7] = myfile.get_string();
+	allCond[r][8] = myfile.get_string();
+	allCond[r][9] = myfile.get_string();
+	allCond[r][10] = myfile.get_string();
+	allCond[r][11] = myfile.get_string();
+	allCond[r][12] = myfile.get_string();
+	allCond[r][13] = myfile.get_string();
+	r=r+1;
+end;
+myfile.close();
+
+/* Columns in allCond:
+1 filename
+2 audiofile number
+3 has_tin
+4 tin_low_high
+5 has_nbn
+6 nbn_low_hig
+7 has_gap
+8 has_pulse
+
+9 gap_on
+10 pulse_on
+11 filestart
+
+12 MEGTTL2 decimal
+13 MEGTTL decimal */
+
+#Test to convert str to int
+int my_gap = int(allCond[1][2]);
+
+#Randomization arrays to select index in stimlist
+array<int> t[] = {0, 1, 2};
+array<int> b[] = {0, 1, 2};
+
+int numBlocks = 1;	#n of blocks (containing num_reps of all conditions)
+int num_reps = 1; 	#n of repetitions within lowest stimblock
+int idx = 0;			#initialize index for conditions
+
+#Will need block loop from here
+
+loop int currBlock = 1 until currBlock > numBlocks begin
+	
+	t.shuffle();
+
+	int trialcounter = 1; #Trial counter within block for monitor
+
+	loop int tix = 1 until tix > nStim begin
+		
+		b.shuffle();
+
+		loop int bix = 1 until bix > nStim begin
+			
+			idx = 9*t[tix]+1+3*b[bix];
+
+			array<string> stimblock [nStim][nCol];
+
+			stimblock[1] = allCond[idx];
+			stimblock[2] = allCond[idx+1];
+			stimblock[3] = allCond[idx+2];
+
+			#Run a loop that appends the entire stimulus array to a new array num_reps times
+			array<string> lastblock [0][0];
+
+			loop int j = 1 until j > num_reps
+			begin
+				lastblock.append( stimblock );
+				j = j + 1;
+			end;
+
+			#Shuffle the new larger array
+			lastblock.shuffle();
+			#Using a loop, show each element of the array in turn
+			loop int i = 1 until i > lastblock.count()
+			begin
+				
+				#PADDING if trial is first in bkg
+				if i == 1 then 
+				#Preload sound of trial in AudioFile
+				audiofile.send_code(1,80); #Test file from AudioFile
+				wait_interval(50);
+				# allCond[idx+4]; Index + 4 for pad-file?
+				#Send trigger to AudioFile to play sound
+				audiofile.send_code(128,10);
+				wait_interval(2000); #Should match padding
+				end;
+				
+				#This is where the action happens!
+				string TrialStatus = lastblock[i][1];		#filename
+
+				int AudioFileTTL = int(lastblock[i][2]);	#AudioFile trigger value
+				int MegTTL = int(lastblock[i][13]);			#Filestart MEGTTL decimal value
+				int MegTTL2 = int(lastblock[i][12]);		#Filestart MEGTTL2 decimal value
+				
+				int has_gap = int(lastblock[i][7]);			# 1 if conditions contains gap
+				int has_pulse = int(lastblock[i][8]);		# 1 if conditions contains pulse
+				
+				#Write TrialStatus on screen
+				TrialStatus = "Trial #: " + string(trialcounter)+ "\n" + 
+								  "Trial: " + TrialStatus + "\n" +
+								  "Block #: " + string(currBlock) + "\n" +
+								  "AF Trig: " + string(AudioFileTTL) + "\n";
+				myStatusText.set_caption(TrialStatus);
+				myStatusText.redraw();
+				tr_statusText.present();
+				term.print_line(TrialStatus);
+
+				#Preload sound of trial in AudioFile
+				audiofile.send_code(AudioFileTTL,80);
+				wait_interval(50);
+
+				#Send trigger to AudioFile to play sound
+				audiofile.send_code(128,10);
+				#Send MEG trigger for file start
+				MEGport.send_code(MegTTL,20); 
+				MEGport2.send_code(MegTTL2,20);
+				
+				if has_gap == 1 then
+					wait_interval(1000); #Predur 1 sec
+					MEGport.send_code(MegTTL-1+4,20); 
+					MEGport2.send_code(MegTTL2,20);
+					
+					if has_pulse == 1 then
+						wait_interval(290); #ISI 240, GAPdur 50
+						MEGport.send_code(MegTTL-1+2,20); 
+						MEGport2.send_code(MegTTL2,20);
+					end;
+				end;
+				
+				if has_gap == 0 && has_pulse == 1 then
+					wait_interval(1240); #Predur 1 sec + ISI 240
+					MEGport.send_code(MegTTL-1+2,20); 
+					MEGport2.send_code(MegTTL2,20);
+				end;
+
+				#Wait post and jitter?
+				wait_interval(1000);
+
+				i = i + 1;
+				
+				trialcounter = trialcounter + 1; #Trial counter within block for monitor
+			end;
+			
+			trialcounter = trialcounter; #Keep for next nested loop
+			bix = bix + 1;
+		end;
+		
+	tix = tix + 1;
+	end;
+
+	#Pause experiment with break screen
+	tr_break.present();
+
+	currBlock = currBlock + 1;
+end;
+
+end;
