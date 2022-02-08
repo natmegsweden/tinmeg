@@ -1,8 +1,14 @@
 
-% Specify MEG data path
-meg_data_path = '/archive/20061_tinnitus/MEG/';
+%Local fieldtrip path
+addpath D:\MATLAB\fieldtrip-20220206;
+ft_defaults;
 
 sub_date = readtable('../sub_date.txt', 'Format', '%s%s');
+
+%%
+
+% Specify MEG data path
+meg_data_path = '/archive/20061_tinnitus/MEG/';
 
 %Sample rate to downsample to
 fs_ds = 200;
@@ -48,12 +54,11 @@ for i = 1%:2%length(sub_date.ID);
     
 end
 
-%% ICA
+%% Load RS data, clean and create pseudo epochs
 
 
-%% Load RS data and create pseudo epochs
 
-for i = 1%:4%length(sub_date.ID);
+for i = 1:length(sub_date.ID);
 
     outdir = ['../mat_data/preprocessing/' 'ID' sub_date.ID{i} '/'];
     
@@ -62,55 +67,22 @@ for i = 1%:4%length(sub_date.ID);
 
     %check if file exist
     if exist(fpath, 'file')
-    warning([fname ' for subject: ID' sub_date.ID{i} ' exist'])
-    continue
-    end
+    warning([fname ' for subject: ID' sub_date.ID{i} ' exist - skipping reject_visual']);
     
+    rawRS_meg_dsc = load(fpath);
+    rawRS_meg_dsc = rawRS_meg_dsc.rawRS_meg_dsc;
+   
+    elseif ~exist(fpath, 'file')
+        
     %load
     rawRS_meg_ds = load(['../mat_data/preprocessing/' 'ID' sub_date.ID{i} '/rawRS_meg_ds.mat']);
     rawRS_meg_ds = rawRS_meg_ds.rawRS_meg_ds;
-    
-    cfg = [];
-    cfg.channel = 'meg';
-    data = ft_selectdata(cfg, rawRS_meg_ds);
     
     %Make pseudo-epochs
     cfg = [];
     cfg.length  = 2;
     cfg.overlap = 0.5;       % 50% overlap
-    epo = ft_redefinetrial(cfg, data);
-
-    %https://www.fieldtriptoolbox.org/faq/how_can_i_do_time-frequency_analysis_on_continuous_data/
-    cfg = [];
-    cfg.method     = 'mtmfft'
-    %cfg.taper      = 'hanning'
-    cfg.tapsmofrq  = 2;
-    cfg.foilim     = [1 30];
-    cfg.keeptrials = 'no';
-    cfg.output     = 'fooof_aperiodic';
-    freq_segmented = ft_freqanalysis(cfg, epo)
-    
-    begsample = epo.sampleinfo(:,1);
-    endsample = epo.sampleinfo(:,2);
-    time = ((begsample+endsample)/2) / epo.fsample;
-
-    freq_continuous           = freq_segmented;
-    freq_continuous.powspctrm = permute(freq_segmented.powspctrm, [2, 3, 1]);
-    freq_continuous.dimord    = 'chan_freq_time'; % it used to be 'rpt_chan_freq'
-    freq_continuous.time      = time;             % add the description of the time dimension
-
-    %https://www.fieldtriptoolbox.org/faq/how_can_i_do_time-frequency_analysis_on_continuous_data/
-    
-    plot(freq_segmented.freq, mean(freq_segmented.powspctrm, 1));
-    
-    
-    
-
-
-
-
-
-
+    epo = ft_redefinetrial(cfg, rawRS_meg_ds);
     
     %ft_rejectvisual
     cfg = [];
@@ -120,30 +92,142 @@ for i = 1%:4%length(sub_date.ID);
     cfg.layout = 'neuromag306all.lay';
 
     rawRS_meg_dsc = ft_rejectvisual(cfg,epo);
-
+    
+    clear epo
+    
     cfg.channel = 'MEGGRAD';
 
     rawRS_meg_dsc = ft_rejectvisual(cfg, rawRS_meg_dsc);
     
-    save([outdir 'rawRS_meg_dsc'], 'rawRS_meg_dsc')
-    
-    %Load if FOOOF does not exist?
+    save(fpath, 'rawRS_meg_dsc');
 
-    
-    %Calculate FOOOF (https://www.fieldtriptoolbox.org/example/fooof/)
+    end
+
+    cfg = [];
+    cfg.channel = 'meg';
+    meg_data = ft_selectdata(cfg, rawRS_meg_dsc);
+
+    % compute the fractal and original spectra
     cfg               = [];
-    cfg.foilim        = [1 100];
-    %cfg.pad           = 4;
-    cfg.tapsmofrq     = 2;
+    cfg.foilim        = [2 30];
+    cfg.taper         = 'hanning';
+    cfg.pad           = 'nextpow2';
+    cfg.tapsmofrq     = 0;
     cfg.method        = 'mtmfft';
-    %cfg.output        = 'fooof_aperiodic';
-    %fractal = ft_freqanalysis(cfg, epo);
+    cfg.output        = 'fooof_aperiodic';
+    fractal = ft_freqanalysis(cfg, meg_data);
     cfg.output        = 'pow';
-    original = ft_freqanalysis(cfg, epo);
+    original = ft_freqanalysis(cfg, meg_data);
+    
+    clear meg_data
+    
+    % subtract the fractal component from the power spectrum
+    cfg               = [];
+    cfg.parameter     = 'powspctrm';
+    cfg.operation     = 'x2-x1';
+    oscillatory = ft_math(cfg, fractal, original);
+    
+    figure; hold on;
+    title(sub_date.ID{i});
+    plot(fractal.freq, mean(fractal.powspctrm,1));
+    plot(original.freq, mean(original.powspctrm,1));
+    plot(oscillatory.freq, mean(oscillatory.powspctrm,1));
+    saveas(gcf, ['../output/' sub_date.ID{i} '_fooof.png']);
+    close
+    
+    original_pwspc{i} = mean(original.powspctrm,1);
+    fract_pwspc{i} = mean(fractal.powspctrm,1);
+    osc_pwspc{i} = mean(oscillatory.powspctrm, 1);
+    
+    freqs = oscillatory.freq;
 
 end
 
-cfg = [];
+% save('../output/osc_pwspc.mat', 'osc_pwspc');
+% save('../output/original_pwspc.mat', 'original_pwspc');
+% save('../output/osc_fract.mat', 'fract_pwspc');
 
-ft_singleplotTFR(cfg, original);
+%%
+for i = 1:22
+   
+    [M, I] = max(osc_pwspc{i}(16:27))
+    
+    maxPSDfreq(i) = freqs(16+I-1);
+    
+end
 
+%% Plots
+
+figure('Units', 'normalized', 'Position', [0.1 0.1 0.6 0.7]);
+histogram(maxPSDfreq)
+set(gca,'FontSize',14)
+title('Distribution of maximum PSD frequency in Alpha');
+xlabel('Maximum PSD frequency (Hz)');
+ylabel('n count');
+ylim([0 10]);
+
+blue = [0, 0.4470, 0.7410];
+orange = [0.8500, 0.3250, 0.0980];
+
+%FoooF demo
+figure('Units', 'normalized', 'Position', [0.1 0.1 0.6 0.7]);
+subplot(2,2,1); hold on;
+set(gca,'FontSize',14)
+plot(freqs, osc_pwspc{2});
+plot(freqs, fract_pwspc{2});
+plot(freqs, original_pwspc{2});
+ylabel('Power Spectrum Density (AU)');
+ylim([-1*10^-26 20*10^-26]);
+xlim([1 30]);
+
+subplot(2,2,2); hold on;
+set(gca,'FontSize',14)
+plot(freqs, osc_pwspc{5});
+plot(freqs, fract_pwspc{5});
+plot(freqs, original_pwspc{5});
+legend('Periodic', 'Aperiodic', 'Original');
+ylim([-1*10^-26 10*10^-25]);
+xlim([1 30]);
+
+subplot(2,2,3); hold on;
+set(gca,'FontSize',14)
+plot(freqs, osc_pwspc{18});
+plot(freqs, fract_pwspc{18});
+plot(freqs, original_pwspc{18});
+ylabel('Power Spectrum Density (AU)');
+xlabel('Frequency (Hz)');
+ylim([-1*10^-26 20*10^-26]);
+xlim([1 30]);
+
+subplot(2,2,4); hold on;
+set(gca,'FontSize',14)
+plot(freqs, osc_pwspc{22});
+plot(freqs, fract_pwspc{22});
+plot(freqs, original_pwspc{22});
+xlabel('Frequency (Hz)');
+ylim([-1*10^-26 20*10^-26]);
+xlim([1 30]);
+
+%Summary plot
+figure('Units', 'normalized', 'Position', [0.1 0.3 0.6 0.45]); hold on;
+set(gca,'FontSize',14)
+for i = [1:10 12:18 20 21 22]
+    if i < 22
+    plot(freqs, osc_pwspc{i}, 'Color', [0 0 0 0.5], 'HandleVisibility','off')
+    else
+    plot(freqs, osc_pwspc{i}, 'Color', [0 0 0 0.5])
+    end
+    tempmean(i,1:73) = osc_pwspc{i};
+end
+plot(freqs, osc_pwspc{18}, 'Color', [0 0 0], 'LineWidth', 1.5)
+plot(freqs, mean(tempmean), 'Color', [0.75 0 0], 'LineWidth', 1.5);
+ylim([-1*10^-25 20*10^-25]);
+xlim([1 30]);
+xlabel('Frequency (Hz)');
+ylabel('Power Spectrum Density (AU)');
+legend('Subject 1-21', 'Subject 22', 'Average PSD');
+
+patch('Faces', [1 2 3 4], 'Vertices', [3.5 -1*10^-25; 3.5 20*10^-25; 7 20*10^-25; 7 -1*10^-25], ...
+'FaceColor', blue, 'FaceAlpha', 0.1, 'EdgeAlpha', 0, 'DisplayName', 'Theta (3.5-7Hz)');
+patch('Faces', [1 2 3 4], 'Vertices', [8 -1*10^-25; 8 20*10^-25; 12 20*10^-25; 12 -1*10^-25], ...
+'FaceColor', orange, 'FaceAlpha', 0.1, 'EdgeAlpha', 0, 'DisplayName', 'Alpha (8-12Hz)');
