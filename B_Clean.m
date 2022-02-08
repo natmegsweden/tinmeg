@@ -36,7 +36,7 @@ cfg = [];
 cfg.method = 'summary';
 cfg.keepchannel = 'yes';
 cfg.channel = 'MEGMAG';
-cfg.layout = 'neuromag306eeg_1005_natmeg.lay';
+cfg.layout = 'neuromag306all.lay';
 
 cleaned4mat = ft_rejectvisual(cfg,res4mat_ds);
 
