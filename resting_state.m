@@ -56,7 +56,7 @@ end
 
 %% Load RS data, clean and create pseudo epochs
 
-for i = 1:length(sub_date.ID);
+for i = 1%:length(sub_date.ID);
 
     outdir = ['../mat_data/preprocessing/' 'ID' sub_date.ID{i} '/'];
     
@@ -163,7 +163,7 @@ load('../output/osc_fract.mat');
 blue = [0, 0.4470, 0.7410];
 orange = [0.8500, 0.3250, 0.0980];
 
-figure('Units', 'centimeters', 'Position', [5 5 15 10]);
+figure('Units', 'centimeters', 'Position', [5 5 8 10]);
 histogram(maxPSDfreq)
 set(gca,'FontSize',10)
 %title('Distribution of maximum PSD frequency in the Alpha band');
@@ -174,7 +174,7 @@ ylim([0 10]);
 saveas(gcf, ['../output/RS_histo.pdf']);
 
 %FoooF demo
-figure('Units', 'centimeters', 'Position', [5 5 15 12]);
+figure('Units', 'centimeters', 'Position', [5 5 18 12]);
 subplot(2,2,1); hold on;
 set(gca,'FontSize',10)
 plot(freqs, osc_pwspc{2});
@@ -215,7 +215,7 @@ xlim([1 30]);
 saveas(gcf, ['../output/RS_subplots.pdf']);
 
 %Summary plot
-figure('Units', 'centimeters', 'Position', [5 5 15 8]); hold on;
+figure('Units', 'centimeters', 'Position', [5 5 18 8]); hold on;
 set(gca,'FontSize',10)
 for i = [1:10 12:18 20 21 22]
     if i < 22
