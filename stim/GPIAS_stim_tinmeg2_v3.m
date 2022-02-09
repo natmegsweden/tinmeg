@@ -44,6 +44,25 @@ for i = 1:numel(tin);
         audiowrite(['output/audio/bkg_cal70_' num2str(bkg(ii)) '.wav'], calnoise70, fs);
         audiowrite(['output/audio/bkg_cal80_' num2str(bkg(ii)) '.wav'], calnoise80, fs);
         clear calnoise60 calnoise70 calnoise80;
+        
+        %Pad-file (6 sec)
+        pad =   makenoise(6,   fs,  0,    0,  bkg(ii),  lp,  0,  clvl, bkglvl);
+        
+        if tin(i) > 0
+            pt = sin(2*pi*tin(i)*(0+dt:dt:length(pad)/fs)); %Pure tone of same length as pad
+            pt = (rms(calref .* tonelvldiff)/rms(pt)) .* pt; %Set level of pure tone
+            pad = pad + pt;
+        end
+        
+        temptin = num2str(tin(i));
+        temptin = temptin(1);
+        tempbkg = num2str(bkg(ii));
+        tempbkg = tempbkg(1);
+        
+        padname = ['tin' temptin '_bkg' tempbkg '_pad'];
+        
+        %Write padfile
+        audiowrite(['output/audio/' padname '.wav'], pad, fs);
 
         for iii = 1:numel(stim)
             
@@ -57,7 +76,7 @@ for i = 1:numel(tin);
             pre =   makenoise(1,      fs,  0,    ft,  bkg(ii),  lp,  0,  clvl, bkglvl);
             isi =   makenoise(isidur, fs,  rt,   0,   bkg(ii),  lp,  0,  clvl, bkglvl);
             pulse = makenoise(pdur,   fs,  0,    0,   0,        lp,  0,  clvl, plvl);
-            post =  makenoise(1,      fs,  0,    0,   bkg(ii),  lp,  0,  clvl, bkglvl);
+            post =  makenoise(2.5,    fs,  0,    0,   bkg(ii),  lp,  0,  clvl, bkglvl);
             gap =   zeros(1, fs*gapdur);
 
             %Assemble noise and specify triggers
