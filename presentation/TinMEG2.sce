@@ -8,8 +8,8 @@ scenario_type = trials;
 response_logging = log_active;  
 response_matching = simple_matching; 
 randomize_trials = true;
-active_buttons = 1;
-button_codes = 0;
+active_buttons = 9;
+button_codes = 1,2,3,4,5,6,7,8,9;
 default_output_port = 1; 
 response_port_output = true; 
 write_codes = true; 
@@ -40,6 +40,38 @@ trial {
 	time = 0;
 } tr_start;
 
+text {font_size = 14;
+	text_align = align_left;
+	caption =
+	"Hur sömnig har du känt dig under de senaste 5 minuterna?\n
+	1  -  Extremt pigg\n
+	2  -  Mycket pigg\n
+	3  -  Pigg\n
+	4  -  Ganska pigg\n
+	5  -  Varken pigg eller sömnig\n
+	6  -  Lätt sömnig\n
+	7  -  Sömnig men ej ansträngande vara vaken\n
+	8  -  Sömnig och något ansträngande att vara vaken\n
+	9  -  Mycket sömnig, mycket ansträngande att vara vaken\n
+	      kämpar mot sömnen";} kss_t;
+
+# Trial: kss
+trial {
+	trial_duration = forever;
+	# trial_duration = 2000; # for testing 
+   trial_type = specific_response;    	# trial ends when response
+	terminator_button = 1,2,3,4,5,6,7,8,9;
+   # terminator_button = 4, 5, 6, 7, 8, 9, 10, 11, 12; # non-MEG
+	stimulus_event {
+		picture {
+			text kss_t; x = 0; y = 0;
+		} kss_p;
+		time = 0;
+		code = "kss";
+		target_button = 1,2,3,4,5,6,7,8,9;
+	};
+} kss;
+
 trial {
    trial_duration =1;
    picture {
@@ -48,6 +80,7 @@ trial {
    } statusPic;
 } tr_statusText;
 
+#end screen
 trial {
 	all_responses = true;
 	trial_duration = forever;

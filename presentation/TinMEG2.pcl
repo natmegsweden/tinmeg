@@ -13,7 +13,7 @@ output_port MEGport2 = output_port_manager.get_port(3);
 #Generate unique result file name	
 string thisDate = date_time("yymmdd");	
 string thisTime = date_time("hhnnss");
-string userName = "Niklas" + thisDate + "_" + thisTime;
+string subjID = logfile.subject();
 
 #Define subject name
 string enterfname = logfile.subject();
@@ -24,13 +24,27 @@ parameter_window.remove_all();
 
 #Create an array of stimuli from file
 string fname = "stimlist.txt";
-int nCond = 27; #total n of conditions
+int nCond = 36; #total n of conditions
 
 int nCol = 13; #n of columns in trigtable (fname)
 
 int nTin = 9;  #n conditions within "tinnitus"
 int nBkg = 3;  #n conditions within "tinnitus" + background
 int nStim = 3; #n conditions in lowest level (i.e. GO, PO, GP)
+
+string kss_file_name = subjID + "_" + thisDate + "_" + thisTime + ".txt";
+output_file kss_data = new output_file;
+kss_data.open(kss_file_name);
+kss_data.print("subj" + "\t" +
+		"Type" + "\t" +
+		"date" + "\t" +
+		"time" + "\t" +
+		"response" + "\n");
+kss_data.close();
+
+response_data newbutton;
+string myResponse;
+
 
 array<string> allCond[nCond][nCol];
 input_file myfile = new input_file; 
@@ -79,9 +93,14 @@ int my_gap = int(allCond[1][2]);
 array<int> t[] = {0, 1, 2};
 array<int> b[] = {0, 1, 2};
 
-int numBlocks = 1;	#n of blocks (containing num_reps of all conditions)
+string TrialStatus = ""; #init text to screen
+string TrialName = ""; #init text to screen
+
+int numBlocks = 5;	#n of blocks (containing num_reps of all conditions)
 int num_reps = 1; 	#n of repetitions within lowest stimblock
 int idx = 0;			#initialize index for conditions
+
+int jitter = 0;
 
 #Will need block loop from here
 
@@ -97,7 +116,7 @@ loop int currBlock = 1 until currBlock > numBlocks begin
 
 		loop int bix = 1 until bix > nStim begin
 			
-			idx = 9*t[tix]+1+3*b[bix];
+			idx = 12*t[tix]+1+4*b[bix];
 
 			array<string> stimblock [nStim][nCol];
 
@@ -122,18 +141,25 @@ loop int currBlock = 1 until currBlock > numBlocks begin
 				
 				#PADDING if trial is first in bkg
 				if i == 1 then 
-				#Preload sound of trial in AudioFile
-				audiofile.send_code(1,80); #Test file from AudioFile
-				wait_interval(50);
-				# allCond[idx+4]; Index + 4 for pad-file?
-				#Send trigger to AudioFile to play sound
-				audiofile.send_code(128,10);
-				wait_interval(2000); #Should match padding
+					#Write TrialStatus on screen
+					TrialName = allCond[idx+3][1];
+					TrialStatus = "Trial #: " + string(trialcounter)+ "\n" + 
+									  "Trial: " + TrialName + "\n" +
+									  "Block #: " + string(currBlock) + "\n" + "\n";
+					myStatusText.set_caption(TrialStatus);
+					myStatusText.redraw();
+					tr_statusText.present();
+					term.print_line(TrialStatus);
+					
+					#Preload sound of trial in AudioFile
+					audiofile.send_code(int(allCond[idx+3][2]),80); #Test file from AudioFile
+					wait_interval(50);
+					# allCond[idx+4]; Index + 4 for pad-file?
+					#Send trigger to AudioFile to play sound
+					audiofile.send_code(128,10);
+					wait_interval(5000); #Should match padding
 				end;
 				
-				#This is where the action happens!
-				string TrialStatus = lastblock[i][1];		#filename
-
 				int AudioFileTTL = int(lastblock[i][2]);	#AudioFile trigger value
 				int MegTTL = int(lastblock[i][13]);			#Filestart MEGTTL decimal value
 				int MegTTL2 = int(lastblock[i][12]);		#Filestart MEGTTL2 decimal value
@@ -142,8 +168,9 @@ loop int currBlock = 1 until currBlock > numBlocks begin
 				int has_pulse = int(lastblock[i][8]);		# 1 if conditions contains pulse
 				
 				#Write TrialStatus on screen
+				TrialName = lastblock[i][1];
 				TrialStatus = "Trial #: " + string(trialcounter)+ "\n" + 
-								  "Trial: " + TrialStatus + "\n" +
+								  "Trial: " + TrialName + "\n" +
 								  "Block #: " + string(currBlock) + "\n" +
 								  "AF Trig: " + string(AudioFileTTL) + "\n";
 				myStatusText.set_caption(TrialStatus);
@@ -178,11 +205,22 @@ loop int currBlock = 1 until currBlock > numBlocks begin
 					MEGport.send_code(MegTTL-1+2,20); 
 					MEGport2.send_code(MegTTL2,20);
 				end;
-
-				#Wait post and jitter?
-				wait_interval(1000);
-
+				
+				#Wait post and jitter
+				
+				jitter = int(random(1,500));
+				term.print_line(jitter);
+				wait_interval(1750 + jitter);
 				i = i + 1;
+				
+				kss_data.open_append(kss_file_name);
+				kss_data.print(subjID + "\t" +
+						"trialname" + "\t" +
+						thisDate + "\t" +
+						date_time("hhnnss") + "\t" +
+						TrialName + "\n"
+				);
+				kss_data.close();
 				
 				trialcounter = trialcounter + 1; #Trial counter within block for monitor
 			end;
@@ -195,8 +233,20 @@ loop int currBlock = 1 until currBlock > numBlocks begin
 	end;
 
 	#Pause experiment with break screen
-	tr_break.present();
+	kss.present();
+	
+	newbutton = response_manager.last_response_data();
+	myResponse = string(newbutton.button());
 
+	kss_data.open_append(kss_file_name);
+	kss_data.print(subjID + "\t" +
+			"kss" + "\t" +
+			thisDate + "\t" +
+			date_time("hhnnss") + "\t" +
+			myResponse + "\n"
+	);
+	kss_data.close();
+	
 	currBlock = currBlock + 1;
 end;
 
