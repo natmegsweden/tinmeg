@@ -171,7 +171,7 @@ xlabel('Maximum PSD frequency (Hz)');
 ylabel('n count');
 ylim([0 10]);
 
-saveas(gcf, ['../output/RS_histo.pdf']);
+saveas(gcf, ['../output/RS_histo.svg']);
 
 %FoooF demo
 figure('Units', 'centimeters', 'Position', [5 5 18 12]);
