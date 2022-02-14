@@ -13,17 +13,14 @@ fs = 44100;     % samplerate
 dt = 1/fs;      % length of sample
 lp = 18000;     % lowpass filter frequency
 plvl = 90;      % pulse level
-bkglvl = 60;    % bakground carrier level
-clvl = 90;      % reference calibration level
+
+clvl = 90;      % reference maximum level
 gapdur = 0.050; % gap duration
 isidur = 0.240; % ISI duration
 riset = 0.002;  % rise time
 pdur = 0.020;   % pulse duration
 fallt = 0.002;  % fall time
-tonelvl = 50;   % Tone level (dB)
 
-tonelvldiff = db2mag((clvl - tonelvl)*-1); %Tone level difference relative calibration level
-    
 %Create 15 sec reference calibration noise. NB!! Same as in function: makenoise
 calref = (rand(1, 15*fs) - 0.5) * 2;
 calref = lowpass(calref, lp, fs);     %LP filter of noise
@@ -35,15 +32,30 @@ for i = 1:numel(tin);
 
     for ii = 1:numel(bkg);
         
-        %Create 15 sec calibration-files for each carrier
-        calnoise60 =   makenoise(15,   fs,  0,    0,  bkg(ii),  lp,  0,  clvl, bkglvl);
-        calnoise70 =   makenoise(15,   fs,  0,    0,  bkg(ii),  lp,  0,  clvl, bkglvl+10);
-        calnoise80 =   makenoise(15,   fs,  0,    0,  bkg(ii),  lp,  0,  clvl, bkglvl+20);
+        bkglvl = 60;    % bakground carrier level
+        tonelvl = 40;   % Tone level (dB)
         
+        %Compensate for equal loudness (ISO 226:2003)
+        if bkg(ii) == 8000;
+            bkglvl = bkglvl + 15;
+        end
+        
+        if tin(i) == 8000;
+            tonelvl = tonelvl + 15;
+        end
+        
+        tonelvldiff = db2mag((clvl - tonelvl)*-1); %Tone level difference relative calibration level
+        
+        %Create 15 sec calibration-files (80 only needed for BBN)
+        calnoise60 =   makenoise(15,   fs,  0,    0,  bkg(ii),  lp,  0,  clvl, bkglvl);
         audiowrite(['output/audio/bkg_cal60_' num2str(bkg(ii)) '.wav'], calnoise60, fs);
-        audiowrite(['output/audio/bkg_cal70_' num2str(bkg(ii)) '.wav'], calnoise70, fs);
+        
+        if bkg(ii) == 0
+        calnoise80 =   makenoise(15,   fs,  0,    0,  bkg(ii),  lp,  0,  clvl, bkglvl+20);
         audiowrite(['output/audio/bkg_cal80_' num2str(bkg(ii)) '.wav'], calnoise80, fs);
-        clear calnoise60 calnoise70 calnoise80;
+        end
+        
+        clear calnoise60 calnoise80;
         
         %Pad-file (6 sec)
         pad =   makenoise(6,   fs,  0,    0,  bkg(ii),  lp,  0,  clvl, bkglvl);
@@ -80,14 +92,14 @@ for i = 1:numel(tin);
             gap =   zeros(1, fs*gapdur);
 
             %Assemble noise and specify triggers
-            if      strcmp(stim{iii}, 'GO'); n = [pre gap isi post];
+            if      strcmp(stim{iii}, 'GO'); n = [pre gap post];
                     gapontrig =   length(pre);
                     gapofftrig =  length([pre gap]);
                     pulseontrig = NaN;
-            elseif  strcmp(stim{iii}, 'PO'); n = [pre isi pulse post];
+            elseif  strcmp(stim{iii}, 'PO'); n = [pre pulse post];
                     gapontrig =   NaN;
                     gapofftrig =  NaN;
-                    pulseontrig = length([pre isi]);
+                    pulseontrig = length([pre]);
             elseif  strcmp(stim{iii}, 'GP'); n = [pre gap isi pulse post];
                     gapontrig =   length(pre);
                     gapofftrig =  length([pre gap]);
