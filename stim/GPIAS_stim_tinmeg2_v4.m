@@ -41,5 +41,7 @@ subplot(2,1,2);
 spectrogram([n_cut n_cut n_cut n_cut n_cut n_cut], 'yaxis', 800, 120, 600, fs, 'MinThreshold', -110);
 title('No crossfade between trials')
 
-audiowrite('n_cut.wav', n_cut, fs);
-audiowrite('cf.wav', cf, fs);
+%audiowrite('n_cut.wav', n_cut, fs);
+%audiowrite('cf.wav', cf, fs);
+
+audiowrite('nbn_noise.wav', [cf n_cut], fs);
