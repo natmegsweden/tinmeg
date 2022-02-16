@@ -22,7 +22,7 @@ t = (0+dt:dt:riset);        %vector for rise/fall
 rise = 0.5 * sin(2*pi*rffreq*t + pi/2) + 0.5; %rise window
 rise = flip(rise); %rise window
 
-n = (rand(1, 0.8*fs) - 0.5) * 2;
+n = (rand(1, 1.2*fs) - 0.5) * 2;
 
 n = octfilter(n');
 n = n';
@@ -32,7 +32,7 @@ falln = n(end-length(fall)+1:end) .* fall;
 
 cf = risen+falln;
 
-n_cut = n(4411:end-4410);
+n_cut = n(4411:end-4410); %length of rise, length of fall
 
 figure; subplot(2,1,1);
 spectrogram([cf n_cut cf n_cut cf n_cut cf n_cut cf n_cut], 'yaxis', 800, 120, 600, fs, 'MinThreshold', -110);
@@ -40,3 +40,6 @@ title('With crossfade between trials');
 subplot(2,1,2);
 spectrogram([n_cut n_cut n_cut n_cut n_cut n_cut], 'yaxis', 800, 120, 600, fs, 'MinThreshold', -110);
 title('No crossfade between trials')
+
+audiowrite('n_cut.wav', n_cut, fs);
+audiowrite('cf.wav', cf, fs);
