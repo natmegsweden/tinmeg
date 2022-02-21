@@ -1,11 +1,12 @@
 
-%Local fieldtrip path
-addpath D:\MATLAB\fieldtrip-20220206;
+%need new fieldtrip version for fooof
+rmpath('../../fieldtrip-20211209/');
+addpath('../../fieldtrip-20220206/');
+
 ft_defaults;
 
+%Readtable of subjects (as string)
 sub_date = readtable('../sub_date.txt', 'Format', '%s%s');
-
-%%
 
 % Specify MEG data path
 meg_data_path = '/archive/20061_tinnitus/MEG/';
@@ -16,43 +17,6 @@ fs_ds = 200;
 % Create cell array for subjects filepaths
 subpaths = cell(1);
 
-for i = 1%:2%length(sub_date.ID);
-
-    outdir = ['../mat_data/preprocessing/' 'ID' sub_date.ID{i} '/'];
-
-    % Find files in subjects path with keywords specified for find_files(folder, inc_str, exc_str)
-    subpath = [meg_data_path 'NatMEG_' sub_date.ID{i} '/' sub_date.date{i} '/'];
-    fnames = find_files(subpath, {'restingstate', 'tsss'}, {'ds', 'test'});
-
-    subpaths{i,1} = sub_date.ID{i}; %Include ID for tracking
-
-        for fileindex = 1:length(fnames);
-            subpaths{i,1+fileindex} = [subpath char(fnames(fileindex))]; % NB! n of files differ between rows, some subjects have empty columns
-        end
-
-    clear fnames subpath fileindex
-
-    sub_data = subpaths(i,2:max(find(~cellfun(@isempty,subpaths(i,:)))));
-
-    %Preprocess
-    cfg = [];
-    cfg.dataset     = sub_data;
-    cfg.continuous  = 'yes';
-    cfg.demean      = 'yes';
-
-    rawRS_meg = ft_preprocessing(cfg);
-    
-    save([outdir 'rawRS_meg'], 'rawRS_meg')
-
-    %downsample and save
-    cfg = [];
-    cfg.resamplefs = fs_ds;
-
-    rawRS_meg_ds = ft_resampledata(cfg, rawRS_meg);
-
-    save([outdir 'rawRS_meg_ds'], 'rawRS_meg_ds')
-    
-end
 
 %% Load RS data, clean and create pseudo epochs
 
@@ -130,7 +94,7 @@ for i = 1%:length(sub_date.ID);
     plot(fractal.freq, mean(fractal.powspctrm,1));
     plot(original.freq, mean(original.powspctrm,1));
     plot(oscillatory.freq, mean(oscillatory.powspctrm,1));
-    saveas(gcf, ['../output/' sub_date.ID{i} '_fooof.png']);
+    %saveas(gcf, ['../output/' sub_date.ID{i} '_fooof.png']);
     close
     
     original_pwspc{i} = mean(original.powspctrm,1);
@@ -141,37 +105,39 @@ for i = 1%:length(sub_date.ID);
 
 end
 
-% save('../output/osc_pwspc.mat', 'osc_pwspc');
-% save('../output/original_pwspc.mat', 'original_pwspc');
-% save('../output/osc_fract.mat', 'fract_pwspc');
+% save('../mat_data/freqs.mat', 'freqs');
+% save('../mat_data/osc_pwspc.mat', 'osc_pwspc');
+% save('../mat_data/original_pwspc.mat', 'original_pwspc');
+% save('../mat_data/osc_fract.mat', 'fract_pwspc');
 
 %%
 for i = 1:22
    
-    [M, I] = max(osc_pwspc{i}(16:27))
-    
-    maxPSDfreq(i) = freqs(16+I-1);
+    %Max between 3.5-12Hz
+    [M, I] = max(osc_pwspc{i}(5:27));
+    maxPSDfreq(i) = freqs(5+I-1);
     
 end
 
 %% Plots
 
-load('../output/osc_pwspc.mat');
-load('../output/original_pwspc.mat');
-load('../output/osc_fract.mat');
+load('../mat_data/freqs.mat');
+load('../mat_data/osc_pwspc.mat');
+load('../mat_data/original_pwspc.mat');
+load('../mat_data/osc_fract.mat');
 
 blue = [0, 0.4470, 0.7410];
 orange = [0.8500, 0.3250, 0.0980];
 
 figure('Units', 'centimeters', 'Position', [5 5 8 10]);
-histogram(maxPSDfreq)
+histogram(maxPSDfreq, 5)
 set(gca,'FontSize',10)
 %title('Distribution of maximum PSD frequency in the Alpha band');
 xlabel('Maximum PSD frequency (Hz)');
 ylabel('n count');
 ylim([0 10]);
 
-saveas(gcf, ['../output/RS_histo.svg']);
+saveas(gcf, ['../Analysis Output/RS_histo.svg']);
 
 %FoooF demo
 figure('Units', 'centimeters', 'Position', [5 5 18 12]);
@@ -212,7 +178,7 @@ xlabel('Frequency (Hz)');
 ylim([-1*10^-26 20*10^-26]);
 xlim([1 30]);
 
-saveas(gcf, ['../output/RS_subplots.pdf']);
+%saveas(gcf, ['../output/RS_subplots.pdf']);
 
 %Summary plot
 figure('Units', 'centimeters', 'Position', [5 5 18 8]); hold on;
@@ -238,4 +204,4 @@ patch('Faces', [1 2 3 4], 'Vertices', [3.5 -1*10^-25; 3.5 20*10^-25; 7 20*10^-25
 patch('Faces', [1 2 3 4], 'Vertices', [8 -1*10^-25; 8 20*10^-25; 12 20*10^-25; 12 -1*10^-25], ...
 'FaceColor', orange, 'FaceAlpha', 0.1, 'EdgeAlpha', 0, 'DisplayName', 'Alpha (8 - 12 Hz)');
 
-saveas(gcf, ['../output/RS_average.pdf']);
+%saveas(gcf, ['../output/RS_average.pdf']);
