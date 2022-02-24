@@ -1,4 +1,12 @@
 
+%To do:
+%Round onset to ms integer
+%ms in table
+%tone
+%wrap in loop
+%save plots for inspection
+%clean up/comment
+
 fs = 44100;
 dt = 1/fs;
 
@@ -9,7 +17,7 @@ stim = {'GO', 'PO', 'GP'};  %Stimulation types
 
 prepad = 5;
 gapdur = 0.050;
-ISI = 0.0240;
+ISI = 0.240;
 pulsedur = 0.020;
 totdur = 45;
 
@@ -18,21 +26,32 @@ rf_time = 0.002; %rise/fall time
 minITI = 1.75; %Minimum ITI
 
 bkg_lvl = 60;
-pulselvl = 90;
+pulse_lvl = 90;
 
 cal_lvl = 90;      % reference maximum level
 
+octfilter = octaveFilter(bkg(ii), '1/3 octave','SampleRate', fs, 'FilterOrder', 8);
+lowpassf = 18000;
+
 bkg_lvldiff = db2mag((cal_lvl - bkg_lvl)*-1);
-pulse_lvldiff
+pulse_lvldiff = db2mag((cal_lvl - pulse_lvl)*-1);
 
 %Create 15 sec reference calibration noise. NB!! Same as in function: makenoise
 calref = (rand(1, 15*fs) - 0.5) * 2;
-calref = lowpass(calref, lp, fs);     %LP filter of noise
+calref = lowpass(calref, lowpassf, fs);     %LP filter of noise
 calref = calref/max(abs(calref(:)));  %Scale to max or LP may introduce clipping
 
 bkg_noise = (rand(1, totdur*fs) - 0.5) * 2;
 
-octfilter = octaveFilter(8000, '1/3 octave','SampleRate', fs, 'FilterOrder', 8);
+if bkg(ii) > 0;
+    bkg_noise = octfilter(bkg_noise'); %Apply NBN filter, octFilt requires signal in column
+    bkg_noise = (rms(calref .* bkg_lvldiff)/rms(bkg_noise)) .* bkg_noise; %Scale to match RMS of bakground level reference
+    bkg_noise = bkg_noise'; %Pivot back to row vector
+elseif bkg(ii) == 0;
+    bkg_noise = lowpass(bkg_noise, lowpassf, fs); %LP filter of noise
+    bkg_noise = bkg_noise/max(abs(bkg_noise(:))); %Limit to 0 +/- 1 range by dividing signal by max(), else LP-filter introduce clipping                            
+    bkg_noise = (rms(calref .* bkg_lvldiff)/rms(bkg_noise)) .* bkg_noise; %Scale to match RMS of bakground level reference
+end
 
 rffreq = 1/(rf_time * 2);  %Frequency that has period of 2 fallt
 t = (0+dt:dt:rf_time);     %vector for rise/fall
@@ -46,9 +65,10 @@ Rstimlist = stimlist(randperm(numel(stimlist)));
 offset = 4.75*fs; %pad at start of condition (sec)
 r = 1; %row number for stim/trigger list
 
-PulseOnset = [];
-GapOnset = [];
-GPOnset = [];
+PulseOnset = zeros(1, ntrials*numel(stim));
+GapOnset = zeros(1, ntrials*numel(stim));
+GP_G_Onset = zeros(1, ntrials*numel(stim));
+GP_P_Onset = zeros(1, ntrials*numel(stim));
 
 for i = 1:numel(Rstimlist)
    
@@ -65,17 +85,34 @@ for i = 1:numel(Rstimlist)
     elseif Rstimlist{i} == 'PO'
         disp(Rstimlist{i})
         offset = offset + minITI*fs + rITI;
-        PO = (rand(1, pulsedur*fs) - 0.5) * 3;
+        
+        PO = (rand(1, pulsedur*fs) - 0.5) * 2;
+        PO = lowpass(PO, lowpassf, fs); %LP filter of noise
+        PO = PO/max(abs(PO(:))); %Limit to 0 +/- 1 range by dividing signal by max(), else LP-filter introduce clipping                            
+        PO = (rms(calref .* pulse_lvldiff)/rms(PO)) .* PO; %Scale to match RMS of bakground level reference
         
         bkg_noise(offset:offset+numel(PO)-1) = PO;
-        
+                
         PulseOnset(r) = offset/fs;
         
     elseif Rstimlist{i} == 'GP'
         disp(Rstimlist{i})
         offset = offset + minITI*fs + rITI;
+        GO = [fall zeros(1, gapdur*fs) rise];
+        bkg_noise(offset:offset+numel(GO)-1) = bkg_noise(offset:offset+numel(GO)-1) .* GO;
         
-        GPOnset(r) = offset/fs;
+        GP_G_Onset(r) = (offset+rf_time*fs)/fs;
+        
+        offset = offset + numel(GO)-(floor(rf_time*fs)) + ISI*fs; %Rise is part of ISI
+        
+        PO = (rand(1, pulsedur*fs) - 0.5) * 2;
+        PO = lowpass(PO, lowpassf, fs); %LP filter of noise
+        PO = PO/max(abs(PO(:))); %Limit to 0 +/- 1 range by dividing signal by max(), else LP-filter introduce clipping                            
+        PO = (rms(calref .* pulse_lvldiff)/rms(PO)) .* PO; %Scale to match RMS of bakground level reference
+        
+        bkg_noise(offset:offset+numel(PO)-1) = PO;
+        
+        GP_P_Onset(r) = offset/fs;
         
     end
     
@@ -83,8 +120,12 @@ for i = 1:numel(Rstimlist)
 
 end
 
+
+
+stimnoise = bkg_noise(1:offset+minITI*fs);
+
 figure; hold on;
-plot(bkg_noise);
+plot(stimnoise);
 for i = 1:numel(GapOnset)
     xline([GapOnset(i)*fs], 'Color', [1 0 0]);
 end
@@ -93,45 +134,14 @@ for i = 1:numel(PulseOnset)
     xline([PulseOnset(i)*fs], 'Color', [0 1 0]);
 end
 
-for i = 1:numel(PulseOnset)
-    xline([GPOnset(i)*fs], 'Color', [0 0 1]);
+for i = 1:numel(GP_G_Onset)
+    xline([GP_G_Onset(i)*fs], 'Color', [0 0 1]);
 end
 
-
-if bkg > 0;
-    bkg_noise = octfilter(bkg_noise'); %Apply NBN filter, octFilt requires signal in column
-    bkg_noise = (rms(calref .* bkg_lvldiff)/rms(bkg_noise)) .* bkg_noise; %Scale to match RMS of bakground level reference
-    bkg_noise = bkg_noise'; %Pivot back to row vector
-elseif bkg == 0;
-    bkg_noise = lowpass(bkg_noise, lowpassf, samplerate); %LP filter of noise
-    bkg_noise = bkg_noise/max(abs(bkg_noise(:))); %Limit to 0 +/- 1 range by dividing signal by max(), else LP-filter introduce clipping                            
-    bkg_noise = (rms(calref .* bkg_lvldiff)/rms(bkg_noise)) .* bkg_noise; %Scale to match RMS of bakground level reference
+for i = 1:numel(GP_P_Onset)
+    xline([GP_P_Onset(i)*fs], 'Color', [0 0 1]);
 end
 
+varnames = {'Stim', 'GO_onset', 'PO_onset', 'GP_Gap_onset', 'GP_Pulse_onset'};
+stimtab = table(Rstimlist', GapOnset', PulseOnset', GP_G_Onset', GP_P_Onset', 'VariableNames', varnames);
 
-%%
-n = (rand(1, 5*fs) - 0.5) * 2;
-offset = 0;
-for i = 1:5;
-    
-    a = 1+offset;
-    b = fs+offset;
-    
-    r = round((b-a).*rand(1,1) + a);
-    n(r:r+length(gap)-1) = gap;
-    
-    offset = offset + 44100;
-    
-end
-
-plot(n);
-
-for i = 1:10
-stim{round((3-1).*rand(1,1) + 1)}
-end
-
-a={'a' 'b' 'c' 'd' 'e' 'f'}
-n=numel(a)
-ii=randperm(n)
-[~,previous_order]=sort(ii)
-b=a(ii)
