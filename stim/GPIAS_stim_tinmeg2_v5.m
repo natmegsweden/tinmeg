@@ -1,11 +1,15 @@
 
 %To do:
-%Round onset to ms integer
+
+%Add Pad to r ITI that round onset to ms integer, be vary of floating point
+%precision
 %ms in table
 %tone
 %wrap in loop
 %save plots for inspection
 %clean up/comment
+%save table/soundfile/fig under filename
+
 
 fs = 44100;
 dt = 1/fs;
@@ -62,7 +66,7 @@ rise = flip(fall); %rise window
 stimlist = repmat(stim,1,ntrials);
 Rstimlist = stimlist(randperm(numel(stimlist)));
 
-offset = 4.75*fs; %pad at start of condition (sec)
+offset = 4.750*fs; %pad at start of condition (sec)
 r = 1; %row number for stim/trigger list
 
 PulseOnset = zeros(1, ntrials*numel(stim));
@@ -72,7 +76,8 @@ GP_P_Onset = zeros(1, ntrials*numel(stim));
 
 for i = 1:numel(Rstimlist)
    
-    rITI = floor(round(0.5 .* rand(1,1), 3)*fs); %Rand ITI 0-500 ms, round to integer millisecond
+    rITI = round(0.5 .* rand(1,1), 3)*fs; %Rand ITI 0-500 ms, round to integer millisecond
+    rITI/fs*1000;
     
     if Rstimlist{i} == 'GO'
         disp(Rstimlist{i});
@@ -80,7 +85,7 @@ for i = 1:numel(Rstimlist)
         GO = [fall zeros(1, gapdur*fs) rise];
         bkg_noise(offset:offset+numel(GO)-1) = bkg_noise(offset:offset+numel(GO)-1) .* GO;
         
-        GapOnset(r) = (offset+rf_time*fs)/fs;
+        GapOnset(r) = (offset+floor(rf_time*fs))/fs; %floor to round rf_time to integer samples
         
     elseif Rstimlist{i} == 'PO'
         disp(Rstimlist{i})
