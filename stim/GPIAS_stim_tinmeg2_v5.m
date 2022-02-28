@@ -1,15 +1,12 @@
 
 %To do:
 
-%Add Pad to r ITI that round onset to ms integer, be vary of floating point
-%precision
 %ms in table
-%tone
-%wrap in loop
+
+%pspectrum predur
 %save plots for inspection
 %clean up/comment
 %save table/soundfile/fig under filename
-
 
 fs = 44100;
 dt = 1/fs;
@@ -19,18 +16,19 @@ tin = [0 3000 8000];        %"Tinnitus" conditions
 bkg = [0 3000 8000];        %Background carrier types
 stim = {'GO', 'PO', 'GP'};  %Stimulation types
 
-prepad = 5;
+prepad = 4;
 gapdur = 0.050;
 ISI = 0.240;
 pulsedur = 0.020;
-totdur = 45;
+totdur = 50;
 
 rf_time = 0.002; %rise/fall time
 
-minITI = 1.75; %Minimum ITI
+minITI = 1.8; %Minimum ITI
 
 bkg_lvl = 60;
 pulse_lvl = 90;
+tone_lvl = 45;
 
 cal_lvl = 90;      % reference maximum level
 
@@ -39,11 +37,16 @@ lowpassf = 18000;
 
 bkg_lvldiff = db2mag((cal_lvl - bkg_lvl)*-1);
 pulse_lvldiff = db2mag((cal_lvl - pulse_lvl)*-1);
+tone_lvldiff = db2mag((cal_lvl - tone_lvl)*-1);
 
 %Create 15 sec reference calibration noise. NB!! Same as in function: makenoise
 calref = (rand(1, 15*fs) - 0.5) * 2;
 calref = lowpass(calref, lowpassf, fs);     %LP filter of noise
 calref = calref/max(abs(calref(:)));  %Scale to max or LP may introduce clipping
+
+%Wrap in loop:
+j = 3;
+ii = 2;
 
 bkg_noise = (rand(1, totdur*fs) - 0.5) * 2;
 
@@ -66,7 +69,7 @@ rise = flip(fall); %rise window
 stimlist = repmat(stim,1,ntrials);
 Rstimlist = stimlist(randperm(numel(stimlist)));
 
-offset = 4.750*fs; %pad at start of condition (sec)
+offset = prepad*fs; %pad at start of condition (sec)
 r = 1; %row number for stim/trigger list
 
 PulseOnset = zeros(1, ntrials*numel(stim));
@@ -76,8 +79,7 @@ GP_P_Onset = zeros(1, ntrials*numel(stim));
 
 for i = 1:numel(Rstimlist)
    
-    rITI = round(0.5 .* rand(1,1), 3)*fs; %Rand ITI 0-500 ms, round to integer millisecond
-    rITI/fs*1000;
+    rITI = round(0.5 .* rand(1,1), 2)*fs; %Rand ITI 0-500 ms, round to integer millisecond
     
     if Rstimlist{i} == 'GO'
         disp(Rstimlist{i});
@@ -85,7 +87,7 @@ for i = 1:numel(Rstimlist)
         GO = [fall zeros(1, gapdur*fs) rise];
         bkg_noise(offset:offset+numel(GO)-1) = bkg_noise(offset:offset+numel(GO)-1) .* GO;
         
-        GapOnset(r) = (offset+floor(rf_time*fs))/fs; %floor to round rf_time to integer samples
+        GapOnset(r) = round((offset/fs)+rf_time,3); %floor to round rf_time to integer samples
         
     elseif Rstimlist{i} == 'PO'
         disp(Rstimlist{i})
@@ -98,7 +100,7 @@ for i = 1:numel(Rstimlist)
         
         bkg_noise(offset:offset+numel(PO)-1) = PO;
                 
-        PulseOnset(r) = offset/fs;
+        PulseOnset(r) = round(offset/fs, 3);
         
     elseif Rstimlist{i} == 'GP'
         disp(Rstimlist{i})
@@ -106,9 +108,9 @@ for i = 1:numel(Rstimlist)
         GO = [fall zeros(1, gapdur*fs) rise];
         bkg_noise(offset:offset+numel(GO)-1) = bkg_noise(offset:offset+numel(GO)-1) .* GO;
         
-        GP_G_Onset(r) = (offset+rf_time*fs)/fs;
+        GP_G_Onset(r) = round(((offset/fs)+rf_time), 3);
         
-        offset = offset + numel(GO)-(floor(rf_time*fs)) + ISI*fs; %Rise is part of ISI
+        offset = offset + numel(GO)-(floor(rf_time*fs)) + ISI*fs;  %Rise is part of ISI
         
         PO = (rand(1, pulsedur*fs) - 0.5) * 2;
         PO = lowpass(PO, lowpassf, fs); %LP filter of noise
@@ -116,18 +118,35 @@ for i = 1:numel(Rstimlist)
         PO = (rms(calref .* pulse_lvldiff)/rms(PO)) .* PO; %Scale to match RMS of bakground level reference
         
         bkg_noise(offset:offset+numel(PO)-1) = PO;
+      
         
-        GP_P_Onset(r) = offset/fs;
+        GP_P_Onset(r) = round(offset/fs,3);
         
-    end
+        %https://se.mathworks.com/matlabcentral/answers/440703
+        disp(['Samples padded: ' num2str(mod(-mod(offset,fs),fs))]);
+        offset = offset+mod(-mod(offset,fs),fs); %pad offset to divide into fs to avoid random rounding errors between trials
+        
+        end
     
+    disp(['Time (sec) of trigger: ' num2str(offset/fs)]);
     r = r+1;
 
 end
 
-
-
 stimnoise = bkg_noise(1:offset+minITI*fs);
+
+if tin(j) > 0
+    pt = sin(2*pi*tin(j)*(0+dt:dt:length(stimnoise)/fs)); %Pure tone of same length as stimnoise
+    pt = (rms(calref .* tone_lvldiff)/rms(pt)) .* pt; %Set level of pure tone
+    
+    stimnoise = stimnoise + pt;
+end
+
+if max(stimnoise) > 1
+    warning('AMPLITUDE CLIP IN FINAL SOUNDFILE')
+end
+
+pspectrum(stimnoise(1:prepad*fs))
 
 figure; hold on;
 plot(stimnoise);
