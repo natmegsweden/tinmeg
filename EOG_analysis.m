@@ -86,7 +86,7 @@ epochs_eog_resp = struct;
 %NB, min between 75-150ms (sample x-x)
 for i = 1:length(sub_date.ID)
     
-    subinpath = [inpath 'ID' sub_date.ID{i} '/'];
+    subinpath = ['../mat_data/timelockeds/ID' sub_date.ID{i} '/'];
     
     epochs_eog_resp.subjects{i,1} = sub_date.ID{i};
     
@@ -113,8 +113,11 @@ for i = 1:length(sub_date.ID)
 %For subjects
 end
 
-%save(['../mat_data/epochs_eog_resp.mat'], 'epochs_eog_resp');
+%save(['../mat_data/timelockeds/epochs_eog_resp.mat'], 'epochs_eog_resp');
 
+%Export EOG amps as CSV
+%EOG_resp_csv = struct2table(epochs_eog_resp);
+%writetable(EOG_resp_csv);
 
 %To rectify vector a:
 % a = [1 2 3 -4]

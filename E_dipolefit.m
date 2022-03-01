@@ -338,7 +338,7 @@ clear val side stim i ii iii idx condlab stim dist
 
 %load data
 load(['../mat_data/source_reconstruction/all_dip_pos.mat']);
-load(['../mat_data/source_reconstruction/all_virtch.mat']);
+load(['../mat_data/source_reconstruction/all_virtch_0-70.mat']);
 
 load standard_mri
 
@@ -583,6 +583,18 @@ x.XTickLabelRotation = 90;
 % saveas(gcf, ['../Analysis Output/virtchan_PO.svg']);
 % close;
 
+%% Quantify amp peak - NB - tempmean will move around
+
+virtchan_peak_L = struct();
+virtchan_peak_R = struct();
+
+for i = 1:numel(sub_date.ID)
+    
+    virtchan_peak_L.PO60_90(i) = min(tempmeanL(i,111:131));
+    virtchan_peak_R.PO60_90(i) = min(tempmeanR(i,111:131));
+    
+end
+
 %% Plot GAP only
 
 gapon = find(timevec == 0);
@@ -761,4 +773,18 @@ for ii = 1:4
         
 end
 
+%% Quantify amp peak - NB - tempmean will move around
+for i = 1:numel(sub_date.ID)
+    
+    virtchan_peak_L.GP60_i240(i) = min(tempmeanL(i,111:131));
+    virtchan_peak_R.GP60_i240(i) = min(tempmeanR(i,111:131));
+    
+end
+
+%Export minimum amps as CSV
+virtchanL_resp_csv = struct2table(virtchan_peak_L);
+virtchanR_resp_csv = struct2table(virtchan_peak_R);
+
+writetable(virtchanL_resp_csv);
+writetable(virtchanR_resp_csv);
 
