@@ -128,7 +128,7 @@ for j = 1:numel(tin)
                 %Log trigger time
                 HasGap(r) = 1;
                 HasPulse(r) = 0;
-                GapOnset(r) = 1000*((offset/fs)+rf_time);
+                GapOnset(r) = 1000*(round((offset/fs)+rf_time,3));
                 
                 %Pad offset samples to keep offset at integer ms - avoids cumulative rounding errors in block.
                 %https://se.mathworks.com/matlabcentral/answers/440703
@@ -243,14 +243,43 @@ for j = 1:numel(tin)
         %save figure
         %saveas(gcf, ['output/figures/' fname '.svg']);
         %saveas(gcf, ['output/figures/' fname '.png']);
-        %close;
+        close;
         
+        %Trigger logic
+        if tin(j) == 0
+            has_tin = zeros(1, numel(Rstimlist));
+        elseif tin(j) > 0
+            has_tin = ones(1, numel(Rstimlist));
+        end
+        
+        if tin(j) == 3000
+            tin_low = ones(1, numel(Rstimlist));
+        elseif tin(j) ~= 3000
+            tin_low = zeros(1, numel(Rstimlist));
+        end
+        
+        if bkg(ii) == 0
+            has_nbn = zeros(1, numel(Rstimlist));
+        elseif bkg(ii) > 0
+            has_nbn = ones(1, numel(Rstimlist));
+        end
+        
+        if bkg(ii) == 3000
+            nbn_low = zeros(1, numel(Rstimlist));
+        elseif bkg(ii) ~= 3000
+            nbn_low = zeros(1, numel(Rstimlist));
+        end
+        
+        %Decimal trigger padded with zeros in 1s and 2s column for HasGap & HasPulse
+        STI101_dec = bin2dec([num2str(has_tin(1)) num2str(tin_low(1)) num2str(has_nbn(1)) num2str(nbn_low(1)), '0', '0']);
+        STI101_dec = repmat(STI101_dec,1,numel(Rstimlist));
+
         %Write stim order and trigger time to table
-        varnames = {'Stim', 'HasGap', 'HasPulse', 'GO_onset', 'PO_onset'};
-        stimtab = table(Rstimlist', HasGap', HasPulse', GapOnset', PulseOnset', 'VariableNames', varnames);
+        varnames = {'Stim', 'STI101_dec', 'HasGap', 'HasPulse', 'GO_onset', 'PO_onset'};
+        stimtab = table(Rstimlist', STI101_dec', HasGap', HasPulse', GapOnset', PulseOnset', 'VariableNames', varnames);
 
         %Write table and soundfile
-        %writetable(stimtab, ['output/stimtable_ ' fname '.csv']);
+        %writetable(stimtab, ['output/' fname '.txt'], 'Delimiter', '\t');
         %audiowrite(['output/audio/' fname '.wav'], stimnoise, fs);
 
     end
