@@ -1,7 +1,6 @@
 
 %To do:
-%Equal loudness compensation
-%Create calibration files
+
 
 fs = 44100; %Samplerate
 dt = 1/fs;  %Seconds per sample
@@ -22,16 +21,9 @@ rf_time = 0.002;    %rise/fall time after/before gap, always symmetric (sec)
 
 minITI = 1.8;       %Minimum inter-trial-interval
 
-bkg_lvl = 60;       %Background noise level (dB)
 pulse_lvl = 90;     %Pulse level (dB)
-tone_lvl = 45;      %Pure tone level in "tin" blocks (dB)
 
 cal_lvl = 90;       %Reference maximum level, all other are levels relative this.
-
-%Calculate level differences relative calibration level
-bkg_lvldiff = db2mag((cal_lvl - bkg_lvl)*-1);
-pulse_lvldiff = db2mag((cal_lvl - pulse_lvl)*-1);
-tone_lvldiff = db2mag((cal_lvl - tone_lvl)*-1);
 
 %Create 15 sec reference calibration noise
 calref = (rand(1, 15*fs) - 0.5) * 2;
@@ -44,6 +36,33 @@ for j = 1:numel(tin)
     %Loop for all background conditions
     for ii = 1:numel(bkg)
         
+        bkg_lvl = 60;       %Background noise level (dB)
+        tone_lvl = 40;      %Pure tone level in "tin" blocks (dB)
+        
+        %Name block
+        temptin = num2str(tin(j));
+        temptin = temptin(1);
+        tempbkg = num2str(bkg(ii));
+        tempbkg = tempbkg(1);
+        fname = ['tin' temptin '_bkg' tempbkg];
+        
+        %Compensate for equal loudness (ISO 226:2003)
+        if bkg(ii) == 8000;
+            bkg_lvl = bkg_lvl + 15;
+        end
+        
+        if tin(j) == 8000;
+            tone_lvl = tone_lvl + 15;
+        end
+        
+        %Calculate level differences relative calibration level
+        bkg_lvldiff = db2mag((cal_lvl - bkg_lvl)*-1);
+        pulse_lvldiff = db2mag((cal_lvl - pulse_lvl)*-1);
+        tone_lvldiff = db2mag((cal_lvl - tone_lvl)*-1);
+        
+        %To create calibration file at second level
+        cal80diff = db2mag((cal_lvl - bkg_lvl+20)*-1);
+    
         %Specify NBN filter parameters
         octfilter = octaveFilter(bkg(ii), '1/3 octave','SampleRate', fs, 'FilterOrder', 8);
 
@@ -57,10 +76,24 @@ for j = 1:numel(tin)
             bkg_noise = bkg_noise'; %Pivot back to row vector
         elseif bkg(ii) == 0;
             bkg_noise = lowpass(bkg_noise, lowpassf, fs); %LP filter of noise
-            bkg_noise = bkg_noise/max(abs(bkg_noise(:))); %Limit to 0 +/- 1 range by dividing signal by max(), else LP-filter introduce clipping                            
+            bkg_noise = bkg_noise/max(abs(bkg_noise(:))); %Limit to 0 +/- 1 range by dividing signal by max(), else LP-filter introduce clipping
+            
+            bkg_noise80 = (rms(calref .* cal80diff)/rms(bkg_noise)) .* bkg_noise; %For calibration purposes
+            
             bkg_noise = (rms(calref .* bkg_lvldiff)/rms(bkg_noise)) .* bkg_noise; %Scale to match RMS of bakground level reference
-        end
 
+        end
+        
+        
+        %Save first 15 sec of bkg_noise from no-tin-blocks for calibration
+        if tin(j) == 0 && bkg(ii) == 0
+            audiowrite([fname '_cal60.wav'], bkg_noise(1:15*fs), fs);
+            audiowrite([fname '_cal80.wav'], bkg_noise80(1:15*fs), fs);
+            clear bkg_noise80;
+        elseif tin(j) == 0 && bkg(ii) > 0
+            audiowrite([fname '_cal60.wav'], bkg_noise(1:15*fs), fs);
+        end
+        
         %Create rise/fall windows
         rffreq = 1/(rf_time * 2);                     %Frequency that has period of 2 rf_time
         t = (0+dt:dt:rf_time);                        %vector for rise/fall
@@ -77,13 +110,7 @@ for j = 1:numel(tin)
         %Create an empty vector for trigger times
         PulseOnset = zeros(1, ntrials*numel(stim));
         GapOnset = zeros(1, ntrials*numel(stim));
-        
-        %Name block
-        temptin = num2str(tin(j));
-        temptin = temptin(1);
-        tempbkg = num2str(bkg(ii));
-        tempbkg = tempbkg(1);
-        fname = ['tin' temptin '_bkg' tempbkg];
+       
         
         %For each trial
         for i = 1:numel(Rstimlist)
@@ -161,8 +188,8 @@ for j = 1:numel(tin)
 
         end
         
-        %Crop full block to size
-        stimnoise = bkg_noise(1:offset+minITI*fs);
+        %Crop full block to size, prepad duration also at end
+        stimnoise = bkg_noise(1:offset+prepad*fs);
         
         %If "tinnitus" block, create and add pure tone at tin frequency
         if tin(j) > 0
@@ -174,7 +201,7 @@ for j = 1:numel(tin)
         
         %Warning if any sample clips
         if max(stimnoise) > 1
-            warning('AMPLITUDE CLIP IN FINAL SOUNDFILE')
+            warning(['AMPLITUDE CLIP IN FINAL SOUNDFILE: ' fname])
         end
         
         %Create figure
@@ -201,7 +228,7 @@ for j = 1:numel(tin)
 
         subplot(3,1,2);
         pspectrum(stimnoise(1:prepad*fs), fs)
-        ylim([-150 -50]);
+        ylim([-150 inf]);
         set(gca, 'XScale', 'log');
         xlim([0.1 20]);
         set(gca, 'XTickLabel', [100 1000 10000]);
@@ -214,17 +241,17 @@ for j = 1:numel(tin)
         xlabel('Time (sec)');
         
         %save figure
-        saveas(gcf, ['output/figures/' fname '.svg']);
-        saveas(gcf, ['output/figures/' fname '.png']);
-        close;
+        %saveas(gcf, ['output/figures/' fname '.svg']);
+        %saveas(gcf, ['output/figures/' fname '.png']);
+        %close;
         
         %Write stim order and trigger time to table
         varnames = {'Stim', 'HasGap', 'HasPulse', 'GO_onset', 'PO_onset'};
         stimtab = table(Rstimlist', HasGap', HasPulse', GapOnset', PulseOnset', 'VariableNames', varnames);
 
         %Write table and soundfile
-        writetable(stimtab, ['output/stimtable_ ' fname '.csv']);
-        audiowrite(['output/audio/' fname '.wav'], stimnoise, fs);
+        %writetable(stimtab, ['output/stimtable_ ' fname '.csv']);
+        %audiowrite(['output/audio/' fname '.wav'], stimnoise, fs);
 
     end
 end
