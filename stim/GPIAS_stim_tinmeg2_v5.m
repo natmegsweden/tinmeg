@@ -1,7 +1,6 @@
 
 %To do:
 
-
 fs = 44100; %Samplerate
 dt = 1/fs;  %Seconds per sample
 
@@ -37,7 +36,7 @@ for j = 1:numel(tin)
     for ii = 1:numel(bkg)
         
         bkg_lvl = 60;       %Background noise level (dB)
-        tone_lvl = 40;      %Pure tone level in "tin" blocks (dB)
+        tone_lvl = 45;      %Pure tone level in "tin" blocks (dB)
         
         %Name block
         temptin = num2str(tin(j));
@@ -280,7 +279,7 @@ for j = 1:numel(tin)
 
         %Write table and soundfile
         %writetable(stimtab, ['output/' fname '.txt'], 'Delimiter', '\t');
-        %audiowrite(['output/audio/' fname '.wav'], stimnoise, fs);
+        audiowrite(['output/audio/' fname '.wav'], stimnoise, fs);
 
     end
 end
