@@ -194,11 +194,7 @@ for j = 1:numel(tin)
                 offsetdiff = offset;
                 offset = offset + numel(GO)-(floor(rf_time*fs)) + ISI*fs;  %Update offset - risetime is part of ISI
 
-                if i == 1;
-                    offsetdiff = offset;
-                elseif i > 1;
-                    offsetdiff = offset-offsetdiff;
-                end                
+                offsetdiff = offset-offsetdiff;           
                 
                 %Create a pulse
                 PO = (rand(1, pulsedur*fs) - 0.5) * 2;
