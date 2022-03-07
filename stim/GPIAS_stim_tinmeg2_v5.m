@@ -84,7 +84,6 @@ for j = 1:numel(tin)
 
         end
         
-        
         %Save first 15 sec of bkg_noise from no-tin-blocks for calibration
         if tin(j) == 0 && bkg(ii) == 0
             audiowrite(['output/audio/' fname '_cal60.wav'], bkg_noise(1:15*fs), fs);
@@ -142,7 +141,7 @@ for j = 1:numel(tin)
                 %Pad offset samples to keep offset at integer ms - avoids cumulative rounding errors in block.
                 %https://se.mathworks.com/matlabcentral/answers/440703
                 disp(['Samples padded: ' num2str(mod(-mod(offset,fs),fs))]);
-                offset = offset+mod(-mod(offset,fs),fs);
+                %offset = offset+mod(-mod(offset,fs),fs);
             
             %if trial is pulse only, inject PO trial
             elseif Rstimlist{i} == 'PO'
@@ -162,7 +161,7 @@ for j = 1:numel(tin)
                     offsetdiff = offset;
                 elseif i > 1;
                     offsetdiff = offset-offsetdiff;
-                end                
+                end
                 
                 %Log trigger time
                 GOgap(r) = 0;
@@ -194,7 +193,7 @@ for j = 1:numel(tin)
                 offsetdiff = offset;
                 offset = offset + numel(GO)-(floor(rf_time*fs)) + ISI*fs;  %Update offset - risetime is part of ISI
 
-                offsetdiff = offset-offsetdiff;           
+                offsetdiff = offset-offsetdiff;
                 
                 %Create a pulse
                 PO = (rand(1, pulsedur*fs) - 0.5) * 2;
@@ -209,8 +208,8 @@ for j = 1:numel(tin)
                 %Pad offset samples to keep offset at integer ms - avoids cumulative rounding errors in block.
                 %https://se.mathworks.com/matlabcentral/answers/440703
                 disp(['Samples padded: ' num2str(mod(-mod(offset,fs),fs))]);
-                offset = offset+mod(-mod(offset,fs),fs);
-
+                %offset = offset+mod(-mod(offset,fs),fs);
+                
                 end
 
             disp(['Time (sec) of trigger: ' num2str(offset/fs)]);
@@ -235,7 +234,7 @@ for j = 1:numel(tin)
         end
         
         %Create figure
-        figure('units', 'pixels', 'Position', [200 200 1600 600]); hold on;
+        figure('units', 'pixels', 'Position', [100 100 800 400]); hold on;
         subplot(3,1,1);
         plot(stimnoise);
         title(['Condition: ' fname], 'interpreter', 'none');
@@ -248,12 +247,25 @@ for j = 1:numel(tin)
         xlabel('Duration (sec)');
         ylabel('Amplitude');
 
-        for i = 1:numel(GapOnset)
-            xline([GapOnset(i)/1000*fs], 'Color', [0 0 0], 'Alpha', 0.3);
-        end
-
-        for i = 1:numel(PulseOnset)
-            xline([PulseOnset(i)/1000*fs], 'Color', [0 0 0], 'Alpha', 0.3);
+        
+        tempmatrix = [GOgap', POpulse', GPgap', GPpulse'];
+        xlineidx = 0;
+        for i = 1:15
+            
+            trialid = bin2dec(num2str(tempmatrix(i,:)));
+            
+            if trialid == 8;
+                xlineidx = xlineidx + GapOnset(i);
+                xline(xlineidx/1000*fs, 'Color', [0 0 0], 'Alpha', 0.3);
+            elseif trialid == 4;
+                xlineidx = xlineidx + PulseOnset(i);
+                xline(xlineidx/1000*fs, 'Color', [0 0 0], 'Alpha', 0.3);
+            elseif trialid == 3;
+                xlineidx = xlineidx + GapOnset(i);
+                xline(xlineidx/1000*fs, 'Color', [0 0 0], 'Alpha', 0.3);
+                xlineidx = xlineidx + PulseOnset(i);
+                xline(xlineidx/1000*fs, 'Color', [0 0 0], 'Alpha', 0.3);
+            end  
         end
 
         subplot(3,1,2);
