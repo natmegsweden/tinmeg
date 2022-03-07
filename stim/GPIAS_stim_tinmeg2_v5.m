@@ -1,5 +1,6 @@
 
 %To do:
+%Fix triggers in amp-figure
 
 fs = 44100; %Samplerate
 dt = 1/fs;  %Seconds per sample
@@ -120,16 +121,23 @@ for j = 1:numel(tin)
             %if trial is gap only, inject GO trial
             if Rstimlist{i} == 'GO'
                 disp(Rstimlist{i});
+                offsetdiff = offset;
                 offset = offset + minITI*fs + rITI; %update offset
                 GO = [fall zeros(1, gapdur*fs) rise];
                 bkg_noise(offset:offset+numel(GO)-1) = bkg_noise(offset:offset+numel(GO)-1) .* GO; %inject at offset
-                
+
+                if i == 1;
+                    offsetdiff = offset;
+                elseif i > 1;
+                    offsetdiff = offset-offsetdiff;
+                end
+
                 %Log trigger time
                 GOgap(r) = 1;
                 POpulse(r) = 0;
                 GPgap(r) = 0;
                 GPpulse(r) = 0;
-                GapOnset(r) = 1000*(round((offset/fs)+rf_time,3));
+                GapOnset(r) = 1000*(round((offsetdiff/fs)+rf_time,3));
                 
                 %Pad offset samples to keep offset at integer ms - avoids cumulative rounding errors in block.
                 %https://se.mathworks.com/matlabcentral/answers/440703
@@ -139,6 +147,7 @@ for j = 1:numel(tin)
             %if trial is pulse only, inject PO trial
             elseif Rstimlist{i} == 'PO'
                 disp(Rstimlist{i})
+                offsetdiff = offset;
                 offset = offset + minITI*fs + rITI; %update offset
                 
                 %Create a pulse
@@ -149,28 +158,48 @@ for j = 1:numel(tin)
 
                 bkg_noise(offset:offset+numel(PO)-1) = PO; %Inject at offset
 
+                if i == 1;
+                    offsetdiff = offset;
+                elseif i > 1;
+                    offsetdiff = offset-offsetdiff;
+                end                
+                
                 %Log trigger time
                 GOgap(r) = 0;
                 POpulse(r) = 1;
                 GPgap(r) = 0;
                 GPpulse(r) = 0;
-                PulseOnset(r) = 1000*(round(offset/fs,3));
+                PulseOnset(r) = 1000*(round(offsetdiff/fs,3));
                 
             %if trial is gap+pulse only, inject GP trial
             elseif Rstimlist{i} == 'GP'
                 disp(Rstimlist{i})
+                offsetdiff = offset;
                 offset = offset + minITI*fs + rITI; %update offset
                 GO = [fall zeros(1, gapdur*fs) rise]; %Create gap
                 bkg_noise(offset:offset+numel(GO)-1) = bkg_noise(offset:offset+numel(GO)-1) .* GO; %Inject gap at offset
         
+                if i == 1;
+                    offsetdiff = offset;
+                elseif i > 1;
+                    offsetdiff = offset-offsetdiff;
+                end                
+                
                 GOgap(r) = 0;
                 POpulse(r) = 0;
                 GPgap(r) = 1;
                 GPpulse(r) = 1;
-                GapOnset(r) = 1000*(round((offset/fs)+rf_time,3)); %Log trigger time
+                GapOnset(r) = 1000*(round((offsetdiff/fs)+rf_time,3)); %Log trigger time
 
+                offsetdiff = offset;
                 offset = offset + numel(GO)-(floor(rf_time*fs)) + ISI*fs;  %Update offset - risetime is part of ISI
 
+                if i == 1;
+                    offsetdiff = offset;
+                elseif i > 1;
+                    offsetdiff = offset-offsetdiff;
+                end                
+                
                 %Create a pulse
                 PO = (rand(1, pulsedur*fs) - 0.5) * 2;
                 PO = lowpass(PO, lowpassf, fs); %LP filter of noise
@@ -179,7 +208,7 @@ for j = 1:numel(tin)
 
                 bkg_noise(offset:offset+numel(PO)-1) = PO; %Inject pulse at offset
 
-                PulseOnset(r) = 1000*(round(offset/fs,3)); %Log trigger time
+                PulseOnset(r) = 1000*(round(offsetdiff/fs,3)); %Log trigger time
                 
                 %Pad offset samples to keep offset at integer ms - avoids cumulative rounding errors in block.
                 %https://se.mathworks.com/matlabcentral/answers/440703
