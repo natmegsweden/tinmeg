@@ -86,11 +86,11 @@ for j = 1:numel(tin)
         
         %Save first 15 sec of bkg_noise from no-tin-blocks for calibration
         if tin(j) == 0 && bkg(ii) == 0
-            audiowrite([fname '_cal60.wav'], bkg_noise(1:15*fs), fs);
-            audiowrite([fname '_cal80.wav'], bkg_noise80(1:15*fs), fs);
+            audiowrite(['output/audio/' fname '_cal60.wav'], bkg_noise(1:15*fs), fs);
+            audiowrite(['output/audio/' fname '_cal80.wav'], bkg_noise80(1:15*fs), fs);
             clear bkg_noise80;
         elseif tin(j) == 0 && bkg(ii) > 0
-            audiowrite([fname '_cal60.wav'], bkg_noise(1:15*fs), fs);
+            audiowrite(['output/audio/' fname '_cal60.wav'], bkg_noise(1:15*fs), fs);
         end
         
         %Create rise/fall windows
@@ -125,8 +125,10 @@ for j = 1:numel(tin)
                 bkg_noise(offset:offset+numel(GO)-1) = bkg_noise(offset:offset+numel(GO)-1) .* GO; %inject at offset
                 
                 %Log trigger time
-                HasGap(r) = 1;
-                HasPulse(r) = 0;
+                GOgap(r) = 1;
+                POpulse(r) = 0;
+                GPgap(r) = 0;
+                GPpulse(r) = 0;
                 GapOnset(r) = 1000*(round((offset/fs)+rf_time,3));
                 
                 %Pad offset samples to keep offset at integer ms - avoids cumulative rounding errors in block.
@@ -148,8 +150,10 @@ for j = 1:numel(tin)
                 bkg_noise(offset:offset+numel(PO)-1) = PO; %Inject at offset
 
                 %Log trigger time
-                HasGap(r) = 0;
-                HasPulse(r) = 1;
+                GOgap(r) = 0;
+                POpulse(r) = 1;
+                GPgap(r) = 0;
+                GPpulse(r) = 0;
                 PulseOnset(r) = 1000*(round(offset/fs,3));
                 
             %if trial is gap+pulse only, inject GP trial
@@ -158,9 +162,11 @@ for j = 1:numel(tin)
                 offset = offset + minITI*fs + rITI; %update offset
                 GO = [fall zeros(1, gapdur*fs) rise]; %Create gap
                 bkg_noise(offset:offset+numel(GO)-1) = bkg_noise(offset:offset+numel(GO)-1) .* GO; %Inject gap at offset
-
-                HasGap(r) = 1;
-                HasPulse(r) = 1;
+        
+                GOgap(r) = 0;
+                POpulse(r) = 0;
+                GPgap(r) = 1;
+                GPpulse(r) = 1;
                 GapOnset(r) = 1000*(round((offset/fs)+rf_time,3)); %Log trigger time
 
                 offset = offset + numel(GO)-(floor(rf_time*fs)) + ISI*fs;  %Update offset - risetime is part of ISI
@@ -240,11 +246,11 @@ for j = 1:numel(tin)
         xlabel('Time (sec)');
         
         %save figure
-        %saveas(gcf, ['output/figures/' fname '.svg']);
-        %saveas(gcf, ['output/figures/' fname '.png']);
+        saveas(gcf, ['output/figures/' fname '.svg']);
+        saveas(gcf, ['output/figures/' fname '.png']);
         close;
         
-        %Trigger logic
+        %Trigger logic        
         if tin(j) == 0
             has_tin = zeros(1, numel(Rstimlist));
         elseif tin(j) > 0
@@ -264,21 +270,21 @@ for j = 1:numel(tin)
         end
         
         if bkg(ii) == 3000
-            nbn_low = zeros(1, numel(Rstimlist));
+            nbn_low = ones(1, numel(Rstimlist));
         elseif bkg(ii) ~= 3000
             nbn_low = zeros(1, numel(Rstimlist));
         end
         
-        %Decimal trigger padded with zeros in 1s and 2s column for HasGap & HasPulse
-        STI101_dec = bin2dec([num2str(has_tin(1)) num2str(tin_low(1)) num2str(has_nbn(1)) num2str(nbn_low(1)), '0', '0']);
+        %Decimal trigger padded with zeros in 1s, 2s, 4s and 8s column for 'GOgap' 'POpulse', 'GPgap', 'GPpulse'
+        STI101_dec = bin2dec([num2str(has_tin(1)) num2str(tin_low(1)) num2str(has_nbn(1)) num2str(nbn_low(1)), '0', '0', '0', '0']);
         STI101_dec = repmat(STI101_dec,1,numel(Rstimlist));
 
         %Write stim order and trigger time to table
-        varnames = {'Stim', 'STI101_dec', 'HasGap', 'HasPulse', 'GO_onset', 'PO_onset'};
-        stimtab = table(Rstimlist', STI101_dec', HasGap', HasPulse', GapOnset', PulseOnset', 'VariableNames', varnames);
+        varnames = {'Stim', 'STI101_dec', 'GOgap' 'POpulse', 'GPgap', 'GPpulse', 'GO_onset', 'PO_onset'};
+        stimtab = table(Rstimlist', STI101_dec', GOgap', POpulse', GPgap', GPpulse', GapOnset', PulseOnset', 'VariableNames', varnames);
 
         %Write table and soundfile
-        %writetable(stimtab, ['output/' fname '.txt'], 'Delimiter', '\t');
+        writetable(stimtab, ['output/triglists/' fname '.txt'], 'Delimiter', '\t', 'WriteVariableNames', 0);
         audiowrite(['output/audio/' fname '.wav'], stimnoise, fs);
 
     end
