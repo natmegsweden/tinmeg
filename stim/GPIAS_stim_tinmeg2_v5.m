@@ -1,6 +1,5 @@
 
 %To do:
-%Fix triggers in amp-figure
 
 fs = 44100; %Samplerate
 dt = 1/fs;  %Seconds per sample
@@ -19,7 +18,7 @@ pulsedur = 0.020;   %Pulse duration (sec)
 totdur = 50;        %Total duration of block, provide as starting point, trimmed later to actual duration (sec)
 rf_time = 0.002;    %rise/fall time after/before gap, always symmetric (sec)
 
-minITI = 1.8;       %Minimum inter-trial-interval
+minITI = 1.6;       %Minimum inter-trial-interval
 
 pulse_lvl = 90;     %Pulse level (dB)
 
@@ -116,15 +115,26 @@ for j = 1:numel(tin)
             
             %Create random duration (0-500ms) to add to minimum ITI
             rITI = round(0.5 .* rand(1,1), 2)*fs; %Round to even 10 ms
+            
+            %Pad offset samples to keep offset at integer ms - avoids cumulative rounding errors in block.
+            %https://se.mathworks.com/matlabcentral/answers/440703
+            roundpad = mod(-mod(offset,fs),fs);
+            
+            offsetdiff = offset;
 
             %if trial is gap only, inject GO trial
             if Rstimlist{i} == 'GO'
                 disp(Rstimlist{i});
-                offsetdiff = offset;
-                offset = offset + minITI*fs + rITI; %update offset
+                %offsetdiff = offset;
+                offset = offset + minITI*fs + rITI + roundpad; %update offset
                 GO = [fall zeros(1, gapdur*fs) rise];
                 bkg_noise(offset:offset+numel(GO)-1) = bkg_noise(offset:offset+numel(GO)-1) .* GO; %inject at offset
-
+                
+                %Pad offset samples to keep offset at integer ms - avoids cumulative rounding errors in block.
+                %https://se.mathworks.com/matlabcentral/answers/440703
+                %disp(['Samples padded: ' num2str(mod(-mod(offset,fs),fs))]);
+                %offset = offset+mod(-mod(offset,fs),fs);
+                
                 if i == 1;
                     offsetdiff = offset;
                 elseif i > 1;
@@ -136,18 +146,13 @@ for j = 1:numel(tin)
                 POpulse(r) = 0;
                 GPgap(r) = 0;
                 GPpulse(r) = 0;
-                GapOnset(r) = 1000*(round((offsetdiff/fs)+rf_time,3));
+                GapOnset(r) = 1000*(round((offsetdiff/fs),3));
                 
-                %Pad offset samples to keep offset at integer ms - avoids cumulative rounding errors in block.
-                %https://se.mathworks.com/matlabcentral/answers/440703
-                disp(['Samples padded: ' num2str(mod(-mod(offset,fs),fs))]);
-                %offset = offset+mod(-mod(offset,fs),fs);
-            
             %if trial is pulse only, inject PO trial
             elseif Rstimlist{i} == 'PO'
                 disp(Rstimlist{i})
-                offsetdiff = offset;
-                offset = offset + minITI*fs + rITI; %update offset
+                %offsetdiff = offset;
+                offset = offset + minITI*fs + rITI + roundpad; %update offset
                 
                 %Create a pulse
                 PO = (rand(1, pulsedur*fs) - 0.5) * 2;
@@ -173,11 +178,11 @@ for j = 1:numel(tin)
             %if trial is gap+pulse only, inject GP trial
             elseif Rstimlist{i} == 'GP'
                 disp(Rstimlist{i})
-                offsetdiff = offset;
-                offset = offset + minITI*fs + rITI; %update offset
+                %offsetdiff = offset;
+                offset = offset + minITI*fs + rITI + roundpad; %update offset
                 GO = [fall zeros(1, gapdur*fs) rise]; %Create gap
                 bkg_noise(offset:offset+numel(GO)-1) = bkg_noise(offset:offset+numel(GO)-1) .* GO; %Inject gap at offset
-        
+                
                 if i == 1;
                     offsetdiff = offset;
                 elseif i > 1;
@@ -188,11 +193,11 @@ for j = 1:numel(tin)
                 POpulse(r) = 0;
                 GPgap(r) = 1;
                 GPpulse(r) = 1;
-                GapOnset(r) = 1000*(round((offsetdiff/fs)+rf_time,3)); %Log trigger time
+                GapOnset(r) = 1000*round((offsetdiff/fs),3); %Log trigger time
 
                 offsetdiff = offset;
-                offset = offset + numel(GO)-(floor(rf_time*fs)) + ISI*fs;  %Update offset - risetime is part of ISI
-
+                offset = offset + numel(GO) + ISI*fs;  %Update offset - risetime is part of ISI
+                
                 offsetdiff = offset-offsetdiff;
                 
                 %Create a pulse
@@ -203,16 +208,10 @@ for j = 1:numel(tin)
 
                 bkg_noise(offset:offset+numel(PO)-1) = PO; %Inject pulse at offset
 
-                PulseOnset(r) = 1000*(round(offsetdiff/fs,3)); %Log trigger time
+                PulseOnset(r) = 1000*round(offsetdiff/fs,3); %Log trigger time
                 
-                %Pad offset samples to keep offset at integer ms - avoids cumulative rounding errors in block.
-                %https://se.mathworks.com/matlabcentral/answers/440703
-                disp(['Samples padded: ' num2str(mod(-mod(offset,fs),fs))]);
-                %offset = offset+mod(-mod(offset,fs),fs);
-                
-                end
-
-            disp(['Time (sec) of trigger: ' num2str(offset/fs)]);
+            end
+            
             r = r+1;
 
         end
