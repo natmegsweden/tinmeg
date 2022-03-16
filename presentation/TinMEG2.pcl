@@ -74,6 +74,8 @@ string TrialName = ""; #init text to screen
 int numBlocks = 2;	#n of blocks (containing num_reps of all conditions)
 int idx = 0;			#initialize index for conditions
 
+double current_time = 0;
+
 #Will need block loop from here
 
 loop int currBlock = 1 until currBlock > numBlocks begin
@@ -143,13 +145,18 @@ loop int currBlock = 1 until currBlock > numBlocks begin
 			#Send trigger to AudioFile to play sound
 			audiofile.send_code(128,10);
 			
+			double starting_time = clock.time_double();
+			
 			#Send MEG trigger for file start
 			MEGport.send_code(MegTTL,20); 
-			#MEGport2.send_code(MegTTL2,20);
+			current_time = clock.time_double()-starting_time;
+			term.print_line(current_time);
 			
+			#MEGport2.send_code(MegTTL2,20);
+
 			#Trigger-loop here
 			loop int i = 1 until i > 15 begin
-			
+				
 				int GOgap = int(triglist[i][3]);			# 1 if conditions contains gap-only gap
 				int POpulse = int(triglist[i][4]);		# 1 if conditions contains pulse-only pulse
 				int GPgap = int(triglist[i][5]);			# 1 if conditions contains gap+pulse gap
@@ -161,25 +168,33 @@ loop int currBlock = 1 until currBlock > numBlocks begin
 				if GOgap == 1 then
 					wait_interval(GapWait);
 					MEGport.send_code(MegTTL+8,20); 
+					current_time = clock.time_double()-starting_time;
 					#MEGport2.send_code(MegTTL2,20);
+					term.print_line(current_time);
 				end;
 				
 				if POpulse == 1 then
 					wait_interval(PulseWait);
 					MEGport.send_code(MegTTL+4,20); 
+					current_time = clock.time_double()-starting_time;
 					#MEGport2.send_code(MegTTL2,20);
+					term.print_line(current_time);
 				end;
 				
 				if GPgap == 1 then
 					wait_interval(GapWait);
 					MEGport.send_code(MegTTL+2,20); 
+					current_time = clock.time_double()-starting_time;
 					#MEGport2.send_code(MegTTL2,20);
+					term.print_line(current_time);
 				end;
 				
 				if GPpulse == 1 then
 					wait_interval(PulseWait);
 					MEGport.send_code(MegTTL+1,20); 
+					current_time = clock.time_double()-starting_time;
 					#MEGport2.send_code(MegTTL2,20);
+					term.print_line(current_time);
 				end;
 				
 				i = i+1
