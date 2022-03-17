@@ -34,19 +34,32 @@ conditions = fieldnames(triggers);
 %read in fif
 infile = '/archive/20061_tinnitus/MEG/NatMEG_0905/220308/tinmeg2_trigtest.fif'
 
-for i = 1:(numel(audiofiles))
+for i = 3%1:(numel(audiofiles))
 
     audf = audioread(['../../audio/' audiofiles{i}]);
 
     %Convert to "mono"
     audf = audf(:,1);
-
+    
+%     event = ft_read_event(infile, 'detectflank', 'up');
+%     
+%     cfg =[];
+%     cfg.event = event;
+%     cfg.dataset = infile;
+%     cfg.trialfun = 'ft_trialfun_general';
+%     cfg.trialdef.eventtype = 'STI101';
+%     cfg.trialdef.prestim = 2.5;
+%     cfg.trialdef.poststim = 2.5;
+%     cfg.trialdef.eventvalue = triggers.(conditions{i});
+%     
+%     dat = ft_read_data(cfg.dataset);
+    
     %from STI016fix to read triggers
-    cfg                     = [];   
+    cfg                     = [];
     cfg.dataset             = infile;
     cfg.trialdef.prestim    = 1;
     cfg.trialdef.poststim   = 1;
-    cfg.trialdef.eventvalue = triggers.(conditions{i});;
+    cfg.trialdef.eventvalue = triggers.(conditions{i});
     %cfg.trialfun            = 'ft_trialfun_neuromagSTI016fix';
     %cfg                     = ft_definetrial(cfg);
     %data                    = ft_preprocessing(cfg);
@@ -61,7 +74,11 @@ for i = 1:(numel(audiofiles))
     % Read trigger channels
     chanindx = find(not(cellfun('isempty', strfind(hdr.label,'STI0'))));
 
-    event = ft_read_event(cfg.dataset, 'chanindx', chanindx);
+    %event = ft_read_event(cfg.dataset, 'chanindx', chanindx, 'detectflank', 'up');
+    
+    event = ft_read_event(cfg.dataset, 'detectflank', 'up');
+    
+    event_cell = struct2cell(event);
 
     % Manually make combined trigger channel
     dat = ft_read_data(cfg.dataset , 'chanindx', chanindx); % Read the trigger data
@@ -116,7 +133,7 @@ for i = 1:(numel(audiofiles))
             end
         end
     end
-    
+
     %Take samplepoints identified for triggers in trial function
     trigsamples = [trl(:,1) trl(:,2)];
 
@@ -125,12 +142,12 @@ for i = 1:(numel(audiofiles))
 
     %convert samples from 1k to 44.1kHz fs and round to integer
     trigsamples = round(trigsamples*(44100/hdr.Fs),0);
-    
+
     %Convert to milliseconds and write the first 21 triggers to cell
     for ii = 1:21
-    
+
     fiftrig_cum(ii,i) = round(trigsamples(ii,1)/44.100, 0);
-    
+
     end
     
 end
