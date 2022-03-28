@@ -5,12 +5,89 @@ infile = '/archive/20061_tinnitus/MEG/NatMEG_0905/220328/bench_audiomisc.fif';
 
 misc01 = ft_read_data(infile, 'chanindx', 1);
 
+STI101 = ft_read_data(infile, 'chanindx', 18);
+
 % read the header information and the events from the data
-hdr = ft_read_header(infile);
-event = ft_read_event(infile, 'detectflank', 'up');
+%hdr = ft_read_header(infile);
+%event = ft_read_event(infile, 'detectflank', 'up', 'checkmaxilter', 'no');
 
-plot(misc01);
+fnames = fieldnames(triggers);
+fnames = fnames(2:end);
+filestarts = [48 32 192 240 224 128 176 160];
 
+ylims = [-0.75 0.75];
+
+for i = 1:numel(filestarts)
+    
+    trigs = find(STI101==filestarts(i));
+    duration = 45*5000; %45 seconds, Fs = 5000
+
+    temp_sti = STI101(trigs(1):trigs(1)+duration);
+    temp_sti_idx = temp_sti > 1;
+    temp_sti(temp_sti_idx) = 0.5;
+
+    figure('Position',[100 300 2200 600]); hold on;
+    subplot(1,6,[1:4]); hold on;
+    plot(misc01(trigs(1):trigs(1)+duration));
+    plot(temp_sti);
+    ylim(ylims);
+    xlim([0 numel(temp_sti)]);
+    title(['Full trial - ' fnames{i}], 'Interpreter', 'none');
+
+    xticks(1:5000:numel(temp_sti));
+    xticklabels(1:(numel(temp_sti)/5000));
+    
+    zoomX = find(temp_sti_idx(200:end), 1, 'first');
+    
+    subplot(1,6,5); hold on;
+    plot(misc01(trigs(1):trigs(1)+duration));
+    plot(temp_sti);
+    xlim([zoomX-2000 zoomX+2000]);
+    ylim([ylims]);
+    xticks(1:5000:numel(temp_sti));
+    xticklabels(1:(numel(temp_sti)/5000));
+    title('First trigger');
+    
+    zoomX = find(temp_sti_idx, 1, 'last');
+    
+    subplot(1,6,6); hold on;
+    plot(misc01(trigs(1):trigs(1)+duration));
+    plot(temp_sti);
+    xlim([zoomX-2000 zoomX+2000]);
+    ylim([ylims]);
+    xticks(1:5000:numel(temp_sti));
+    xticklabels(1:(numel(temp_sti)/5000));
+    title('Last trigger');
+    
+    saveas(gcf, ['../Analysis Output/' fnames{i} '.svg']);
+    close;
+    
+end
+
+%%
+triggers = struct();
+
+triggers.tin0_bkg0 = [0 1 2 4 8];
+triggers.tin0_bkg3 = triggers.tin0_bkg0 + 48;
+triggers.tin0_bkg8 = triggers.tin0_bkg0 + 32;
+
+triggers.tin3_bkg0 = triggers.tin0_bkg0 + 192;
+triggers.tin3_bkg3 = triggers.tin0_bkg0 + 240;
+triggers.tin3_bkg8 = triggers.tin0_bkg0 + 224;
+
+triggers.tin8_bkg0 = triggers.tin0_bkg0 + 128;
+triggers.tin8_bkg3 = triggers.tin0_bkg0 + 176;
+triggers.tin8_bkg8 = triggers.tin0_bkg0 + 160;
+
+audiofiles = {'tin0_bkg0.wav',
+              'tin0_bkg3.wav',
+              'tin0_bkg8.wav',
+              'tin3_bkg0.wav',
+              'tin3_bkg3.wav',
+              'tin3_bkg8.wav',
+              'tin8_bkg0.wav',
+              'tin8_bkg3.wav',
+              'tin8_bkg8.wav'}
 
 %% Check Audiofile on/off trigger
 
