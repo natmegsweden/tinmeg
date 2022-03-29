@@ -15,10 +15,10 @@ prepad = 4;         %Duration of background before first trial in each block (se
 gapdur = 0.050;     %Gap duration (sec)
 ISI = 0.240;        %Inter-stimulus-interval, time between gap and pulse in GP trials
 pulsedur = 0.020;   %Pulse duration (sec)
-totdur = 50;        %Total duration of block, provide as starting point, trimmed later to actual duration (sec)
+totdur = 55;        %Total duration of block, provide as starting point, trimmed later to actual duration (sec)
 rf_time = 0.002;    %rise/fall time after/before gap, always symmetric (sec)
 
-minITI = 1.6;       %Minimum inter-trial-interval
+minITI = 1.8;       %Minimum inter-trial-interval
 
 pulse_lvl = 90;     %Pulse level (dB)
 
@@ -36,7 +36,7 @@ for j = 1:numel(tin)
     for ii = 1:numel(bkg)
         
         bkg_lvl = 60;       %Background noise level (dB)
-        tone_lvl = 45;      %Pure tone level in "tin" blocks (dB)
+        tone_lvl = 40;      %Pure tone level in "tin" blocks (dB)
         
         %Name block
         temptin = num2str(tin(j));
