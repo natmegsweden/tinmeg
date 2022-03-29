@@ -60,7 +60,7 @@ for j = 1:numel(tin)
         tone_lvldiff = db2mag((cal_lvl - tone_lvl)*-1);
         
         %To create calibration file at second level
-        cal80diff = db2mag((cal_lvl - bkg_lvl+20)*-1);
+        cal80diff = db2mag((cal_lvl - (bkg_lvl+20))*-1);
     
         %Specify NBN filter parameters
         octfilter = octaveFilter(bkg(ii), '1/3 octave','SampleRate', fs, 'FilterOrder', 8);
