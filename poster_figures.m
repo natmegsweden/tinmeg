@@ -150,9 +150,7 @@ sub_sensoi = load('../mat_data/timelockeds/subjects_sensoi_avg.mat');
 sub_sensoi = sub_sensoi.sub_sensoi;
 
 
-%%
-%Structure for amplitude and latency-measures
-sub_amp_lat = struct();
+%% Plots
 
 %Specify plot y-limits
 minylim = 0*10^-12;
@@ -339,13 +337,13 @@ all_dip_pos = load('../mat_data/source_reconstruction/all_dip_pos3.mat');
 all_dip_pos = all_dip_pos.all_dip_pos;
 
 %% Mesh brain
-figure('Position', [400 400 1800 1800]); hold on;
+figure('Renderer', 'painters', 'Position', [400 400 1800 1800]); hold on;
 ft_plot_headmodel(headmodel_std, 'facealpha', 0.2, 'edgecolor', [0.5 0.5 0.5]);
 
 for j = 1:22
    
     if all_dip_pos.PO60_90Lsrc(j,1) < 0
-    hemicol = [0 0 1];
+    hemicol = [0 0.75 1];
     elseif all_dip_pos.PO60_90Lsrc(j,1) > 0
     hemicol = [1 0 0];
     end
@@ -354,7 +352,7 @@ for j = 1:22
     
        
     if all_dip_pos.PO60_90Rsrc(j,1) < 0
-    hemicol = [0 0 1];
+    hemicol = [0 0.75 1];
     elseif all_dip_pos.PO60_90Rsrc(j,1) > 0
     hemicol = [1 0 0];
     end
