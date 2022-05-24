@@ -414,7 +414,7 @@ blue = [93 165 218]/256;
 purple = [178 118 178]/256;
 
 %number of subjects
-n_subs = 1:numel(sub_date.ID);
+n_subs = 1:22;
 
 %% PO60_90: Extract and plot amplitude and latencies
 
@@ -467,6 +467,8 @@ x.XTickLabelRotation = 90;
 % close;
 
 %% GO_60: Extract and plot amplitude and latencies
+
+run('Conditions_triggers.m');
 
 %Time windows of interest, varies with gap position!!
 N1on = find(mean_sub.time == 0.050);

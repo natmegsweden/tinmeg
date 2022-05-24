@@ -27,14 +27,15 @@ audiofiles = {'tin0_bkg0.wav',
           
 %% Line out from AudioFile to MISC001
 
-infile = '/archive/20061_tinnitus/MEG/NatMEG_0905/220328/bench_audiomisc.fif';
+infile = '/archive/20061_tinnitus/MEG/NatMEG_0905/220329/audiomisc2.fif';
+
+% read the header information and the events from the data
+hdr = ft_read_header(infile);
 
 misc01 = ft_read_data(infile, 'chanindx', 1);
 
-STI101 = ft_read_data(infile, 'chanindx', 18);
+STI101 = ft_read_data(infile, 'chanindx', 19); % <<< Check hdr for STI101 channel
 
-% read the header information and the events from the data
-%hdr = ft_read_header(infile);
 %event = ft_read_event(infile, 'detectflank', 'up', 'checkmaxilter', 'no');
 
 fnames = fieldnames(triggers);
@@ -57,7 +58,7 @@ for i = 1:numel(filestarts)
     plot(misc01(trigs(1):trigs(1)+duration));
     plot(temp_sti);
     ylim(ylims);
-    xlim([0 numel(temp_sti)]);
+    %xlim([0 numel(temp_sti)]);
     title(['Full trial - ' fnames{i}], 'Interpreter', 'none');
 
     xticks(1:10000:numel(temp_sti));
@@ -85,8 +86,8 @@ for i = 1:numel(filestarts)
     xticklabels(1:(numel(temp_sti)/5000));
     title('Last trigger');
     
-    saveas(gcf, ['../Analysis Output/' fnames{i} '.svg']);
-    close;
+    saveas(gcf, ['../Analysis Output/' fnames{i} '2.svg']);
+    %close;
     
 end
 
