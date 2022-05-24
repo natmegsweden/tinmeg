@@ -17,7 +17,7 @@ meg_data_path = '/archive/20061_tinnitus/MEG/';
 mri_data_path = '../MRI/';
 
 %Sourcemodel template
-load('/../../fieldtrip-20211209/template/sourcemodel/standard_sourcemodel3d6mm');
+load('../../fieldtrip-20211209/template/sourcemodel/standard_sourcemodel3d6mm.mat')
 template_grid = sourcemodel;
 template_grid = ft_convert_units(template_grid, 'mm');
 clear sourcemodel;

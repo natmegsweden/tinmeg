@@ -125,6 +125,51 @@ end
 
 %[M, I] = min(mean(cell2mat(epochs_eog.PO60(:,6))));
 
+%% Find biggest response in all trials (conditions of interest)
+
+%New empty structure
+epochs_eog_allresp = struct;
+
+
+%NB, min between 75-150ms (sample x-x)
+%For all subjects
+for i = 1:length(sub_date.ID)
+    
+    %List subject ID
+    epochs_eog_allresp.subjects{i,1} = sub_date.ID{i};
+    
+    %For conditions 1 & 3: PO60 and GP60
+    for ii = [1,3] 
+        
+        %Include only specific stim of interest (90dB PO and isi 240ms GP)
+        if ii == 1; stim_index =  5; 
+            elseif ii == 3; stim_index = 4;
+        end;
+        
+        %Matrix of all subjects trials with stim
+        minwin = cell2mat(epochs_eog_all.(conditions{ii})(i,stim_index));
+        
+        %Include first 45 trials for consitency
+        ntrials = 45;
+        
+        %For each trial (row) take min between samples representing 75-150ms
+        for iii = 1:ntrials
+
+            %minresponse
+            minresp = min(minwin(iii,35:50));
+            epochs_eog_allresp.(conditions{ii}){i, iii} = minresp
+        end
+        
+    %For conditions
+    end
+
+%For subjects
+end
+
+% Save as CSV
+%csvwrite('../Analysis Output/EOG_response_PO60_90.csv', epochs_eog_allresp.PO60);
+%csvwrite('../Analysis Output/EOG_response_GP60_i240.csv', epochs_eog_allresp.GP60);
+
 %% Create struct of average rasters
 
 epochs_eog_avgrast = struct;
@@ -159,7 +204,7 @@ epochs_eog_avgrast.subjects{i,1} = sub_date.ID{i};
     
 end
 
-save(['../mat_data/timelockeds/epochs_eog_avgrast.mat'], 'epochs_eog_avgrast');
+%save(['../mat_data/timelockeds/epochs_eog_avgrast.mat'], 'epochs_eog_avgrast');
 
 %% Average rasterplots
 
