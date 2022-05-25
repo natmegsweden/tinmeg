@@ -781,10 +781,9 @@ for i = 1:numel(sub_date.ID)
     
 end
 
-%Export minimum amps as CSV
-virtchanL_resp_csv = struct2table(virtchan_peak_L);
-virtchanR_resp_csv = struct2table(virtchan_peak_R);
+% Save as CSV
+csvwrite('../Analysis Output/sourceR_PO60_90.csv', virtchan_peak_R.PO60_90');
+csvwrite('../Analysis Output/sourceR_GP60_i240.csv', virtchan_peak_R.GP60_i240');
 
-writetable(virtchanL_resp_csv);
-writetable(virtchanR_resp_csv);
-
+csvwrite('../Analysis Output/sourceL_PO60_90.csv', virtchan_peak_L.PO60_90');
+csvwrite('../Analysis Output/sourceL_GP60_i240.csv', virtchan_peak_L.GP60_i240');
