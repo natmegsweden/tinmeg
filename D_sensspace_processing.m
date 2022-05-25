@@ -33,7 +33,6 @@ trig = eval(['cond.' char(conditions(ii)) 'trig']);
         
         tempdat = load([subinpath conditions{ii} 'ica.mat']);
         tempdat = tempdat.([conditions{ii} 'ica']);
- 
 
         cfg = [];
         cfg.covariance = 'no';
@@ -100,6 +99,122 @@ clear i ii iii trig nstim
 
 %save('../mat_data/timelockeds/grand_avg_cmb.mat', 'gravg_cmb', '-v7.3');
 %save('../mat_data/timelockeds/all_cmb_avg.mat', 'all_cmb_avg', '-v7.3');
+
+%% Process timelockeds: keeptrials = yes, trials of interest only, average top_chan SOI
+
+all_cmb = struct();
+
+%Samples indentified in timelockeds.time
+startsamp = 116;
+endsamp = 131;
+
+%For conditions of interest (1: PO60 and 3: GP60)
+for ii = [1,3]
+
+        %Include only specific index 'stix' for stim of interest (90dB PO and isi 240ms GP)
+        if ii == 1; stix =  5; 
+            elseif ii == 3; stix = 4;
+        end;
+    
+    %Trigger code for trial of interest
+    trig = eval(['cond.' char(conditions(ii)) 'trig']);
+    trig = trig(stix);
+
+    %For each subject
+    for i = 1:length(sub_date.ID)
+    
+        %get subject specific path
+        subinpath = ['../mat_data/ICA/' 'ID' sub_date.ID{i} '/'];
+
+        %load subject data
+        tempdat = load([subinpath conditions{ii} 'ica.mat']);
+        tempdat = tempdat.([conditions{ii} 'ica']);
+
+        %preprocess
+        cfg = [];
+        cfg.covariance = 'no';
+        cfg.covariancewindow = 'prestim';
+        cfg.keeptrials = 'yes'; %if yes, no avg in output variable "timelockeds"
+        cfg.preproc.demean = 'yes';
+        
+        %Variable baseline window
+        if ismember(conditions{ii}, {'GO60', 'GO70', 'PO60', 'PO70'});
+        %Baseline window: 150ms before pulse onset in PO trials
+        cfg.preproc.baselinewindow = [-0.150 0];
+        elseif ismember(conditions{ii}, {'GP60', 'GP70'});
+            %Baseline window variable timepoint: 150ms before gap onset in GP trials
+            if stix == 1 %ISI 0
+            cfg.preproc.baselinewindow = [-0.200 -0.050];
+            elseif stix == 2 %ISI 60
+                cfg.preproc.baselinewindow = [-0.260 -0.110];
+            elseif stix == 3 %ISI 120
+                cfg.preproc.baselinewindow = [-0.320 -0.170];
+            elseif stix == 4 %ISI 240
+                cfg.preproc.baselinewindow = [-0.440 -0.290];
+            end
+        end
+
+        cfg.preproc.lpfilter = 'yes';
+        cfg.preproc.lpfreq = 70; %original  : 70
+
+        cfg.preproc.hpfilter = 'no';
+        cfg.preproc.hpfreq = 1; %original: no hpfilter
+
+        cfg.trials = tempdat.trialinfo == trig;
+
+        timelockeds = ft_timelockanalysis(cfg, tempdat);
+
+        clear tempdat
+
+        %save individual timelockeds
+        %save(['../mat_data/timelockeds/ID' sub_date.ID{i} '/' (cond.(([conditions{ii} 'label'])){iii}) '_tlks.mat'], 'timelockeds', '-v7.3');
+
+        cfg = [];
+        timelockeds_cmb = ft_combineplanar(cfg, timelockeds);
+        
+        %Select and average sensors of interest
+        cfg = [];
+        cfg.channel = top_chan;
+        timelockeds_soi = ft_selectdata(cfg, timelockeds_cmb);
+        timelockeds_soi = mean(timelockeds_soi.trial, 2);
+        
+        %Reshape to two dimensions
+        timelockeds_soi = reshape(timelockeds_soi, size(timelockeds_soi, 1), 165);
+        
+        %Find the maximum response for all trials (n varies from cleaning)
+        for trial = 1:size(timelockeds_soi, 1);
+           peakresp = max(timelockeds_soi(trial, startsamp:endsamp));
+           
+           all_cmb.(conditions{ii})(i, trial) = peakresp;
+                       
+        end
+            
+
+        %all_cmb.(conditions{ii}){i, iii} = timelockeds_cmb.avg;
+
+        %Grab only 'avg' parameter in struct compatible with cat(mean())
+        %all_avg.(conditions{ii}){i, iii} = timelockeds.avg;
+
+        %Save some subject data structure for use with plot functions later
+        %save('../mat_data/timelockeds/mean_sub.mat', 'timelockeds_cmb', '-v7.3');
+        %clear timelockeds timelockeds_cmb
+
+        %Calculate grand average over trial and subject per condition
+    %        gravg_cmb.(conditions{ii}){iii} = mean(cat(3, all_cmb_avg.(conditions{ii}){:, iii}), 3);
+
+    end
+
+    %save timelockeds?
+
+    warning(['looking for maximum repsonse between: ' num2str(timelockeds.time(startsamp)) ' and ' num2str(timelockeds.time(endsamp)) '0 seconds']);
+    
+end
+
+%clear i ii iii trig nstim
+
+% Save as CSV
+csvwrite('../Analysis Output/gradSOI_response_PO60_90.csv', all_cmb.PO60);
+csvwrite('../Analysis Output/gradSOI_response_GP60_i240.csv', all_cmb.GP60);
 
 %% Butterfly with selected sensors
 
