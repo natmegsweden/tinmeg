@@ -1,7 +1,6 @@
 
 load('../mat_data/timelockeds/epochs_eog_all.mat');
 load(['../mat_data/timelockeds/epochs_eog_avgrast.mat']);
-
 load('../mat_data/timelockeds/epochs_eog.mat');
 
 
@@ -628,3 +627,20 @@ end
 %The first two lines measure the size of your figure (in inches). The next line configures the print paper size to fit the figure size. 
 %The last line uses the print command and exports a vector pdf document as the output.
 
+
+%% Permutetest of EOG?
+
+%create matrix of subject responses
+
+for i = 1:22
+    POavg(:,i) = epochs_eog.PO60{i,5}';
+    GPavg(:,i) = epochs_eog.GP60{i,4}';
+end
+
+[clusters, p_values, t_sums, permutation_distribution] = permutest(POavg, GPavg, true, 0.01, 1000, true, inf);
+
+figure; hold on;
+plot(mean(POavg,2))
+plot(mean(GPavg,2))
+plot(clusters{:}, repmat(0.5*10^-5, 1, length(clusters{:})), 'red', 'LineWidth', 2)
+hold off
