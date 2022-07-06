@@ -2,6 +2,7 @@
 load('../mat_data/timelockeds/epochs_eog_all.mat');
 load(['../mat_data/timelockeds/epochs_eog_avgrast.mat']);
 load('../mat_data/timelockeds/epochs_eog.mat');
+load('../mat_data/timelockeds/epochs_eog_resp.mat');
 
 
 %% load EOG data to structure
@@ -82,7 +83,7 @@ save(['../mat_data/timelockeds/epochs_eog_all.mat'], 'epochs_eog_all');
 epochs_eog_resp = struct;
 
 %Calculate max response for subjects
-%NB, min between 75-150ms (sample x-x)
+%NB, min between 50-150ms (sample 111-131)
 for i = 1:length(sub_date.ID)
     
     subinpath = ['../mat_data/timelockeds/ID' sub_date.ID{i} '/'];
@@ -99,9 +100,9 @@ for i = 1:length(sub_date.ID)
         %window:
         minwin = cell2mat(epochs_eog.(conditions{ii})(i,stim_index));
         %minresponse
-        minresp = min(minwin(35:50));
+        minresp = min(minwin(111:131));
         
-        epochs_eog_resp.(conditions{ii}){i, stim_index} = minresp
+        epochs_eog_resp.(conditions{ii})(i, stim_index) = minresp
             
         %For stim
         end
@@ -628,11 +629,159 @@ end
 %The last line uses the print command and exports a vector pdf document as the output.
 
 
+%% Manuscript plots
+
+%Make a grand average EOG response
+for i = 1:numel(conditions)
+    for ii = 1:numel(cond.([(conditions{i}) 'label']))
+        for iii = 1:numel(sub_date.ID)
+            temp(iii,:) = epochs_eog.(conditions{i}){iii,ii};
+        end
+    %SEM calculation goes here
+    EOG_GA.(conditions{i})(ii,:) = mean(temp,1);
+    clear temp
+    end
+end
+
+% Inherited from raster plots
+xtick = [1:20:165];
+xticklab = [-500:100:320];
+triglinex = [101 101];
+xrange = [41 161];
+
+txtsize = 10;
+
+lineylims = [-8*10^-5 1*10^-5];
+boxylims = [-3*10^-4 1*10^-4];
+
+%Tableau medium 10 palette
+colors = [173 139 201;
+    168 120 110;
+    114 158 206;
+    255 158 74;
+    103 191 92;
+    237 102 93;
+    237 151 202;
+    162 162 162;
+    205 204 93;
+    109 204 218]/256;
+
+%No idea why the colors are red backwards for boxplot
+boxcolors = flip(colors(1:6,:));
+
+figure; subplot(4,2,1); 
+hold on;
+
+%PO60
+for i = 1:6
+    plot(EOG_GA.PO60(i,:), 'Color', colors(i,:))
+end
+
+plot(triglinex, ylims, 'k --');
+
+ax = gca;
+ax.XTick = xtick;
+ax.XTickLabel = [];
+ax.XGrid = 'on';
+ax.FontSize = txtsize;
+ylim(lineylims);
+xlim(xrange);
+
+legend({"70", "75", "80", "85", "90", "95"}, 'Location', 'southwest');
+legend('boxoff');
+
+subplot(4,2,2); boxplot(epochs_eog_resp.PO60(:, :), [70:5:95], 'Symbol', 'ok');
+ylim(boxylims)
+ax = gca;
+ax.FontSize = txtsize;
+
+h = findobj(gca,'Tag','Box');
+for j=1:6
+    patch(get(h(j),'XData'),get(h(j),'YData'),boxcolors(j,:),'FaceAlpha',.5);
+end
+
+lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
+set(lines, 'Color', 'k');
+
+
+%PO70
+subplot(4,2,3); hold on;
+for i = 1:5
+    plot(EOG_GA.PO70(i,:), 'Color', colors(i+1,:)) %+1 to color to match PO60
+end
+plot(triglinex, ylims, 'k --');
+ylim(lineylims)
+
+ax = gca;
+ax.XTick = xtick;
+ax.XTickLabel = [];
+ax.XGrid = 'on';
+ax.FontSize = txtsize;
+ylim(lineylims);
+xlim(xrange);
+
+%NaNs to pad missing 70dB pulse in 70dB carrier
+subplot(4,2,4); boxplot([repmat(NaN, 1, 22)' epochs_eog_resp.PO70(:, 1:5)], [70:5:95], 'Symbol', 'ok');
+ylim(boxylims)
+ax = gca;
+ax.FontSize = txtsize;
+
+h = findobj(gca,'Tag','Box');
+for j=1:5
+    patch(get(h(j),'XData'),get(h(j),'YData'),boxcolors(j,:),'FaceAlpha',.5);
+end
+
+lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
+set(lines, 'Color', 'k');
+
+%GP60
+subplot(4,2,5); hold on;
+for i = 1:4
+    plot(EOG_GA.GP60(i,:), 'Color', colors(i,:))
+end
+plot(triglinex, lineylims, 'k --');
+ylim(lineylims)
+
+ax = gca;
+ax.XTick = xtick;
+ax.XTickLabel = [];
+ax.XGrid = 'on';
+ax.FontSize = txtsize;
+ylim(lineylims);
+xlim(xrange);
+
+subplot(4,2,6); boxplot(epochs_eog_resp.GP60(:, :), [0 60 120 240]);
+ylim(boxylims)
+ax = gca;
+ax.FontSize = txtsize;
+
+%GP70
+subplot(4,2,7); hold on;
+for i = 1:4
+    plot(EOG_GA.GP70(i,:), 'Color', colors(i,:))
+end
+plot(triglinex, lineylims, 'k --');
+ylim(lineylims)
+
+ax = gca;
+ax.XTick = xtick;
+ax.XTickLabel = [xticklab];
+ax.XGrid = 'on';
+ax.FontSize = txtsize;
+ylim(lineylims);
+xlim(xrange);
+
+subplot(4,2,8); boxplot(epochs_eog_resp.GP70(:, :), [0 60 120 240]);
+ylim(boxylims)
+ax = gca;
+ax.FontSize = txtsize;
+
+%saveas(gcf, ['../Analysis Output/MEG_manus_EOG.svg']);
+
 %% Permutetest of EOG?
 
-%create matrix of subject responses
-
-for i = 1:22
+%create matrix (that works for permutest) of subject responses
+for i = 1:numel(sub_date.ID)
     POavg(:,i) = epochs_eog.PO60{i,5}';
     GPavg(:,i) = epochs_eog.GP60{i,4}';
 end
