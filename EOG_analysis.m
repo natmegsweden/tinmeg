@@ -652,15 +652,15 @@ xrange = [41 161];
 txtsize = 10;
 
 lineylims = [-8*10^-5 1*10^-5];
-boxylims = [-3*10^-4 1*10^-4];
+boxylims = [-2*10^-4 0.5*10^-4];
 
 %Tableau medium 10 palette
 colors = [173 139 201;
     168 120 110;
     114 158 206;
     255 158 74;
-    103 191 92;
     237 102 93;
+    103 191 92;
     237 151 202;
     162 162 162;
     205 204 93;
@@ -668,8 +668,9 @@ colors = [173 139 201;
 
 %No idea why the colors are red backwards for boxplot
 boxcolors = flip(colors(1:6,:));
+isiboxcolors = flip(colors(7:10,:));
 
-figure; subplot(4,2,1); 
+figure('Position',  [800 100 600 1100]); subplot(4,2,1); 
 hold on;
 
 %PO60
@@ -677,7 +678,7 @@ for i = 1:6
     plot(EOG_GA.PO60(i,:), 'Color', colors(i,:))
 end
 
-plot(triglinex, ylims, 'k --');
+plot(triglinex, lineylims, 'k --');
 
 ax = gca;
 ax.XTick = xtick;
@@ -686,6 +687,7 @@ ax.XGrid = 'on';
 ax.FontSize = txtsize;
 ylim(lineylims);
 xlim(xrange);
+ylabel("EOG Amplitude (u?V)")
 
 legend({"70", "75", "80", "85", "90", "95"}, 'Location', 'southwest');
 legend('boxoff');
@@ -694,6 +696,10 @@ subplot(4,2,2); boxplot(epochs_eog_resp.PO60(:, :), [70:5:95], 'Symbol', 'ok');
 ylim(boxylims)
 ax = gca;
 ax.FontSize = txtsize;
+xlabel("Pulse level")
+
+h = findobj(gcf,'tag','Outliers');
+set(h,'MarkerSize',4);
 
 h = findobj(gca,'Tag','Box');
 for j=1:6
@@ -709,7 +715,7 @@ subplot(4,2,3); hold on;
 for i = 1:5
     plot(EOG_GA.PO70(i,:), 'Color', colors(i+1,:)) %+1 to color to match PO60
 end
-plot(triglinex, ylims, 'k --');
+plot(triglinex, lineylims, 'k --');
 ylim(lineylims)
 
 ax = gca;
@@ -719,12 +725,17 @@ ax.XGrid = 'on';
 ax.FontSize = txtsize;
 ylim(lineylims);
 xlim(xrange);
+ylabel("EOG Amplitude (u?V)")
 
 %NaNs to pad missing 70dB pulse in 70dB carrier
 subplot(4,2,4); boxplot([repmat(NaN, 1, 22)' epochs_eog_resp.PO70(:, 1:5)], [70:5:95], 'Symbol', 'ok');
 ylim(boxylims)
 ax = gca;
 ax.FontSize = txtsize;
+xlabel("Pulse level")
+
+h = findobj(gcf,'tag','Outliers');
+set(h,'MarkerSize',4);
 
 h = findobj(gca,'Tag','Box');
 for j=1:5
@@ -737,7 +748,7 @@ set(lines, 'Color', 'k');
 %GP60
 subplot(4,2,5); hold on;
 for i = 1:4
-    plot(EOG_GA.GP60(i,:), 'Color', colors(i,:))
+    plot(EOG_GA.GP60(i,:), 'Color', colors(i+6,:))
 end
 plot(triglinex, lineylims, 'k --');
 ylim(lineylims)
@@ -749,16 +760,32 @@ ax.XGrid = 'on';
 ax.FontSize = txtsize;
 ylim(lineylims);
 xlim(xrange);
+ylabel("EOG Amplitude (u?V)")
 
-subplot(4,2,6); boxplot(epochs_eog_resp.GP60(:, :), [0 60 120 240]);
+legend({"0 ms", "60 ms", "120 ms", "240 ms"}, 'Location', 'southwest');
+legend('boxoff');
+
+subplot(4,2,6); boxplot(epochs_eog_resp.GP60(:, :), [0 60 120 240], 'Symbol', 'ok');
 ylim(boxylims)
 ax = gca;
 ax.FontSize = txtsize;
+xlabel("ISI duration")
+
+h = findobj(gcf,'tag','Outliers');
+set(h,'MarkerSize',4);
+
+h = findobj(gca,'Tag','Box');
+for j=1:4
+    patch(get(h(j),'XData'),get(h(j),'YData'),isiboxcolors(j,:),'FaceAlpha',.5);
+end
+
+lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
+set(lines, 'Color', 'k');
 
 %GP70
 subplot(4,2,7); hold on;
 for i = 1:4
-    plot(EOG_GA.GP70(i,:), 'Color', colors(i,:))
+    plot(EOG_GA.GP70(i,:), 'Color', colors(i+6,:))
 end
 plot(triglinex, lineylims, 'k --');
 ylim(lineylims)
@@ -770,15 +797,29 @@ ax.XGrid = 'on';
 ax.FontSize = txtsize;
 ylim(lineylims);
 xlim(xrange);
+ylabel("EOG Amplitude (u?V)")
+xlabel("Time (ms)")
 
-subplot(4,2,8); boxplot(epochs_eog_resp.GP70(:, :), [0 60 120 240]);
+subplot(4,2,8); boxplot(epochs_eog_resp.GP70(:, :), [0 60 120 240], 'Symbol', 'ok');
 ylim(boxylims)
 ax = gca;
 ax.FontSize = txtsize;
+xlabel("ISI duration")
+
+h = findobj(gcf,'tag','Outliers');
+set(h,'MarkerSize',4);
+
+h = findobj(gca,'Tag','Box');
+for j=1:4
+    patch(get(h(j),'XData'),get(h(j),'YData'),isiboxcolors(j,:),'FaceAlpha',.5);
+end
+
+lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
+set(lines, 'Color', 'k');
 
 %saveas(gcf, ['../Analysis Output/MEG_manus_EOG.svg']);
 
-%% Permutetest of EOG?
+%% Permutetest of EOG + manuscript plot
 
 %create matrix (that works for permutest) of subject responses
 for i = 1:numel(sub_date.ID)
@@ -786,10 +827,29 @@ for i = 1:numel(sub_date.ID)
     GPavg(:,i) = epochs_eog.GP60{i,4}';
 end
 
-[clusters, p_values, t_sums, permutation_distribution] = permutest(POavg, GPavg, true, 0.01, 1000, true, inf);
+[clusters, p_values, t_sums, permutation_distribution] = permutest(POavg, GPavg, true, 0.01, 10000, true, inf);
 
-figure; hold on;
-plot(mean(POavg,2))
-plot(mean(GPavg,2))
-plot(clusters{:}, repmat(0.5*10^-5, 1, length(clusters{:})), 'red', 'LineWidth', 2)
-hold off
+figure('Position', [800 250 300 275]); hold on;
+plot(mean(POavg,2), 'Color', colors(5,:)); %Manually specify colors to match other plots
+plot(mean(GPavg,2), 'Color', colors(10,:)); % -''-
+plot(clusters{:}, repmat(0.5*10^-5, 1, length(clusters{:})), 'red', 'LineWidth', 3)
+
+ylim(lineylims);
+xlim(xrange);
+
+h = get(gca,'Children');
+set(gca,'Children',[h(3) h(2) h(1)])
+
+ax = gca;
+ax.FontSize = txtsize;
+ax.XTick = xtick;
+ax.XTickLabel = xticklab;
+ax.XGrid = 'on';
+
+xlabel("Time (ms)");
+ylabel("EOG Amplitude (u?V)");
+
+legend({"Cluster, p = 0.01", "Gap + Pulse (ISI 240 ms)", "Pulse (90 dB)"}, 'Location', 'southwest');
+legend('boxoff');
+
+%saveas(gcf, ['../Analysis Output/MEG_manus_EOG2.svg']);
