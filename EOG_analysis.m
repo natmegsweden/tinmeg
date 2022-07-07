@@ -629,6 +629,18 @@ end
 %The last line uses the print command and exports a vector pdf document as the output.
 
 
+
+
+%% Permutetest of EOG + manuscript plot
+
+%create matrix (that works for permutest) of subject responses
+for i = 1:numel(sub_date.ID)
+    POavg(:,i) = epochs_eog.PO60{i,5}';
+    GPavg(:,i) = epochs_eog.GP60{i,4}';
+end
+
+[clusters, p_values, t_sums, permutation_distribution] = permutest(POavg, GPavg, true, 0.01, 10000, true, inf);
+
 %% Manuscript plots
 
 %Make a grand average EOG response
@@ -670,7 +682,7 @@ colors = [173 139 201;
 boxcolors = flip(colors(1:6,:));
 isiboxcolors = flip(colors(7:10,:));
 
-figure('Position',  [800 100 600 1100]); subplot(4,2,1); 
+figure('Units', 'centimeters', 'Position',  [5 5 25 30]); subplot(4,3,1); 
 hold on;
 
 %PO60
@@ -687,12 +699,13 @@ ax.XGrid = 'on';
 ax.FontSize = txtsize;
 ylim(lineylims);
 xlim(xrange);
-ylabel("EOG Amplitude (u?V)")
+
+ylabel({"60dB carrier", "EOG Amplitude (V)"})
 
 legend({"70", "75", "80", "85", "90", "95"}, 'Location', 'southwest');
 legend('boxoff');
 
-subplot(4,2,2); boxplot(epochs_eog_resp.PO60(:, :), [70:5:95], 'Symbol', 'ok');
+subplot(4,3,2); boxplot(epochs_eog_resp.PO60(:, :), [70:5:95], 'Symbol', 'ok');
 ylim(boxylims)
 ax = gca;
 ax.FontSize = txtsize;
@@ -709,9 +722,33 @@ end
 lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
 set(lines, 'Color', 'k');
 
+%Inhib PO6090 & ISI240
+subplot(4,3,3); hold on;
+plot(mean(POavg,2), 'Color', colors(5,:)); %Manually specify colors to match other plots
+plot(mean(GPavg,2), 'Color', colors(10,:)); % -''-
+plot(clusters{:}, repmat(0.5*10^-5, 1, length(clusters{:})), 'red', 'LineWidth', 3)
+
+ylim(lineylims);
+xlim(xrange);
+
+h = get(gca,'Children');
+set(gca,'Children',[h(3) h(2) h(1)])
+
+ax = gca;
+ax.FontSize = txtsize;
+ax.XTick = xtick;
+ax.XTickLabel = xticklab;
+ax.XGrid = 'on';
+ax.XTickLabelRotation = 90;
+
+xlabel("Time (ms)");
+
+legend({"Cluster, p = 0.01", "Gap + Pulse (ISI 240 ms)", "Pulse (90 dB)"}, 'Location', 'southwest');
+legend('boxoff');
+
 
 %PO70
-subplot(4,2,3); hold on;
+subplot(4,3,4); hold on;
 for i = 1:5
     plot(EOG_GA.PO70(i,:), 'Color', colors(i+1,:)) %+1 to color to match PO60
 end
@@ -725,10 +762,10 @@ ax.XGrid = 'on';
 ax.FontSize = txtsize;
 ylim(lineylims);
 xlim(xrange);
-ylabel("EOG Amplitude (u?V)")
+ylabel({"70dB carrier", "EOG Amplitude (V)"})
 
 %NaNs to pad missing 70dB pulse in 70dB carrier
-subplot(4,2,4); boxplot([repmat(NaN, 1, 22)' epochs_eog_resp.PO70(:, 1:5)], [70:5:95], 'Symbol', 'ok');
+subplot(4,3,5); boxplot([repmat(NaN, 1, 22)' epochs_eog_resp.PO70(:, 1:5)], [70:5:95], 'Symbol', 'ok');
 ylim(boxylims)
 ax = gca;
 ax.FontSize = txtsize;
@@ -746,7 +783,7 @@ lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
 set(lines, 'Color', 'k');
 
 %GP60
-subplot(4,2,5); hold on;
+subplot(4,3,7); hold on;
 for i = 1:4
     plot(EOG_GA.GP60(i,:), 'Color', colors(i+6,:))
 end
@@ -760,12 +797,12 @@ ax.XGrid = 'on';
 ax.FontSize = txtsize;
 ylim(lineylims);
 xlim(xrange);
-ylabel("EOG Amplitude (u?V)")
+ylabel({"60dB carrier", "EOG Amplitude (V)"})
 
 legend({"0 ms", "60 ms", "120 ms", "240 ms"}, 'Location', 'southwest');
 legend('boxoff');
 
-subplot(4,2,6); boxplot(epochs_eog_resp.GP60(:, :), [0 60 120 240], 'Symbol', 'ok');
+subplot(4,3,8); boxplot(epochs_eog_resp.GP60(:, :), [0 60 120 240], 'Symbol', 'ok');
 ylim(boxylims)
 ax = gca;
 ax.FontSize = txtsize;
@@ -783,7 +820,7 @@ lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
 set(lines, 'Color', 'k');
 
 %GP70
-subplot(4,2,7); hold on;
+subplot(4,3,10); hold on;
 for i = 1:4
     plot(EOG_GA.GP70(i,:), 'Color', colors(i+6,:))
 end
@@ -794,13 +831,15 @@ ax = gca;
 ax.XTick = xtick;
 ax.XTickLabel = [xticklab];
 ax.XGrid = 'on';
+ax.XTickLabelRotation = 90;
+
 ax.FontSize = txtsize;
 ylim(lineylims);
 xlim(xrange);
-ylabel("EOG Amplitude (u?V)")
+ylabel({"70dB carrier", "EOG Amplitude (V)"})
 xlabel("Time (ms)")
 
-subplot(4,2,8); boxplot(epochs_eog_resp.GP70(:, :), [0 60 120 240], 'Symbol', 'ok');
+subplot(4,3,11); boxplot(epochs_eog_resp.GP70(:, :), [0 60 120 240], 'Symbol', 'ok');
 ylim(boxylims)
 ax = gca;
 ax.FontSize = txtsize;
@@ -817,39 +856,4 @@ end
 lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
 set(lines, 'Color', 'k');
 
-%saveas(gcf, ['../Analysis Output/MEG_manus_EOG.svg']);
-
-%% Permutetest of EOG + manuscript plot
-
-%create matrix (that works for permutest) of subject responses
-for i = 1:numel(sub_date.ID)
-    POavg(:,i) = epochs_eog.PO60{i,5}';
-    GPavg(:,i) = epochs_eog.GP60{i,4}';
-end
-
-[clusters, p_values, t_sums, permutation_distribution] = permutest(POavg, GPavg, true, 0.01, 10000, true, inf);
-
-figure('Position', [800 250 300 275]); hold on;
-plot(mean(POavg,2), 'Color', colors(5,:)); %Manually specify colors to match other plots
-plot(mean(GPavg,2), 'Color', colors(10,:)); % -''-
-plot(clusters{:}, repmat(0.5*10^-5, 1, length(clusters{:})), 'red', 'LineWidth', 3)
-
-ylim(lineylims);
-xlim(xrange);
-
-h = get(gca,'Children');
-set(gca,'Children',[h(3) h(2) h(1)])
-
-ax = gca;
-ax.FontSize = txtsize;
-ax.XTick = xtick;
-ax.XTickLabel = xticklab;
-ax.XGrid = 'on';
-
-xlabel("Time (ms)");
-ylabel("EOG Amplitude (u?V)");
-
-legend({"Cluster, p = 0.01", "Gap + Pulse (ISI 240 ms)", "Pulse (90 dB)"}, 'Location', 'southwest');
-legend('boxoff');
-
-%saveas(gcf, ['../Analysis Output/MEG_manus_EOG2.svg']);
+saveas(gcf, ['../Analysis Output/MEG_manus_EOG.svg']);
