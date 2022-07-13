@@ -4,6 +4,7 @@ load(['../mat_data/timelockeds/epochs_eog_avgrast.mat']);
 load('../mat_data/timelockeds/epochs_eog.mat');
 load('../mat_data/timelockeds/epochs_eog_resp.mat');
 
+%% Testing
 
 %% load EOG data to structure
 

@@ -1,5 +1,5 @@
 %% Create timelockeds for EOG
-    
+
 %for each condition
 for ii = 1:length(conditions)
 
