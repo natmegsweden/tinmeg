@@ -4,8 +4,6 @@ load(['../mat_data/timelockeds/epochs_eog_avgrast.mat']);
 load('../mat_data/timelockeds/epochs_eog.mat');
 load('../mat_data/timelockeds/epochs_eog_resp.mat');
 
-%% Testing
-
 %% load EOG data to structure
 
 epochs_eog = struct;
@@ -77,6 +75,130 @@ for i = 1:length(sub_date.ID)
 end
     
 save(['../mat_data/timelockeds/epochs_eog_all.mat'], 'epochs_eog_all');
+
+%% Clean EOG data
+%Adapted from: https://se.mathworks.com/matlabcentral/answers/385226-how-to-use-the-data-brush-tool-to-automatically-save-selected-points-in-multiple-line-plots
+
+%%% Notes:
+% Fixed xlim when plotting
+% xline for gap onset in ISI-conditions
+%plots as commented out below
+
+% Pack up data
+t = (1:165)'; %n of timepoints in data
+names = regexp(cellstr(sprintf('trial_n_%d ',1:50)),' ','split');
+names = names{1,1};
+
+epochs_eog_all_clean = struct();
+
+for i = 1:numel(conditions)
+
+nstim = length(eval(['cond.' conditions{i} 'trig']));
+
+    for ii = 1:nstim
+
+        for iii = 1:numel(sub_date.ID)
+
+            %load eog-trials in temp variable "y"
+            y = epochs_eog_all.(conditions{i}){iii,ii}';
+            
+            % Plot data
+            figure('Position',[800 800 1000 800])
+            hLines = plot(t,y, 'k');
+            xline([101 101]);
+            xlim([1 165]);
+            xticks([1:20:165]);
+            xticklabels([-500:100:320]);
+            
+            % Start brushing mode and wait for user to hit "Enter" when done
+            brush on
+            disp('Hit Enter in comand window when done brushing')
+            pause
+            
+            % Loop through each graphics object
+            for k = 1:numel(hLines)
+                % Check that the property is valid for that type of object
+                % Also check if any points in that object are selected
+                if isprop(hLines(k),'BrushData') && any(hLines(k).BrushData)
+                    % Output the selected data to the base workspace with assigned name
+                    ptsSelected = logical(hLines(k).BrushData.');
+                    data = [t(ptsSelected) y(ptsSelected,k)];
+                    assignin('base',names{k},data) %assign brushed data as variables names from "names"
+                end
+            end
+            
+            %Hacky way to get index of brushed variables
+            vars = who('trial_n_*');
+            clear(names{:});
+            
+            close;
+            clear('colnum');
+
+            for j = 1:numel(vars)
+                colnum(j) = find(ismember(names, vars{j}));
+            end
+            
+            %Save plot of data with removed trials
+            figure('Position',[800 800 1000 1000]); hold on;
+            plot(t,y, 'k');
+            if exist('colnum','var') == 1 %if any removed, plot them as red
+                plot(t,y(:,[colnum]), 'r');
+            end;
+            xline([101 101]);
+            xlim([1 165]);
+            xticks([1:20:165]);
+            xticklabels([-500:100:320]);
+
+            saveas(gcf, ['../Analysis Output/EOG_cleaned/' sub_date.ID{iii} '_' conditions{i} '_' num2str(ii) '.jpg']);
+            close;
+            
+            %if any brushed trials, remove from temp variable y
+            if exist('colnum','var') == 1 %if any removed, plot them as red
+                y(:,[colnum]) = [];
+            end
+    
+            % Write y to new struct
+            epochs_eog_all_clean.(conditions{i}){iii,ii} = y;
+
+            clear('y');
+        
+        %for subjects
+        end
+    
+    %for stim
+    end
+
+%for conditions
+end
+
+% figure; hold on;
+% subplot(2,2,1)
+% for i = 1:6
+%     plot(epochs_eog_all.PO60{1,i}')
+% end
+% title('All trials PO60');
+% 
+% subplot(2,2,2)
+% for i = 1:6
+%     plot(mean(epochs_eog_all.PO60{1,i}', 2))
+% end
+% title('PO60 average per pulse level');
+% 
+% subplot(2,2,3)
+% for i = 1:6
+%     plot(epochs_eog_all_clean.PO60{1,i})
+% end
+% title('All trials PO60 - CLEANED');
+% 
+% subplot(2,2,4)
+% for i = 1:6
+%     plot(mean(epochs_eog_all_clean.PO60{1,i}, 2))
+% end
+% title('PO60 average per pulse level - CLEANED');
+
+%save('../mat_data/timelockeds/epochs_eog_all_clean.mat', "epochs_eog_all_clean");
+
+
 
 
 %% find biggest response from structure
