@@ -79,11 +79,6 @@ save(['../mat_data/timelockeds/epochs_eog_all.mat'], 'epochs_eog_all');
 %% Clean EOG data
 %Adapted from: https://se.mathworks.com/matlabcentral/answers/385226-how-to-use-the-data-brush-tool-to-automatically-save-selected-points-in-multiple-line-plots
 
-%%% Notes:
-% Fixed xlim when plotting
-% xline for gap onset in ISI-conditions
-%plots as commented out below
-
 % Pack up data
 t = (1:165)'; %n of timepoints in data
 names = regexp(cellstr(sprintf('trial_n_%d ',1:50)),' ','split');
@@ -171,61 +166,121 @@ nstim = length(eval(['cond.' conditions{i} 'trig']));
 %for conditions
 end
 
-% figure; hold on;
-% subplot(2,2,1)
-% for i = 1:6
-%     plot(epochs_eog_all.PO60{1,i}')
-% end
-% title('All trials PO60');
-% 
-% subplot(2,2,2)
-% for i = 1:6
-%     plot(mean(epochs_eog_all.PO60{1,i}', 2))
-% end
-% title('PO60 average per pulse level');
-% 
-% subplot(2,2,3)
-% for i = 1:6
-%     plot(epochs_eog_all_clean.PO60{1,i})
-% end
-% title('All trials PO60 - CLEANED');
-% 
-% subplot(2,2,4)
-% for i = 1:6
-%     plot(mean(epochs_eog_all_clean.PO60{1,i}, 2))
-% end
-% title('PO60 average per pulse level - CLEANED');
-
 %save('../mat_data/timelockeds/epochs_eog_all_clean.mat', "epochs_eog_all_clean");
 
 
 
 
-%% find biggest response from structure
+%% Plot cleaned EOG data
+
+%load('../mat_data/timelockeds/epochs_eog_all_clean.mat');
+
+for i = 1:numel(sub_date.ID)
+
+    for ii = 1:numel(conditions)
+
+        figure('Position', [500 500 1200 1100]); hold on;
+        subplot(2,2,1)
+        for iii = 1:numel(cond.([conditions{ii} 'label']))
+            plot(epochs_eog_all.(conditions{ii}){i,iii}')
+        end
+        xline([101 101]);
+        xticks([1:20:165]);
+        xticklabels([-500:100:320]);
+        xlim([1 165]);
+        ylim([-6*10^-4 4*10^-4])
+        title(['All trials ' (conditions{ii})]);
+        
+        subplot(2,2,2)
+        for iii = 1:numel(cond.([conditions{ii} 'label']))
+            plot(mean(epochs_eog_all.(conditions{ii}){i,iii}', 2))
+        end
+        xline([101 101]);
+        xticks([1:20:165]);
+        xticklabels([-500:100:320]);
+        xlim([1 165]);
+        ylim([-6*10^-4 4*10^-4])
+        title(['Average per pulse level ' (conditions{ii})]);
+        
+        subplot(2,2,3)
+        for iii = 1:numel(cond.([conditions{ii} 'label']))
+            plot(epochs_eog_all_clean.(conditions{ii}){i,iii})
+        end
+        xline([101 101]);
+        xticks([1:20:165]);
+        xticklabels([-500:100:320]);
+        xlim([1 165]);
+        ylim([-6*10^-4 4*10^-4])
+        title(['All trials ' (conditions{ii}) ' - cleaned']);
+        
+        subplot(2,2,4)
+        for iii = 1:numel(cond.([conditions{ii} 'label']))
+            plot(mean(epochs_eog_all_clean.(conditions{ii}){i,iii}, 2))
+        end
+        xline([101 101]);
+        xticks([1:20:165]);
+        xticklabels([-500:100:320]);
+        xlim([1 165]);
+        ylim([-6*10^-4 4*10^-4])
+        title(['Average per pulse level ' (conditions{ii}) ' - cleaned']);
+
+        %saveas(gcf, ['../Analysis Output/EOG_cleaned/' sub_date.ID{i} '_' conditions{ii} '.jpg']);
+        close
+
+    %for conditions
+    end
+
+%for subjects
+end
+
+%% Arrange cleaned data
+
+%Struct  to count how many trials were excluded
+trials_left = struct();
+
+%Struct for average of cleaned trials
+epochs_eog_clean = struct();
+
+for i = 1:numel(sub_date.ID)
+
+    for ii = 1:numel(conditions)
+
+        for iii = 1:numel(cond.([conditions{ii} 'label']))
+
+            %Count n of excluded/kept trials
+            trials_left.(conditions{ii}){i,iii} = size(epochs_eog_all_clean.(conditions{ii}){i,iii},2);
+
+            %Collect mean for cleaned trials
+            epochs_eog_clean.(conditions{ii}){i,iii} = mean(epochs_eog_all_clean.(conditions{ii}){i,iii}, 2)';
+
+        end
+
+    %for conditions
+    end
+
+%for subjects
+end
+%% Find biggest response from structure
 
 epochs_eog_resp = struct;
 
 %Calculate max response for subjects
 %NB, min between 50-150ms (sample 111-131)
 for i = 1:length(sub_date.ID)
-    
-    subinpath = ['../mat_data/timelockeds/ID' sub_date.ID{i} '/'];
-    
+
     epochs_eog_resp.subjects{i,1} = sub_date.ID{i};
     
     for ii = 1:length(conditions)
     
-    nstim = length(eval(['cond.' char(conditions(ii)) 'trig']));
-    label = eval(['cond.' char(conditions(ii)) 'label']);
+    nstim = numel(cond.([conditions{ii} 'trig']));
+    label = cond.([conditions{ii} 'label']);
     
         for stim_index = 1:nstim
         
-        %window:
-        minwin = cell2mat(epochs_eog.(conditions{ii})(i,stim_index));
-        %minresponse
-        minresp = min(minwin(111:131));
+        %minresponse sample 111-131
+        minresp = min(epochs_eog.(conditions{ii}){i,stim_index}(111:131));
         
-        epochs_eog_resp.(conditions{ii})(i, stim_index) = minresp
+        epochs_eog_resp.(conditions{ii})(i, stim_index) = minresp;
             
         %For stim
         end
@@ -242,11 +297,42 @@ end
 %EOG_resp_csv = struct2table(epochs_eog_resp);
 %writetable(EOG_resp_csv);
 
-%To rectify vector a:
-% a = [1 2 3 -4]
-% a(a<0) = a(a<0)*-1
+%% Find biggest response in cleaned data
 
-%[M, I] = min(mean(cell2mat(epochs_eog.PO60(:,6))));
+epochs_eog_clean_resp = struct;
+
+%Calculate max response for subjects
+%NB, min between 50-150ms (sample 111-131)
+for i = 1:numel(sub_date.ID)
+
+    epochs_eog_clean_resp.subjects{i,1} = sub_date.ID{i};
+    
+    for ii = 1:numel(conditions)
+    
+    nstim = numel(cond.([conditions{ii} 'trig']));
+    label = cond.([conditions{ii} 'label']);
+    
+        for stim_index = 1:nstim
+        
+        %minresponse in sample 111-131
+        minresp = min(epochs_eog_clean.(conditions{ii}){i,stim_index}(111:131));
+        
+        epochs_eog_clean_resp.(conditions{ii})(i, stim_index) = minresp;
+            
+        %For stim
+        end
+    
+    %For conditions
+    end
+
+%For subjects
+end
+
+%save(['../mat_data/timelockeds/epochs_eog__clean_resp.mat'], 'epochs_eog_clean_resp');
+
+%Export EOG amps as CSV
+%EOG_clean_resp_csv = struct2table(epochs_eog_clean_resp);
+%writetable(EOG_clean_resp_csv);
 
 %% Find biggest response in all trials (conditions of interest)
 
@@ -754,17 +840,42 @@ end
 
 
 
-%% Permutetest of EOG + manuscript plot
+%% Permutetest of EOG
 
 %create matrix (that works for permutest) of subject responses
 for i = 1:numel(sub_date.ID)
-    POavg(:,i) = epochs_eog.PO60{i,5}';
-    GPavg(:,i) = epochs_eog.GP60{i,4}';
+    PO60avg(:,i) = epochs_eog.PO60{i,5}'; %NB condition 5 = 90dB pulse
+    GP60avg(:,i) = epochs_eog.GP60{i,4}';
 end
 
-[clusters, p_values, t_sums, permutation_distribution] = permutest(POavg, GPavg, true, 0.01, 10000, true, inf);
+[clusters60, p_values60, t_sums60, permutation_distribution60] = permutest(PO60avg, GP60avg, true, 0.01, 10000, true, inf);
 
-%% Manuscript plots
+%create matrix (that works for permutest) of subject responses
+for i = 1:numel(sub_date.ID)
+    PO70avg(:,i) = epochs_eog.PO70{i,4}'; %NB condition 4 = 90dB pulse
+    GP70avg(:,i) = epochs_eog.GP70{i,4}';
+end
+
+[clusters70, p_values70, t_sums70, permutation_distribution70] = permutest(PO70avg, GP70avg, true, 0.01, 10000, true, inf);
+
+%Clean responses:
+%create matrix (that works for permutest) of subject responses
+for i = 1:numel(sub_date.ID)
+    PO60_clean_avg(:,i) = epochs_eog_clean.PO60{i,5}'; %NB condition 5 = 90dB pulse
+    GP60_clean_avg(:,i) = epochs_eog_clean.GP60{i,4}';
+end
+
+[clusters60c, p_values60c, t_sums60c, permutation_distribution60c] = permutest(PO60_clean_avg, GP60_clean_avg, true, 0.01, 10000, true, inf);
+
+%create matrix (that works for permutest) of subject responses
+for i = 1:numel(sub_date.ID)
+    PO70_clean_avg(:,i) = epochs_eog.PO70{i,4}'; %NB condition 4 = 90dB pulse
+    GP70_clean_avg(:,i) = epochs_eog.GP70{i,4}';
+end
+
+[clusters70c, p_values70c, t_sums70c, permutation_distribution70c] = permutest(PO70_clean_avg, GP70_clean_avg, true, 0.01, 10000, true, inf);
+
+%% Manuscript plots_v1
 
 %Make a grand average EOG response
 for i = 1:numel(conditions)
@@ -847,9 +958,9 @@ set(lines, 'Color', 'k');
 
 %Inhib PO6090 & ISI240
 subplot(4,3,3); hold on;
-plot(mean(POavg,2), 'Color', colors(5,:)); %Manually specify colors to match other plots
-plot(mean(GPavg,2), 'Color', colors(10,:)); % -''-
-plot(clusters{:}, repmat(0.5*10^-5, 1, length(clusters{:})), 'red', 'LineWidth', 3)
+plot(mean(PO60avg,2), 'Color', colors(5,:)); %Manually specify colors to match other plots
+plot(mean(GP60avg,2), 'Color', colors(10,:)); % -''-
+plot(clusters60{:}, repmat(0.5*10^-5, 1, length(clusters60{:})), 'red', 'LineWidth', 3)
 
 ylim(lineylims);
 xlim(xrange);
@@ -979,4 +1090,292 @@ end
 lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
 set(lines, 'Color', 'k');
 
-saveas(gcf, ['../Analysis Output/MEG_manus_EOG.svg']);
+%saveas(gcf, ['../Analysis Output/MEG_manus_EOG.svg']);
+
+%% Mauscript plots_V2
+% V2: Using cleaned up EOG responses
+
+%Make a grand average EOG response
+for i = 1:numel(conditions)
+    for ii = 1:numel(cond.([(conditions{i}) 'label']))
+        for iii = 1:numel(sub_date.ID)
+            temp(iii,:) = epochs_eog_clean.(conditions{i}){iii,ii};
+        end
+    %SEM calculation goes here
+    EOG_GA_clean.(conditions{i})(ii,:) = mean(temp,1);
+    clear temp
+    end
+end
+
+% Inherited from raster plots
+xtick = [1:20:165];
+xticklab = [-500:100:320];
+triglinex = [101 101];
+xrange = [41 161];
+
+txtsize = 10;
+
+lineylims = [-9*10^-5 1*10^-5];
+boxylims = [-2*10^-4 0.5*10^-4];
+
+%Tableau medium 10 palette
+colors = [173 139 201;
+    168 120 110;
+    114 158 206;
+    255 158 74;
+    237 102 93;
+    103 191 92;
+    237 151 202;
+    162 162 162;
+    205 204 93;
+    109 204 218]/256;
+
+%No idea why the colors are read backwards for boxplot
+boxcolors = flip(colors(1:6,:));
+isiboxcolors = flip(colors(7:10,:));
+
+figure('Units', 'centimeters', 'Position',  [5 5 50 30]);
+tiledlayout(3,4, 'TileSpacing','compact', 'Padding','compact');
+
+%PO60
+nexttile; hold on;
+patch('Faces', [1 2 3 4], 'Vertices', [111 lineylims(1); 111 lineylims(2); 131 lineylims(2); 131 lineylims(1)], 'FaceColor', [0 0 0], 'FaceAlpha', 0.1, 'EdgeAlpha', 0)
+for i = 1:6
+    plot(EOG_GA_clean.PO60(i,:), 'Color', colors(i,:))
+end
+
+plot(triglinex, lineylims, 'k --');
+ax = gca;
+ax.XTick = xtick;
+ax.XTickLabel = [xticklab];
+ax.XGrid = 'on';
+ax.FontSize = txtsize;
+ylim(lineylims);
+xlim(xrange);
+xlabel("Time (ms)");
+
+ylabel({"60dB carrier", "EOG Amplitude (V)"})
+
+title({'Pulse only trials', 'Different pulse level'});
+
+legend({"", "70", "75", "80", "85", "90", "95"}, 'Location', 'southwest'); %First one empty to skip patch
+legend('boxoff');
+
+nexttile; hold on;
+boxplot(epochs_eog_clean_resp.PO60(:, :), [70:5:95], 'Symbol', 'ok');
+
+title({'Pulse only response amplitude', 'Different pulse level'});
+
+ylim(boxylims)
+ax = gca;
+ax.FontSize = txtsize;
+ax.Box = 'off';
+
+set(findobj(gca,'type','line'),'lineStyle','-');
+
+xlabel("Pulse level");
+
+%[normx, normy] = coord2norm(ax, [5 5], [-18*10^-5 -20*10^-5]); %https://se.mathworks.com/matlabcentral/fileexchange/54254-coord2norm
+%annotation('arrow', normx, normy);
+
+h = findobj(gcf,'tag','Outliers');
+set(h,'MarkerSize',4);
+
+h = findobj(gca,'Tag','Box');
+for j=1:6
+    patch(get(h(j),'XData'),get(h(j),'YData'),boxcolors(j,:),'FaceAlpha',.5);
+end
+
+lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
+set(lines, 'Color', 'k');
+
+title({'Pulse only response amplitude', 'Different pulse level'});
+
+
+
+%GP60
+nexttile; hold on;
+patch('Faces', [1 2 3 4], 'Vertices', [111 lineylims(1); 111 lineylims(2); 131 lineylims(2); 131 lineylims(1)], 'FaceColor', [0 0 0], 'FaceAlpha', 0.1, 'EdgeAlpha', 0)
+for i = 1:4
+    plot(EOG_GA_clean.GP60(i,:), 'Color', colors(i+6,:))
+end
+plot(triglinex, lineylims, 'k --');
+ylim(lineylims)
+
+ax = gca;
+ax.XTick = xtick;
+ax.XTickLabel = [xticklab];
+ax.XGrid = 'on';
+ax.FontSize = txtsize;
+ylim(lineylims);
+xlim(xrange);
+
+xlabel("Time (ms)");
+
+legend({"", "0 ms", "60 ms", "120 ms", "240 ms"}, 'Location', 'southwest'); %First one empty to skip patch
+legend('boxoff');
+
+title({'Gap + Pulse trials', 'Different ISI'});
+
+nexttile; boxplot(epochs_eog_clean_resp.GP60(:, :), [0 60 120 240], 'Symbol', 'ok');
+ylim(boxylims)
+ax = gca;
+ax.FontSize = txtsize;
+xlabel("ISI duration")
+ax.Box = 'off';
+
+set(findobj(gca,'type','line'),'lineStyle','-');
+
+h = findobj(gcf,'tag','Outliers');
+set(h,'MarkerSize',4);
+
+h = findobj(gca,'Tag','Box');
+for j=1:4
+    patch(get(h(j),'XData'),get(h(j),'YData'),isiboxcolors(j,:),'FaceAlpha',.5);
+end
+
+lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
+set(lines, 'Color', 'k');
+
+title({'Gap + Pulse response amplitude', 'Different ISI'});
+
+
+%PO70
+nexttile; hold on;
+patch('Faces', [1 2 3 4], 'Vertices', [111 lineylims(1); 111 lineylims(2); 131 lineylims(2); 131 lineylims(1)], 'FaceColor', [0 0 0], 'FaceAlpha', 0.1, 'EdgeAlpha', 0)
+for i = 1:5
+    plot(EOG_GA_clean.PO70(i,:), 'Color', colors(i+1,:)) %+1 to color to match PO60
+end
+plot(triglinex, lineylims, 'k --');
+ylim(lineylims)
+
+ax = gca;
+ax.XTick = xtick;
+ax.XTickLabel = [xticklab];
+ax.XGrid = 'on';
+ax.FontSize = txtsize;
+ylim(lineylims);
+xlim(xrange);
+ylabel({"70dB carrier", "EOG Amplitude (V)"})
+xlabel("Time (ms)");
+
+legend({"", "75", "80", "85", "90", "95"}, 'Location', 'southwest'); %First one empty to skip patch
+legend('boxoff');
+
+%NaNs to pad missing 70dB pulse in 70dB carrier
+nexttile; boxplot([repmat(NaN, 1, 22)' epochs_eog_clean_resp.PO70(:, 1:5)], [70:5:95], 'Symbol', 'ok');
+ylim(boxylims)
+ax = gca;
+ax.FontSize = txtsize;
+xlabel("Pulse level")
+ax.Box = 'off';
+
+set(findobj(gca,'type','line'),'lineStyle','-');
+
+h = findobj(gcf,'tag','Outliers');
+set(h,'MarkerSize',4);
+
+h = findobj(gca,'Tag','Box');
+for j=1:5
+    patch(get(h(j),'XData'),get(h(j),'YData'),boxcolors(j,:),'FaceAlpha',.5);
+end
+
+lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
+set(lines, 'Color', 'k');
+
+%GP70
+nexttile; hold on;
+patch('Faces', [1 2 3 4], 'Vertices', [111 lineylims(1); 111 lineylims(2); 131 lineylims(2); 131 lineylims(1)], 'FaceColor', [0 0 0], 'FaceAlpha', 0.1, 'EdgeAlpha', 0)
+for i = 1:4
+    plot(EOG_GA_clean.GP70(i,:), 'Color', colors(i+6,:))
+end
+plot(triglinex, lineylims, 'k --');
+ylim(lineylims)
+
+ax = gca;
+ax.XTick = xtick;
+ax.XTickLabel = [xticklab];
+ax.XGrid = 'on';
+
+ax.FontSize = txtsize;
+ylim(lineylims);
+xlim(xrange);
+xlabel("Time (ms)");
+
+legend({"", "0 ms", "60 ms", "120 ms", "240 ms"}, 'Location', 'southwest'); %First one empty to skip patch
+legend('boxoff');
+
+nexttile; boxplot(epochs_eog_clean_resp.GP70(:, :), [0 60 120 240], 'Symbol', 'ok');
+ylim(boxylims)
+ax = gca;
+ax.FontSize = txtsize;
+xlabel("ISI duration")
+ax.Box = 'off';
+
+set(findobj(gca,'type','line'),'lineStyle','-');
+
+h = findobj(gcf,'tag','Outliers');
+set(h,'MarkerSize',4);
+
+h = findobj(gca,'Tag','Box');
+for j=1:4
+    patch(get(h(j),'XData'),get(h(j),'YData'),isiboxcolors(j,:),'FaceAlpha',.5);
+end
+
+lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
+set(lines, 'Color', 'k');
+
+%Inhib PO6090 & ISI240
+nexttile; hold on;
+plot(mean(PO60_clean_avg,2), 'Color', colors(5,:)); %Manually specify colors to match other plots
+plot(mean(GP60_clean_avg,2), 'Color', colors(10,:)); % -''-
+
+%plot clusters
+for j = 1:numel(clusters60c)
+    plot(clusters60c{j}, repmat(0.5*10^-5, 1, numel(clusters60c{j})), 'red', 'LineWidth', 3)
+end
+
+ylim(lineylims);
+xlim(xrange);
+
+ax = gca;
+ax.FontSize = txtsize;
+ax.XTick = xtick;
+ax.XTickLabel = xticklab;
+ax.XGrid = 'on';
+
+xlabel("Time (ms)");
+
+legend({"Pulse (90 dB)", "Gap + Pulse (ISI 240 ms)", "Cluster, p = 0.01"}, 'Location', 'southwest');
+legend('boxoff');
+
+title({'Inhibition of EOG response', '60 dB carrier'});
+
+%%%%%%%%%%%%%
+%Inhib PO7090 & ISI240
+nexttile; hold on;
+plot(mean(PO70_clean_avg,2), 'Color', colors(5,:)); %Manually specify colors to match other plots
+plot(mean(GP70_clean_avg,2), 'Color', colors(10,:)); % -''-
+
+%plot clusters
+for j = 1:numel(clusters70c)
+    plot(clusters70c{j}, repmat(0.5*10^-5, 1, numel(clusters70c{j})), 'red', 'LineWidth', 3)
+end
+
+ylim(lineylims);
+xlim(xrange);
+
+ax = gca;
+ax.FontSize = txtsize;
+ax.XTick = xtick;
+ax.XTickLabel = xticklab;
+ax.XGrid = 'on';
+
+xlabel("Time (ms)");
+
+legend({"Pulse (90 dB)", "Gap + Pulse (ISI 240 ms)", "Cluster, p = 0.01"}, 'Location', 'southwest');
+legend('boxoff');
+
+title({'Inhibition of EOG response', '70 dB carrier'});
+
+%saveas(gcf, ['../Analysis Output/MEG_manus_EOG3.svg']);
