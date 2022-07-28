@@ -235,6 +235,8 @@ end
 
 %% Arrange cleaned data
 
+%load('../mat_data/timelockeds/epochs_eog_all_clean.mat')
+
 %Struct  to count how many trials were excluded
 trials_left = struct();
 
@@ -260,6 +262,9 @@ for i = 1:numel(sub_date.ID)
 
 %for subjects
 end
+
+%save('../mat_data/timelockeds/epochs_eog_all_clean_avg.mat', "epochs_eog_clean");
+
 %% Find biggest response from structure
 
 epochs_eog_resp = struct;
@@ -1094,6 +1099,8 @@ set(lines, 'Color', 'k');
 
 %% Mauscript plots_V2
 % V2: Using cleaned up EOG responses
+
+%load('../mat_data/timelockeds/epochs_eog_all_clean_avg.mat');
 
 %Make a grand average EOG response
 for i = 1:numel(conditions)

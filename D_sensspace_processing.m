@@ -20,14 +20,16 @@ top_chan = {'MEG0242+0243', 'MEG1222+1223', 'MEG1322+1323', 'MEG1332+1333', 'MEG
 all_cmb_avg = struct();
 gravg_cmb = struct ();
 
-for ii = 3%:length(conditions)
+for ii = 1:length(conditions)
 
-nstim = length(eval(['cond.' char(conditions(ii)) 'trig']));
-trig = eval(['cond.' char(conditions(ii)) 'trig']);
+numel(cond.([(conditions{i}) 'label']))
 
-    for iii = 4%1:nstim
+trig = cond.([conditions{ii} 'trig']);
+nstim = numel(trig);
 
-        for i = 1:length(sub_date.ID)
+    for iii = 1:nstim
+
+        for i = 1:numel(sub_date.ID)
 
         subinpath = ['../mat_data/ICA/' 'ID' sub_date.ID{i} '/'];
         
@@ -57,10 +59,8 @@ trig = eval(['cond.' char(conditions(ii)) 'trig']);
         end
         
         cfg.preproc.lpfilter = 'yes';
-        cfg.preproc.lpfreq = 30; %original  : 70
-        
-        cfg.preproc.hpfilter = 'yes';
-        cfg.preproc.hpfreq = 1; %original: no hpfilter
+        cfg.preproc.lpfreq = 70;
+        cfg.preproc.hpfilter = 'no';
         
         cfg.trials = tempdat.trialinfo == trig(iii);
         
@@ -85,7 +85,7 @@ trig = eval(['cond.' char(conditions(ii)) 'trig']);
         clear timelockeds timelockeds_cmb
         
         %Calculate grand average over trial and subject per condition
-%        gravg_cmb.(conditions{ii}){iii} = mean(cat(3, all_cmb_avg.(conditions{ii}){:, iii}), 3);
+%       gravg_cmb.(conditions{ii}){iii} = mean(cat(3, all_cmb_avg.(conditions{ii}){:, iii}), 3);
 
         end
 
@@ -532,6 +532,9 @@ purple = [178 118 178]/256;
 n_subs = 1:22;
 
 %% PO60_90: Extract and plot amplitude and latencies
+
+%sub_sensoi = load('../mat_data/timelockeds/subjects_sensoi_avg.mat');
+%sub_sensoi = sub_sensoi.sub_sensoi;
 
 %Time windows of interest, varies with gap position!!
 N1on = find(mean_sub.time == 0.050);
@@ -1098,3 +1101,7 @@ colormap(flipud(brewermap(64,'RdBu'))) % change the colormap
 
 % saveas(gcf, ['../Analysis Output/topo_' cond.GP60label{i} '_pulP2.svg']);
 % close
+
+
+%% Manuscript figures
+
