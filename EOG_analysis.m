@@ -322,6 +322,9 @@ for i = 1:numel(sub_date.ID)
         %minresponse in sample 111-131
         minresp = min(epochs_eog_clean.(conditions{ii}){i,stim_index}(111:131));
         
+        %replace "minresp" with [M, I] and use I for latency in separate
+        %structure
+
         epochs_eog_clean_resp.(conditions{ii})(i, stim_index) = minresp;
             
         %For stim
@@ -1386,3 +1389,53 @@ legend('boxoff');
 title({'Inhibition of EOG response', '70 dB carrier'});
 
 %saveas(gcf, ['../Analysis Output/MEG_manus_EOG3.svg']);
+
+%% Supplementary figure of latency variability for all subjects all stimuli
+
+%load('../mat_data/timelockeds/epochs_eog_all_clean.mat');
+
+
+
+xrange = [1 165];
+ylims = [-6*10^-4 2*10^-4];
+
+xtick = [1:20:165];
+xticklab = [-500:100:320];
+triglinex = [101 101];
+
+SDvec = std(epochs_eog_all_clean.PO60{1,5}, 0, 2)';
+meanvec = mean(epochs_eog_all_clean.PO60{1,5}, 2)';
+
+SDpos = meanvec + SDvec;
+SDneg = meanvec - SDvec;
+
+x = 1:numel(meanvec);
+x2 = [x, fliplr(x)];
+inBetween = [SDneg, fliplr(SDpos)]';
+
+figure; hold on;
+
+fill(x2, inBetween, [1 0 0], 'FaceAlpha', 0.2, 'LineStyle', 'none');
+fill(x2, inBetween*2, [1 0 0], 'FaceAlpha', 0.2, 'LineStyle', 'none');
+plot(epochs_eog_all_clean.PO60{1,5}, 'Color', [0 0 0 0.5])
+plot(meanvec, 'r', 'LineWidth', 2)
+
+plot(triglinex, ylims, 'k --');
+
+xlim(xrange);
+
+ax = gca;
+ax.XTick = xtick;
+ax.XTickLabel = xticklab;
+
+
+
+
+
+
+
+
+
+
+
+
