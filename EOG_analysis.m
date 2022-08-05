@@ -4,6 +4,8 @@ load(['../mat_data/timelockeds/epochs_eog_avgrast.mat']);
 load('../mat_data/timelockeds/epochs_eog.mat');
 load('../mat_data/timelockeds/epochs_eog_resp.mat');
 
+load('../mat_data/timelockeds/epochs_eog_clean_resp.mat');
+
 %% load EOG data to structure
 
 epochs_eog = struct;
@@ -336,7 +338,7 @@ for i = 1:numel(sub_date.ID)
 %For subjects
 end
 
-%save(['../mat_data/timelockeds/epochs_eog__clean_resp.mat'], 'epochs_eog_clean_resp');
+%save(['../mat_data/timelockeds/epochs_eog_clean_resp.mat'], 'epochs_eog_clean_resp');
 
 %Export EOG amps as CSV
 %EOG_clean_resp_csv = struct2table(epochs_eog_clean_resp);
@@ -1394,39 +1396,101 @@ title({'Inhibition of EOG response', '70 dB carrier'});
 
 %load('../mat_data/timelockeds/epochs_eog_all_clean.mat');
 
-
+timevec = -500:5:320; %Vector of timepoints in ms
 
 xrange = [1 165];
 ylims = [-6*10^-4 2*10^-4];
 
+trigidx = find(timevec == 0); %Trigger index, i.e. time zero
+
 xtick = [1:20:165];
 xticklab = [-500:100:320];
-triglinex = [101 101];
+triglinex = [trigidx trigidx];
 
-SDvec = std(epochs_eog_all_clean.PO60{1,5}, 0, 2)';
-meanvec = mean(epochs_eog_all_clean.PO60{1,5}, 2)';
+for i = 1:numel(conditions)
 
-SDpos = meanvec + SDvec;
-SDneg = meanvec - SDvec;
+    for ii = 1:numel(cond.([(conditions{i}) 'label']))
+        
+        figure('Position', [800 800 1000 1100], 'Renderer', 'painters');
+        tiledlayout(6,4, 'TileSpacing','compact', 'Padding','compact'); 
 
-x = 1:numel(meanvec);
-x2 = [x, fliplr(x)];
-inBetween = [SDneg, fliplr(SDpos)]';
+        for iii = 1:numel(sub_date.ID)
 
-figure; hold on;
+            tempdat = epochs_eog_all_clean.(conditions{i}){iii,ii};
+            
+            SDvec = std(tempdat, 0, 2)';
+            meanvec = mean(tempdat, 2)';
+            
+            SDposamp = meanvec + SDvec;
+            SDnegamp = meanvec - SDvec;
+            
+            x = 1:numel(meanvec);
+            x2 = [x, fliplr(x)];
+            inBetween = [SDnegamp, fliplr(SDposamp)]';
+            
+            %find minimum magnitude and index between trigidx (time zero) and end
+            [M,I] = min(tempdat(trigidx:numel(timevec),:),[], 1);
+            
+            %mean latency as ms
+            meanlat = mean(timevec(I+trigidx-1));
+            meanlatidx = interp1(timevec,1:numel(timevec),meanlat,'nearest');
+            
+            % Latency standard deviation
+            SDlat = std(timevec(I+trigidx-1));
+            
+            % Index of mean +/- SD
+            SDposlat = interp1(timevec,1:numel(timevec),(meanlat + SDlat),'nearest');
+            SDneglat = interp1(timevec,1:numel(timevec),(meanlat - SDlat),'nearest');
+            
+            % Index of mean +/- SD
+            SD_2_poslat = interp1(timevec,1:numel(timevec),(meanlat + SDlat*2),'nearest');
+            SD_2_neglat = interp1(timevec,1:numel(timevec),(meanlat - SDlat*2),'nearest');           
+            
+            nexttile; hold on;
 
-fill(x2, inBetween, [1 0 0], 'FaceAlpha', 0.2, 'LineStyle', 'none');
-fill(x2, inBetween*2, [1 0 0], 'FaceAlpha', 0.2, 'LineStyle', 'none');
-plot(epochs_eog_all_clean.PO60{1,5}, 'Color', [0 0 0 0.5])
-plot(meanvec, 'r', 'LineWidth', 2)
+            %Latency patch + text of 2SD range
+            %patch([SD_2_neglat SD_2_neglat SD_2_poslat SD_2_poslat], [ylims(1) ylims(2) ylims(2) ylims(1)], [0 0 1], 'FaceAlpha', 0.1, 'LineStyle', 'none');
+            patch([SDneglat SDneglat SDposlat SDposlat], [ylims(1) ylims(2) ylims(2) ylims(1)], [0 0 1], 'FaceAlpha', 0.1, 'LineStyle', 'none');
+            
+            text(5, -5.5*10^-4, ['2 SD range: ' num2str((round(meanlat - SDlat*2,0))) ' - ' num2str((round(meanlat + SDlat*2,0)))], 'HorizontalAlignment', 'left', 'Color', 'blue', 'FontSize', 8);
+            
+            %Amplitude SD fills
+            fill(x2, inBetween*2, [1 0 0], 'FaceAlpha', 0.15, 'LineStyle', 'none');
+            fill(x2, inBetween, [1 0 0], 'FaceAlpha', 0.25, 'LineStyle', 'none');
+            
+            %Trials
+            plot(tempdat, 'Color', [0 0 0 0.5])
+            
+            %Min amp dot
+            plot(I+trigidx-1,M, 'r.')
+            
+            %Mean of trials
+            plot(meanvec, 'r', 'LineWidth', 2)
+            
+            %Trigger marker
+            plot(triglinex, ylims, 'k --');
+            
+            %Mean latency
+            plot([meanlatidx meanlatidx], ylims, 'b --');
+            
+            xlim(xrange);
+            ylim(ylims);
+            
+            ax = gca;
+            ax.XTick = xtick;
+            ax.XTickLabel = xticklab;
 
-plot(triglinex, ylims, 'k --');
+            title(sub_date.ID{iii})
 
-xlim(xrange);
+            clear tempdat;
 
-ax = gca;
-ax.XTick = xtick;
-ax.XTickLabel = xticklab;
+        end %subject
+    
+        saveas(gcf, ['../Analysis Output/EOG_variance/' cond.([(conditions{i}) 'label']){ii} '.svg'])
+        close;
+    end %stim
+
+end %conditions
 
 
 
