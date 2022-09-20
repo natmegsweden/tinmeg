@@ -1,20 +1,3 @@
-%% Load conditions for subjects, average trials via ft_timelockanalysis
-
-%NB, fs_ds = 200 is hardcoded in for adapting TOI to gap in identifying amp and lat
-
-all_cmb_avg = load('../mat_data/timelockeds/all_cmb_avg.mat');
-all_cmb_avg = all_cmb_avg.all_cmb_avg;
-
-gravg_cmb = load('../mat_data/timelockeds/grand_avg_cmb.mat');
-gravg_cmb = gravg_cmb.gravg_cmb;
-
-mean_sub = load(['../mat_data/timelockeds/mean_sub.mat']);
-mean_sub = mean_sub.timelockeds_cmb;
-mean_sub.time = round(mean_sub.time,3); %Round to avoid issues with floating point precision in plots
-
-%top_chan are 6 unique highest response channels in combined grads in all PO60 conditions (i.e. unique(max_grad) except 'MEG2022+2023', 'MEG2042+2043' (superior parietal)
-top_chan = {'MEG0242+0243', 'MEG1222+1223', 'MEG1322+1323', 'MEG1332+1333', 'MEG1342+1343', 'MEG1442+1443', 'MEG1522+1523', 'MEG1612+1613',  'MEG2422+2423', 'MEG2612+2613',  'MEG2642+2643'};
-
 %% Process timelockeds per condition, gather subject- and grand average
 
 all_cmb_avg = struct();
@@ -216,16 +199,11 @@ end
 csvwrite('../Analysis Output/gradSOI_response_PO60_90.csv', all_cmb.PO60);
 csvwrite('../Analysis Output/gradSOI_response_GP60_i240.csv', all_cmb.GP60);
 
-%% Butterfly with selected sensors
-
-%Old, hand-picked sensors from MultiPlotER
-%l_mag_chan = {'MEG1611', 'MEG1621', 'MEG1811', 'MEG1641', 'MEG1631', 'MEG1841', 'MEG1731', 'MEG1941', 'MEG1911'};
-%r_mag_chan = {'MEG2421', 'MEG2411', 'MEG2221', 'MEG2431', 'MEG2441', 'MEG2231', 'MEG2511', 'MEG2321', 'MEG2311'};
-%l_grad_chan = {'MEG1612+1613', 'MEG1622+1623', 'MEG1812+1813', 'MEG1642+1643', 'MEG1632+1633', 'MEG1842+1843', 'MEG1732+1733', 'MEG1942+1943', 'MEG1912+1913'};
-%r_grad_chan = {'MEG2422+2423', 'MEG2412+2413', 'MEG2222+2223', 'MEG2432+2433', 'MEG2442+2443', 'MEG2232+2233', 'MEG2512+2513', 'MEG2322+2323', 'MEG2312+2313'};
-%other_chan = {'MEG1332+1333', 'MEG1342+1343', 'MEG2612+2613', 'MEG0242+0243', 'MEG1322+1323'};
+%% Amplitude plot selecting combined gradiometers
 
 %GRAD-PLOTS PO60
+max_grad = cell(6,6);
+
 for j = 1:6
 
 cfg =[];
@@ -273,17 +251,22 @@ patch('Faces', [1 2 3 4], 'Vertices', [71 minylim; 71 maxylim; 101 maxylim; 101 
     %find max of first 102 chan (grads) at mean of samples 116:131 (75-150ms)
     [val, ind] = sort(mean(mean_sub.avg(1:102,116:131),2), 'descend');
 
-    max_grad{j,1} = mean_sub.label{ind(1)};
-    max_grad{j,2} = mean_sub.label{ind(2)};
-    max_grad{j,3} = mean_sub.label{ind(3)};
-    max_grad{j,4} = mean_sub.label{ind(4)};
-    max_grad{j,5} = mean_sub.label{ind(5)};
-    max_grad{j,6} = mean_sub.label{ind(6)};
+    %write top 6 cmb_grads to struct
+    for k = 1:6
+        max_grad{j,1} = mean_sub.label{ind(1)};
+        max_grad{j,2} = mean_sub.label{ind(2)};
+        max_grad{j,3} = mean_sub.label{ind(3)};
+        max_grad{j,4} = mean_sub.label{ind(4)};
+        max_grad{j,5} = mean_sub.label{ind(5)};
+        max_grad{j,6} = mean_sub.label{ind(6)};
+    end
     
     %saveas(gcf, ['../Analysis Output/' cond.PO60label{j} 'butterfly.svg']);
-    %close
+    close
     
 end
+
+top_chan = unique(max_grad)';
 
 %GRAD-PLOTS GP60
 for j = 1:4
@@ -406,78 +389,7 @@ patch('Faces', [1 2 3 4], 'Vertices', [101 minylim; 101 maxylim; 111 maxylim; 11
 end
 
 
-%% Sensshape plot with highlighted chips
 
-cfg = [];
-cfg.output = 'scalp';
-
-mri_segmented = ft_volumesegment(cfg, template_mri);
-
-%Transform to neuromag coordsys - same as for sensors
-mri_segmented = ft_convert_coordsys(mri_segmented, 'neuromag');
-
-%Create mesh skull
-cfg = [];
-cfg.method = 'projectmesh';
-cfg.tissue = 'scalp';
-cfg.numvertices = 1000;
-
-mesh_scalp = ft_prepare_mesh(cfg, mri_segmented);
-
-%ft_plot_mesh(mesh_scalp);
-
-%Plot higlighted sensors
-colors = ones(306, 3);
-%l_chips = {'MEG1612', 'MEG1622', 'MEG1812', 'MEG1642', 'MEG1632', 'MEG1842', 'MEG1732', 'MEG1942', 'MEG1912'};
-%r_chips = {'MEG2422', 'MEG2412', 'MEG2222', 'MEG2432', 'MEG2442', 'MEG2232', 'MEG2512', 'MEG2322', 'MEG2312'};
-%top_chips = {'MEG0242', 'MEG1322', 'MEG1332', 'MEG1342', 'MEG1442', 'MEG1612', 'MEG2422', 'MEG2522',  'MEG2612',  'MEG2642'}; %Other strong responses from GRADS (i.e. max_grad)
-%l_chips_idx = ismember(mean_sub.label, l_chips);
-%r_chips_idx = ismember(mean_sub.label, r_chips);
-%top_chips_idx = ismember(mean_sub.label, top_chips);
-
-%Index of the first gradiometer in top_chan before combine_planar to match plot
-for j = 1:numel(top_chan)
-top_chan_temp{j} = top_chan{j}(1:end-5);
-end
-top_chan_idx = ismember(mean_sub.label, top_chan_temp);
-clear top_chan_temp
-
-%Write colour vector to row in mean_sub.label (+1 to row for both grads on chip)
-for i = 1:numel(mean_sub.label)
-    
-%     if l_chips_idx(i) == 1
-%     colors(i, :) = [0 0 1];
-%     colors(i+1, :) = [0 0 1];
-%     elseif r_chips_idx(i) == 1
-%     colors(i, :) = [1 0 0];
-%     colors(i+1, :) = [1 0 0];
-    if top_chan_idx(i) == 1
-    colors(i, :) = [0.85 0.325 0.098];
-    colors(i+1, :) = [0.85 0.325 0.098];
-    end
-    
-end
-
-%Move scalp to not clip through sensors and be positioned nicely in helmet
-mesh_scalp.pos(:,3) = mesh_scalp.pos(:,3) - 10; %Down 10mm
-mesh_scalp.pos(:,2) = mesh_scalp.pos(:,2) - 15; %Back 15mm
-
-figure('Position', [400 200 1800 1000]);
-hold on
-subplot(1,2,1)
-sensors = mean_sub.grad;
-ft_plot_sens(sensors, 'facecolor', colors, 'facealpha', 0.7);
-
-ft_plot_mesh(ft_convert_units(mesh_scalp, 'cm'), 'edgecolor', [173/256 216/256 230/256]);
-view([100 25])
-
-subplot(1,2,2)
-sensors = mean_sub.grad;
-ft_plot_sens(sensors, 'facecolor', colors, 'facealpha', 0.7);
-
-ft_plot_mesh(ft_convert_units(mesh_scalp, 'cm'), 'edgecolor', [173/256 216/256 230/256]);
-
-view([-100 25])
 
 %% Quantify individual subjects components latencies and amplitude
 
@@ -1033,7 +945,7 @@ colormap(flipud(brewermap(64,'RdBu'))) % change the colormap
 
 end
 
-%% Pulse components - WIP - Be careful - static!
+%% Topoplot Pulse components - WIP - Be careful - static!
 
 i = 4;
 
@@ -1103,5 +1015,4 @@ colormap(flipud(brewermap(64,'RdBu'))) % change the colormap
 % close
 
 
-%% Manuscript figures
 
