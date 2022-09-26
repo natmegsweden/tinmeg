@@ -35,9 +35,9 @@ pulse_lvl = 90;     %Pulse level (dB)
 cal_lvl = 90;       %Reference maximum level, all other are levels relative this.
 
 %Compensate for equal loudness at 8kHz (ISO 226:2003) + 15dB
-%AND compensate for speaker frequency response (+7dB at 8kHz, +10 dB at 3kHz)
-lvl_comp8 = 15+7;
-lvl_comp3 = 10;
+%AND compensate for speaker frequency response (+1dB at 8kHz, -2 dB at 3kHz)
+lvl_comp8 = 15+3;
+lvl_comp3 = -7;
 
 %Create 15 sec reference calibration noise
 calref = (rand(1, 15*fs) - 0.5) * 2;
@@ -50,8 +50,8 @@ for j = 1:numel(tin)
     %Loop for all background conditions
     for ii = 1:numel(bkg)
         
-        bkg_lvl = 60;       %Background noise level (dB)
-        tone_lvl = 40;      %Pure tone level in "tin" blocks (dB)
+        bkg_lvl = 60-7;       %Background noise level (dB), -5 compensates for MSR speakers non-linearity when pulse is amplified to 90dB
+        tone_lvl = 40-7;      %Pure tone level in "tin" blocks (dB)
         
         %Name block
         temptin = num2str(tin(j));
@@ -99,7 +99,7 @@ for j = 1:numel(tin)
             bkg_noise = bkg_noise/max(abs(bkg_noise(:))); %Limit to 0 +/- 1 range by dividing signal by max(), else LP-filter introduce clipping
             
             bkg_noise80 = (rms(calref .* cal80diff)/rms(bkg_noise)) .* bkg_noise; %For calibration purposes
-            bkg_noise90 = (rms(calref .* cal90diff)/rms(bkg_noise)) .* bkg_noise; %For calibration purposes
+            pulse_lvl_cal = (rms(calref .* pulse_lvldiff)/rms(bkg_noise)) .* bkg_noise; %For calibration purposes
             
             bkg_noise = (rms(calref .* bkg_lvldiff)/rms(bkg_noise)) .* bkg_noise; %Scale to match RMS of bakground level reference
 
@@ -109,7 +109,7 @@ for j = 1:numel(tin)
         if tin(j) == 0 && bkg(ii) == 0
             audiowrite(['output/audio/' fname '_cal60.wav'], bkg_noise(1:15*fs), fs);
             audiowrite(['output/audio/' fname '_cal80.wav'], bkg_noise80(1:15*fs), fs);
-            audiowrite(['output/audio/' fname '_cal90.wav'], bkg_noise90(1:15*fs), fs);
+            audiowrite(['output/audio/pulse_lvl_cal.wav'], pulse_lvl_cal(1:15*fs), fs);
             clear bkg_noise80 bkg_noise90;
         elseif tin(j) == 0 && bkg(ii) > 0
             audiowrite(['output/audio/' fname '_cal60.wav'], bkg_noise(1:15*fs), fs);
