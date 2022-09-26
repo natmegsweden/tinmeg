@@ -81,6 +81,7 @@ for j = 1:numel(tin)
         
         %To create calibration file at second level
         cal80diff = db2mag((cal_lvl - (bkg_lvl+20))*-1);
+        cal90diff = db2mag((cal_lvl - (bkg_lvl+30))*-1);
     
         %Specify NBN filter parameters
         octfilter = octaveFilter(bkg(ii), '1/3 octave','SampleRate', fs, 'FilterOrder', 8);
@@ -98,6 +99,7 @@ for j = 1:numel(tin)
             bkg_noise = bkg_noise/max(abs(bkg_noise(:))); %Limit to 0 +/- 1 range by dividing signal by max(), else LP-filter introduce clipping
             
             bkg_noise80 = (rms(calref .* cal80diff)/rms(bkg_noise)) .* bkg_noise; %For calibration purposes
+            bkg_noise90 = (rms(calref .* cal90diff)/rms(bkg_noise)) .* bkg_noise; %For calibration purposes
             
             bkg_noise = (rms(calref .* bkg_lvldiff)/rms(bkg_noise)) .* bkg_noise; %Scale to match RMS of bakground level reference
 
@@ -107,7 +109,8 @@ for j = 1:numel(tin)
         if tin(j) == 0 && bkg(ii) == 0
             audiowrite(['output/audio/' fname '_cal60.wav'], bkg_noise(1:15*fs), fs);
             audiowrite(['output/audio/' fname '_cal80.wav'], bkg_noise80(1:15*fs), fs);
-            clear bkg_noise80;
+            audiowrite(['output/audio/' fname '_cal90.wav'], bkg_noise90(1:15*fs), fs);
+            clear bkg_noise80 bkg_noise90;
         elseif tin(j) == 0 && bkg(ii) > 0
             audiowrite(['output/audio/' fname '_cal60.wav'], bkg_noise(1:15*fs), fs);
         end

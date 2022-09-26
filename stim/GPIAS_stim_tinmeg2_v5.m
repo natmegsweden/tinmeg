@@ -1,5 +1,15 @@
 
-%To do:
+% Calibration version of V5 to average responses from Svantek log:
+% - ordered trials
+% - no jitter 
+% - no "simulated tinnitus"
+
+% Also compensates for MSR speaker frequency response
+ % +7dB for 8kHz NBN
+ % +10dB for 3kHz NBN
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 fs = 44100; %Samplerate
 dt = 1/fs;  %Seconds per sample
@@ -7,7 +17,7 @@ dt = 1/fs;  %Seconds per sample
 lowpassf = 18000; %Lowpass filter cutoff for calibration noise, pulse and BBN background
 
 ntrials = 5;                %number of presentations per block
-tin = [0 3000 8000];        %"Tinnitus" conditions (PT frequencies)
+tin = [0];        %"Tinnitus" conditions (PT frequencies)
 bkg = [0 3000 8000];        %Background carrier types (0: BBN or NBN center frequency)
 stim = {'GO', 'PO', 'GP'};  %Stimulation types (Gap Only, Pulse Only, Gap+Pulse)
 
@@ -23,6 +33,11 @@ minITI = 1.8;       %Minimum inter-trial-interval
 pulse_lvl = 90;     %Pulse level (dB)
 
 cal_lvl = 90;       %Reference maximum level, all other are levels relative this.
+
+%Compensate for equal loudness at 8kHz (ISO 226:2003) + 15dB
+%AND compensate for speaker frequency response (+6dB at 8kHz, +10 dB at 3kHz)
+lvl_comp8 = 15+6;
+lvl_comp3 = -9;
 
 %Create 15 sec reference calibration noise
 calref = (rand(1, 15*fs) - 0.5) * 2;
@@ -45,13 +60,18 @@ for j = 1:numel(tin)
         tempbkg = tempbkg(1);
         fname = ['tin' temptin '_bkg' tempbkg];
         
-        %Compensate for equal loudness (ISO 226:2003)
+        %Compensate for equal loudness (ISO 226:2003) + 15dB
+        %AND compensate for speaker frequency response (+7dB at 8kHz, +10 dB at 3kHz)
         if bkg(ii) == 8000;
-            bkg_lvl = bkg_lvl + 15;
+            bkg_lvl = bkg_lvl + lvl_comp8;
+        elseif bkg(ii) == 3000;
+            bkg_lvl = bkg_lvl + lvl_comp3;
         end
         
         if tin(j) == 8000;
-            tone_lvl = tone_lvl + 15;
+            tone_lvl = tone_lvl + lvl_comp8;
+        elseif tin(j) == 3000;
+            tone_lvl = tone_lvl + lvl_comp3;
         end
         
         %Calculate level differences relative calibration level
@@ -100,7 +120,7 @@ for j = 1:numel(tin)
         
         %Create and shuffle list of stims to include in block
         stimlist = repmat(stim,1,ntrials);
-        Rstimlist = stimlist(randperm(numel(stimlist)));
+        Rstimlist = sort(stimlist); %stimlist(randperm(numel(stimlist)));
 
         offset = prepad*fs; %pad at start of block, offset keep track och trigger times in loop
         r = 1;              %row number for stim/trigger list
@@ -114,7 +134,7 @@ for j = 1:numel(tin)
         for i = 1:numel(Rstimlist)
             
             %Create random duration (0-500ms) to add to minimum ITI
-            rITI = round(0.5 .* rand(1,1), 2)*fs; %Round to even 10 ms
+            rITI = 0; %round(0.5 .* rand(1,1), 2)*fs; %Round to even 10 ms
             
             %Pad offset samples to keep offset at integer ms - avoids cumulative rounding errors in block.
             %https://se.mathworks.com/matlabcentral/answers/440703
