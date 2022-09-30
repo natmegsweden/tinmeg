@@ -1,11 +1,12 @@
 %% Process timelockeds per condition, gather subject- and grand average
 
-all_cmb_avg = struct();
-gravg_cmb = struct ();
+%Structure for subject timleockeds.avg
+tlk_sub = struct();
+
+%Structure for subject timleockeds.avg with combined planar gradiometers
+tlk_sub_cmb = struct();
 
 for ii = 1:length(conditions)
-
-numel(cond.([(conditions{i}) 'label']))
 
 trig = cond.([conditions{ii} 'trig']);
 nstim = numel(trig);
@@ -52,27 +53,16 @@ nstim = numel(trig);
         clear tempdat
         
         %save individual timelockeds
-        %save(['../mat_data/timelockeds/ID' sub_date.ID{i} '/' (cond.(([conditions{ii} 'label'])){iii}) '_tlks.mat'], 'timelockeds', '-v7.3');
-        
-        
+        save(['../mat_data/timelockeds/ID' sub_date.ID{i} '/' (cond.(([conditions{ii} 'label'])){iii}) '_tlks.mat'], 'timelockeds');
+                
         cfg = [];
         timelockeds_cmb = ft_combineplanar(cfg, timelockeds);
         
-        all_cmb_avg.(conditions{ii}){i, iii} = timelockeds_cmb.avg;
+        %Write averages to structs for easy access
+        tlk_sub_cmb.(conditions{ii}){i, iii} = timelockeds_cmb.avg;
+        tlk_sub.(conditions{ii}){i, iii} = timelockeds.avg;
         
-        %Grab only 'avg' parameter in struct compatible with cat(mean())
-        %all_avg.(conditions{ii}){i, iii} = timelockeds.avg;
-        
-        %Save some subject data structure for use with plot functions later
-        %save('../mat_data/timelockeds/mean_sub.mat', 'timelockeds_cmb', '-v7.3');
-        clear timelockeds timelockeds_cmb
-        
-        %Calculate grand average over trial and subject per condition
-%       gravg_cmb.(conditions{ii}){iii} = mean(cat(3, all_cmb_avg.(conditions{ii}){:, iii}), 3);
-
         end
-
-        %save timelockeds?
         
     end
 
@@ -80,8 +70,8 @@ end
 
 clear i ii iii trig nstim
 
-%save('../mat_data/timelockeds/grand_avg_cmb.mat', 'gravg_cmb', '-v7.3');
-%save('../mat_data/timelockeds/all_cmb_avg.mat', 'all_cmb_avg', '-v7.3');
+save('../mat_data/timelockeds/tlk_sub.mat', 'tlk_sub');
+save('../mat_data/timelockeds/tlk_sub_cmb.mat', 'tlk_sub_cmb');
 
 %% Process timelockeds: keeptrials = yes, trials of interest only, average top_chan SOI
 
@@ -473,7 +463,7 @@ sub_amp_lat.PO60_90_P2lat(i,1) = mean_sub.time(P2on-1+I);
 sub_amp_lat.PO60_90_P2amp(i,1) = mean(sub_sensoi.PO60{i,5}(P2on:P2off)); %Mean amp
 sub_amp_lat.PO60_90_P2amp_peak(i,1) = max(sub_sensoi.PO60{i,5}(P2on:P2off)); %Peak amp
 clear M I
-    
+
 plot(sub_sensoi.PO60{i,5}, 'Color', [0 0 0 0.5])
 tempmean(i,1:165) = sub_sensoi.PO60{i,5};
 end
