@@ -1492,14 +1492,186 @@ for i = 1:numel(conditions)
 
 end %conditions
 
+%% EOG Raster plot for Chris
+
+if exist('epochs_eog_all_clean', 'var') == 0
+    load('../mat_data/timelockeds/epochs_eog_all_clean.mat');
+end
+
+%index of max for PO60_90
+if exist('epochs_eog_clean_resp', 'var') == 0
+    load('../mat_data/timelockeds/epochs_eog_clean_resp.mat');
+end
+
+%Plot
+colbar = [-1.5*10^-4 0.3*10^-4];
+ylimamp = [-3*10^-4 1*10^-4];
+
+figure('Position', [600 200 1400 1200]); tiledlayout(5,2, 'TileSpacing', 'compact');
+
+%PO60_90
+nexttile; hold on;
+for i = 1:22
+    temp(i, 1:165) = mean(epochs_eog_all_clean.PO60{i,5}, 2);
+    plot(mean(epochs_eog_all_clean.PO60{i,5}, 2), 'Color', [0 0 0 0.5])
+end
+plot(mean(temp', 2), 'Color', [1 0 0], 'LineWidth', 2)
+
+xlim([1 165])
+xticks([1:20:165]);
+xticklabels([]);
+xline(101)
+ylim(ylimamp)
+title('EOG 90dB Pulse only')
+ylabel('EOG amp (uV)')
+set(gca, 'XGrid', 'on');
+
+clear ind
+%Sort according to mean amplitud 75-150ms and keep index of sort
+[val, ind] = sort(mean(temp(:,116:131), 2), 'ascend');
+temp = temp(ind,:);
+
+nexttile;
+imagesc(temp, colbar); hold on;
+xline(101)
+colormap(viridis)
+ylim([1 22])
+xlim([1 165])
+xticks([1:20:165]);
+xticklabels([]);
+title('EOG 90dB Pulse only')
+ylabel('subjects (n = 22)')
+set(gca, 'XGrid', 'on');
+colorbar;
 
 
+%ISI_240
+nexttile; hold on;
+for i = 1:22
+    temp(i, 1:165) = mean(epochs_eog_all_clean.GP60{i,4}, 2);
+    plot(mean(epochs_eog_all_clean.GP60{i,4}, 2), 'Color', [0 0 0 0.5])
+end
+plot(mean(temp', 2), 'Color', [1 0 0], 'LineWidth', 2)
 
+xlim([1 165])
+xticks([1:20:165]);
+xticklabels([]);
+xline(101)
+ylim(ylimamp)
+title('EOG ISI 240ms')
+ylabel('EOG amp (uV)')
+set(gca, 'XGrid', 'on');
 
+temp = temp(ind,:);
 
+nexttile;
+imagesc(temp, colbar); hold on;
+xline(101)
+colormap(viridis)
+ylim([1 22])
+xlim([1 165])
+xticks([1:20:165]);
+xticklabels([]);
+title('EOG ISI 240ms')
+ylabel('subjects (n = 22)')
+set(gca, 'XGrid', 'on');
 
+%ISI_120
+nexttile; hold on;
+for i = 1:22
+    temp(i, 1:165) = mean(epochs_eog_all_clean.GP60{i,3}, 2);
+    plot(mean(epochs_eog_all_clean.GP60{i,3}, 2), 'Color', [0 0 0 0.5])
+end
+plot(mean(temp', 2), 'Color', [1 0 0], 'LineWidth', 2)
 
+xlim([1 165])
+xticks([1:20:165]);
+xticklabels([]);
+xline(101)
+ylim(ylimamp)
+title('EOG ISI 120ms')
+ylabel('EOG amp (uV)')
+set(gca, 'XGrid', 'on');
 
+temp = temp(ind,:);
 
+nexttile;
+imagesc(temp, colbar); hold on;
+xline(101)
+colormap(viridis)
+ylim([1 22])
+xlim([1 165])
+xticks([1:20:165]);
+xticklabels([]);
+title('EOG ISI 120ms')
+ylabel('subjects (n = 22)')
+set(gca, 'XGrid', 'on');
+
+%ISI_60
+nexttile; hold on;
+for i = 1:22
+    temp(i, 1:165) = mean(epochs_eog_all_clean.GP60{i,2}, 2);
+    plot(mean(epochs_eog_all_clean.GP60{i,2}, 2), 'Color', [0 0 0 0.5])
+end
+plot(mean(temp', 2), 'Color', [1 0 0], 'LineWidth', 2)
+
+xlim([1 165])
+xticks([1:20:165]);
+xticklabels([]);
+xline(101)
+ylim(ylimamp)
+title('EOG ISI 60ms')
+ylabel('EOG amp (uV)')
+set(gca, 'XGrid', 'on');
+
+temp = temp(ind,:);
+
+nexttile;
+imagesc(temp, colbar); hold on;
+xline(101)
+colormap(viridis)
+ylim([1 22])
+xlim([1 165])
+xticks([1:20:165]);
+xticklabels([]);
+title('EOG ISI 60ms')
+ylabel('subjects (n = 22)')
+set(gca, 'XGrid', 'on');
+
+%ISI_0
+nexttile; hold on;
+for i = 1:22
+    temp(i, 1:165) = mean(epochs_eog_all_clean.GP60{i,1}, 2);
+    plot(mean(epochs_eog_all_clean.GP60{i,1}, 2), 'Color', [0 0 0 0.5])
+end
+plot(mean(temp', 2), 'Color', [1 0 0], 'LineWidth', 2)
+
+xlim([1 165])
+xticks([1:20:165]);
+xticklabels([-500:100:320]);
+xline(101)
+ylim(ylimamp)
+title('EOG ISI 0ms')
+ylabel('EOG amp (uV)')
+xlabel('Time (ms)')
+set(gca, 'XGrid', 'on');
+
+temp = temp(ind,:);
+
+nexttile;
+imagesc(temp, colbar); hold on;
+xline(101)
+colormap(viridis)
+ylim([1 22])
+xlim([1 165])
+xticks([1:20:165]);
+xticklabels([-500:100:320]);
+title('EOG ISI 0ms')
+ylabel('subjects (n = 22)')
+xlabel('Time (ms)')
+set(gca, 'XGrid', 'on');
+
+%saveas(gcf, ['../Analysis Output/EOG_subject_raster.svg'])
+%close;
 
 
