@@ -195,6 +195,52 @@ end
 
 %% Manuscript figures
 
+%Load and arrange statistics to plot
+%60dB carrier
+if exist("p_allchan", "var") == 0; load('../mat_data/stats/clustertest_p_allchan.mat'); end
+if exist("p_soichan", "var") == 0; load('../mat_data/stats/clustertest_p_soichan.mat'); 
+
+    %Make matrices same size for imagesc
+    p_soichan = [repmat(1, 8, 110), p_soichan repmat(1, 8, 34)];
+    
+    % New, separate values, for colors in imagesc
+    p_allchan = p_allchan<0.01;
+    p_soichan = p_soichan<0.01;
+    
+    p_allchan = double(p_allchan);
+    p_soichan = double(p_soichan);
+    
+    p_soichan(p_soichan==1) = 2;
+    
+    p_soichan(:, 1:110) = repmat([3 3], 8, 110/2);
+    p_soichan(:, 132:165) = repmat([3 3], 8, 34/2);
+
+end
+
+%70dB carrier
+if exist("p_allchan70", "var") == 0; load('../mat_data/stats/clustertest_p_allchan70.mat'); end
+if exist("p_soichan70", "var") == 0; load('../mat_data/stats/clustertest_p_soichan70.mat'); 
+
+    %Make matrices same size for imagesc
+    p_soichan70 = [repmat(1, 8, 110), p_soichan70 repmat(1, 8, 34)];
+    
+    % New, separate values, for colors in imagesc
+    p_allchan70 = p_allchan70<0.01;
+    p_soichan70 = p_soichan70<0.01;
+    
+    p_allchan70 = double(p_allchan70);
+    p_soichan70 = double(p_soichan70);
+    
+    p_soichan70(p_soichan70==1) = 2;
+    
+    p_soichan70(:, 1:110) = repmat([3 3], 8, 110/2);
+    p_soichan70(:, 132:165) = repmat([3 3], 8, 34/2);
+
+end
+
+%colorbar for imagesc
+c = [1 1 1; 0 0.4470 0.7410; 0.8500 0.3250 0.0980; 0.2 0.2 0.2];
+
 % Inherited from raster plots
 xtick = [1:20:165];
 xticklab = [-500:100:320];
@@ -223,7 +269,7 @@ boxcolors = flip(colors(1:6,:));
 isiboxcolors = flip(colors(7:10,:));
 
 figure('Units', 'centimeters', 'Position',  [5 5 50 30]);
-tiledlayout(3,4, 'TileSpacing','compact', 'Padding','compact');
+tiledlayout(4,4, 'TileSpacing','tight', 'Padding','tight');
 
 %PO60
 nexttile; hold on;
@@ -410,15 +456,119 @@ end
 lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
 set(lines, 'Color', 'k');
 
-nexttile;
-nexttile;
 
+%Stat amplitude 60
 nexttile; hold on;
+patch('Faces', [1 2 3 4], 'Vertices', [111 lineylims(1); 111 lineylims(2); 131 lineylims(2); 131 lineylims(1)], 'FaceColor', [0 0 0], 'FaceAlpha', 0.1, 'EdgeAlpha', 0)
+plot(gravg_soi.PO60{5}, 'Color', colors(5,:)); %Manually specify colors to match other plots
+plot(gravg_soi.GP60{4}, 'Color', colors(10,:)); % -''-
+
+plot(triglinex, lineylims, 'k --');
+ax = gca;
+ax.XTick = xtick;
+ax.XTickLabel = [xticklab];
+ax.XGrid = 'on';
+ax.FontSize = txtsize;
+ylim(lineylims);
+xlim(xrange);
+xlabel("Time (ms)");
+
+ylabel({"Gradiometer ERF"})
+
+legend({"", "Pulse (90 dB)", "Gap + Pulse (ISI 240 ms)"}, 'Location', 'northwest');
+legend('boxoff');
+
+title({'Inhibition of response - 60dB carrier'});
+
+%Stat amplitude 70
+nexttile; hold on;
+patch('Faces', [1 2 3 4], 'Vertices', [111 lineylims(1); 111 lineylims(2); 131 lineylims(2); 131 lineylims(1)], 'FaceColor', [0 0 0], 'FaceAlpha', 0.1, 'EdgeAlpha', 0)
+plot(gravg_soi.PO70{5}, 'Color', colors(5,:)); %Manually specify colors to match other plots
+plot(gravg_soi.GP70{4}, 'Color', colors(10,:)); % -''-
+
+plot(triglinex, lineylims, 'k --');
+ax = gca;
+ax.XTick = xtick;
+ax.XTickLabel = [xticklab];
+ax.XGrid = 'on';
+ax.FontSize = txtsize;
+ylim(lineylims);
+xlim(xrange);
+xlabel("Time (ms)");
+
+ylabel({"Gradiometer ERF"})
+
+legend({"", "Pulse (90 dB)", "Gap + Pulse (ISI 240 ms)"}, 'Location', 'northwest');
+legend('boxoff');
+
+title({'Inhibition of response - 70dB carrier'});
+
+%Head and sensshape1
+nexttile(11, [2 1]); hold on;
 ft_plot_sens(sensors, 'facecolor', colors2, 'facealpha', 0.7);
 ft_plot_mesh(ft_convert_units(mesh_scalp, 'cm'), 'edgecolor', [173/256 216/256 230/256]);
 view([100 25])
 
-nexttile; hold on;
+%Head and sensshape2
+nexttile(12, [2 1]); hold on;
 ft_plot_sens(sensors, 'facecolor', colors2, 'facealpha', 0.7);
 ft_plot_mesh(ft_convert_units(mesh_scalp, 'cm'), 'edgecolor', [173/256 216/256 230/256]);
 view([-100 25])
+
+% Probabilities 60
+nexttile(13);
+imagesc([p_allchan(1:102,:); p_soichan])
+colormap(c)
+xlim(xrange)
+xticks(xtick);
+xticklabels(xticklab);
+ylim([-8 120])
+ylabel("Channel number");
+set(gca, 'XGrid', 'on')
+set(gca, 'YGrid', 'on')
+set(gca, "Box", "off");
+
+%some weird loop for legend in imagesc
+hold on;
+for K = 1 : 3; hidden_h(K) = surf(uint8(K-[1 1;1 1]), 'edgecolor', 'none'); end
+hold off
+leg = legend({'', 'All Gradiometers', 'Selected Gradiometers'}, 'Location', 'southwest' )
+title(leg,'p < 0.01')
+set(gca, "Box", "off");
+clear K hidden_h
+
+title({'Difference probability per channel - 60dB carrier'});
+
+ax = gca;
+ax.FontSize = txtsize;
+
+% Probabilities 70
+nexttile(14);
+imagesc([p_allchan70(1:102,:); p_soichan70])
+colormap(c)
+xlim(xrange)
+xticks(xtick);
+xticklabels(xticklab);
+ylim([-8 120])
+ylabel("Channel number");
+set(gca, 'XGrid', 'on')
+set(gca, 'YGrid', 'on')
+set(gca, "Box", "off");
+
+%some weird loop for legend in imagesc
+hold on;
+for K = 1 : 3; hidden_h(K) = surf(uint8(K-[1 1;1 1]), 'edgecolor', 'none'); end
+hold off
+leg = legend({'', 'All Gradiometers', 'Selected Gradiometers'}, 'Location', 'southwest' )
+title(leg,'p < 0.01')
+clear K hidden_h
+
+title({'Difference probability per channel - 70dB carrier'});
+
+ax = gca;
+ax.FontSize = txtsize;
+
+saveas(gcf, ['../Analysis Output/MEG_manus_sensspace.svg']);
+close
+
+
