@@ -110,16 +110,16 @@ end
 [top_chan60 top_chan70]
 warning('Note that sensors are the same for PO60 and PO70 - 90dB when n of sensors = 8');
 
-figure('Position', [400 200 1800 1000]); hold on
-subplot(1,2,1)
-ft_plot_sens(sensors, 'facecolor', colors2, 'facealpha', 0.7);
-ft_plot_mesh(ft_convert_units(mesh_scalp, 'cm'), 'edgecolor', [173/256 216/256 230/256]);
-view([100 25])
-
-subplot(1,2,2)
-ft_plot_sens(sensors, 'facecolor', colors2, 'facealpha', 0.7);
-ft_plot_mesh(ft_convert_units(mesh_scalp, 'cm'), 'edgecolor', [173/256 216/256 230/256]);
-view([-100 25])
+% figure('Position', [400 200 1800 1000]); hold on
+% subplot(1,2,1)
+% ft_plot_sens(sensors, 'facecolor', colors2, 'facealpha', 0.7);
+% ft_plot_mesh(ft_convert_units(mesh_scalp, 'cm'), 'edgecolor', [173/256 216/256 230/256]);
+% view([100 25])
+% 
+% subplot(1,2,2)
+% ft_plot_sens(sensors, 'facecolor', colors2, 'facealpha', 0.7);
+% ft_plot_mesh(ft_convert_units(mesh_scalp, 'cm'), 'edgecolor', [173/256 216/256 230/256]);
+% view([-100 25])
 
 %% Sanity check figure of identified gradiometers
 
@@ -268,7 +268,7 @@ colors = [173 139 201;
 boxcolors = flip(colors(1:6,:));
 isiboxcolors = flip(colors(7:10,:));
 
-figure('Units', 'centimeters', 'Position',  [5 5 50 30]);
+figure('Units', 'centimeters', 'Position',  [5 5 50 30], 'Renderer','painters');
 tiledlayout(4,4, 'TileSpacing','tight', 'Padding','tight');
 
 %PO60
@@ -471,7 +471,6 @@ ax.XGrid = 'on';
 ax.FontSize = txtsize;
 ylim(lineylims);
 xlim(xrange);
-xlabel("Time (ms)");
 
 ylabel({"Gradiometer ERF"})
 
@@ -494,7 +493,6 @@ ax.XGrid = 'on';
 ax.FontSize = txtsize;
 ylim(lineylims);
 xlim(xrange);
-xlabel("Time (ms)");
 
 ylabel({"Gradiometer ERF"})
 
@@ -527,6 +525,7 @@ ylabel("Channel number");
 set(gca, 'XGrid', 'on')
 set(gca, 'YGrid', 'on')
 set(gca, "Box", "off");
+xlabel("Time (ms)");
 
 %some weird loop for legend in imagesc
 hold on;
@@ -554,6 +553,7 @@ ylabel("Channel number");
 set(gca, 'XGrid', 'on')
 set(gca, 'YGrid', 'on')
 set(gca, "Box", "off");
+xlabel("Time (ms)");
 
 %some weird loop for legend in imagesc
 hold on;
