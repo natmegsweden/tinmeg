@@ -24,44 +24,7 @@ sensors = sensors.cleaned4mat.grad;
 %helmet
 %permutations test
 
-%% Find 8 combined gradiometers with biggest response in grand average of subjects in PO60/70 90-trials
 
-%How many combined grads of interest?
-n_top_chan = 8;
-
-%For 60dB Carrier
-%Create empty cell array
-max_grad = cell(1,n_top_chan);
-
-%Overwrite mean_sub with grand average to maintain "labels"
-mean_sub.avg = gravg_cmb.PO60{5}; %col 5 = PO6090
-
-%find max of first 102 chan (grads) at mean of samples 116:131 (75-150ms)
-[val, ind] = sort(mean(mean_sub.avg(1:102,116:131),2), 'descend');
-
-%write top i cmb_grads to struct
-for i = 1:n_top_chan
-    max_grad{1,i} = mean_sub.label{ind(i)};
-end
-
-top_chan60 = unique(max_grad)';
-
-%For 70dB Carrier
-%Create empty cell array
-max_grad = cell(1,n_top_chan);
-
-%Overwrite mean_sub with grand average to maintain "labels"
-mean_sub.avg = gravg_cmb.PO70{4}; %col 5 = PO7090
-
-%find max of first 102 chan (grads) at mean of samples 116:131 (75-150ms)
-[val, ind] = sort(mean(mean_sub.avg(1:102,116:131),2), 'descend');
-
-%write top i cmb_grads to struct
-for i = 1:n_top_chan
-    max_grad{1,i} = mean_sub.label{ind(i)};
-end
-
-top_chan70 = unique(max_grad)';
 
 %% Sensshape plot with highlighted chips
 

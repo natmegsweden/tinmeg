@@ -27,12 +27,7 @@ load standard_mri;
 template_mri = mri;
 clear mri;
 
-%Readtable of subjects (as string)
-sub_date = readtable('../sub_date.txt', 'Format', '%s%s');
-
-disp(['Number of subjects in table is ' num2str(height(sub_date))])
-
-%Specify conditions and event triggers
+%Specify conditions, event triggers and subject list
 
 run('Conditions_triggers.m');
 
