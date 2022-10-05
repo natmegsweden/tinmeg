@@ -5,7 +5,7 @@
 % trials with no jitter and no "simulated tinnitus" tone.
 
 % Set to 'cal' for calibration or 'exp' for experiment files
-mode = 'cal';
+mode = 'exp';
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -46,7 +46,7 @@ lvl_comp3 = -7;
 
 %Create 15 sec reference calibration noise
 calref = (rand(1, 15*fs) - 0.5) * 2;
-calref = lowpass(calref, lowpassf, fs); %LP filter of noise
+%%%% calref = lowpass(calref, lowpassf, fs); %LP filter of noise
 calref = calref/max(abs(calref(:)));    %Scale to max or lowpass may introduce clipping
 
 %Loop for all "tin" conditions
@@ -86,20 +86,20 @@ for j = 1:numel(tin)
         
         %To create calibration file at second level
         cal80diff = db2mag((cal_lvl - (bkg_lvl+20))*-1);
-    
-        %Specify NBN filter parameters
-        octfilter = octaveFilter(bkg(ii), '1/3 octave','SampleRate', fs, 'FilterOrder', 8);
 
         %Construct noise vector to inject trials in
         bkg_noise = (rand(1, totdur*fs) - 0.5) * 2;
         
+        %Specify NBN filter parameters
+        %%%% octfilter = octaveFilter(bkg(ii), '1/3 octave','SampleRate', fs, 'FilterOrder', 8);
+
         %Apply lowpass or NBN filter
         if bkg(ii) > 0;
-            bkg_noise = octfilter(bkg_noise'); %Apply NBN filter, octFilt requires signal in column
+            %%%% bkg_noise = octfilter(bkg_noise'); %Apply NBN filter, octFilt requires signal in column
             bkg_noise = (rms(calref .* bkg_lvldiff)/rms(bkg_noise)) .* bkg_noise; %Scale to match RMS of bakground level reference
-            bkg_noise = bkg_noise'; %Pivot back to row vector
+            %%%% bkg_noise = bkg_noise'; %Pivot back to row vector
         elseif bkg(ii) == 0;
-            bkg_noise = lowpass(bkg_noise, lowpassf, fs); %LP filter of noise
+            %%%% bkg_noise = lowpass(bkg_noise, lowpassf, fs); %LP filter of noise
             bkg_noise = bkg_noise/max(abs(bkg_noise(:))); %Limit to 0 +/- 1 range by dividing signal by max(), else LP-filter introduce clipping
             
             bkg_noise80 = (rms(calref .* cal80diff)/rms(bkg_noise)) .* bkg_noise; %For calibration purposes
@@ -197,7 +197,7 @@ for j = 1:numel(tin)
                 
                 %Create a pulse
                 PO = (rand(1, pulsedur*fs) - 0.5) * 2;
-                PO = lowpass(PO, lowpassf, fs); %LP filter of noise
+                %%%% PO = lowpass(PO, lowpassf, fs); %LP filter of noise
                 PO = PO/max(abs(PO(:))); %Limit to 0 +/- 1 range by dividing signal by max(), else LP-filter introduce clipping                            
                 PO = (rms(calref .* pulse_lvldiff)/rms(PO)) .* PO; %Scale to match RMS of bakground level reference
 
@@ -243,7 +243,7 @@ for j = 1:numel(tin)
                 
                 %Create a pulse
                 PO = (rand(1, pulsedur*fs) - 0.5) * 2;
-                PO = lowpass(PO, lowpassf, fs); %LP filter of noise
+                %%%%PO = lowpass(PO, lowpassf, fs); %LP filter of noise
                 PO = PO/max(abs(PO(:))); %Limit to 0 +/- 1 range by dividing signal by max(), else LP-filter introduce clipping                            
                 PO = (rms(calref .* pulse_lvldiff)/rms(PO)) .* PO; %Scale to match RMS of bakground level reference
 
