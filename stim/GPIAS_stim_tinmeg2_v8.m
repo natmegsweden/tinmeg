@@ -38,7 +38,7 @@ rf_time = 0.002;    %rise/fall time after/before gap, always symmetric (sec)
 
 minITI = 2;         %Minimum inter-trial-interval
 
-pulse_lvl = 90;     %Pulse level
+pulse_lvl = 90-2;   %Pulse level (-2 compensates for MSR speakers)
 
 cal_lvl = 90;       %Reference maximum level, all other are levels relative this.
 
@@ -49,7 +49,7 @@ lvl_comp3 = -7;
 
 %Create 15 sec reference calibration noise
 calref = (rand(1, 15*fs) - 0.5) * 2;
-%%%% calref = lowpass(calref, lowpassf, fs); %LP filter of noise
+calref = lowpass(calref, lowpassf, fs); %LP filter of noise
 calref = calref/max(abs(calref(:)));    %Scale to max or lowpass may introduce clipping
 
 %Loop for all "tin" conditions
@@ -96,15 +96,15 @@ for j = 1:numel(tin)
         bkg_noise = (rand(1, totdur*fs) - 0.5) * 2;
         
         %Specify NBN filter parameters
-        %%%% octfilter = octaveFilter(bkg(ii), '1/3 octave','SampleRate', fs, 'FilterOrder', 8);
+        octfilter = octaveFilter(bkg(ii), '1/3 octave','SampleRate', fs, 'FilterOrder', 8);
 
         %Apply lowpass or NBN filter
         if bkg(ii) > 0;
-            %%%% bkg_noise = octfilter(bkg_noise'); %Apply NBN filter, octFilt requires signal in column
+            bkg_noise = octfilter(bkg_noise'); %Apply NBN filter, octFilt requires signal in column
             bkg_noise = (rms(calref .* bkg_lvldiff)/rms(bkg_noise)) .* bkg_noise; %Scale to match RMS of bakground level reference
-            %%%% bkg_noise = bkg_noise'; %Pivot back to row vector
+            bkg_noise = bkg_noise'; %Pivot back to row vector
         elseif bkg(ii) == 0;
-            %%%% bkg_noise = lowpass(bkg_noise, lowpassf, fs); %LP filter of noise
+            bkg_noise = lowpass(bkg_noise, lowpassf, fs); %LP filter of noise
             bkg_noise = bkg_noise/max(abs(bkg_noise(:))); %Limit to 0 +/- 1 range by dividing signal by max(), else LP-filter introduce clipping
             
             bkg_noise80 = (rms(calref .* cal80diff)/rms(bkg_noise)) .* bkg_noise; %For calibration purposes
@@ -214,7 +214,7 @@ for j = 1:numel(tin)
                 
                 %Create a pulse
                 PO = (rand(1, pulsedur*fs) - 0.5) * 2;
-                %%%% PO = lowpass(PO, lowpassf, fs); %LP filter of noise
+                PO = lowpass(PO, lowpassf, fs); %LP filter of noise
                 PO = PO/max(abs(PO(:))); %Limit to 0 +/- 1 range by dividing signal by max(), else LP-filter introduce clipping                            
                 PO = (rms(calref .* pulse_lvldiff)/rms(PO)) .* PO; %Scale to match RMS of bakground level reference
 
@@ -264,7 +264,7 @@ for j = 1:numel(tin)
                 
                 %Create a pulse
                 PO = (rand(1, pulsedur*fs) - 0.5) * 2;
-                %%%%PO = lowpass(PO, lowpassf, fs); %LP filter of noise
+                PO = lowpass(PO, lowpassf, fs); %LP filter of noise
                 PO = PO/max(abs(PO(:))); %Limit to 0 +/- 1 range by dividing signal by max(), else LP-filter introduce clipping                            
                 PO = (rms(calref .* pulse_lvldiff)/rms(PO)) .* PO; %Scale to match RMS of bakground level reference
 
@@ -279,7 +279,7 @@ for j = 1:numel(tin)
 
                 %Create a pre-pulse
                 PP = (rand(1, gapdur*fs) - 0.5) * 2;
-                %%%%PP = lowpass(PO, lowpassf, fs); %LP filter of noise
+                PP = lowpass(PO, lowpassf, fs); %LP filter of noise
                 PP = PP/max(abs(PP(:))); %Limit to 0 +/- 1 range by dividing signal by max(), else LP-filter introduce clipping                            
                 PP = (rms(calref .* pp_lvldiff)/rms(PP)) .* PP; %Scale to match RMS of bakground level reference
 
@@ -296,7 +296,7 @@ for j = 1:numel(tin)
                 GPgap(r) = 0;
                 GPpulse(r) = 0;
                 PPgap(r) = 1;
-                PPpulse(r) = 1; %%%%%%%%%%%%
+                PPpulse(r) = 1;
                 GapOnset(r) = 1000*round((offsetdiff/fs),3); %Log trigger time
 
                 offsetdiff = offset;
@@ -306,7 +306,7 @@ for j = 1:numel(tin)
                 
                 %Create a pulse
                 PO = (rand(1, pulsedur*fs) - 0.5) * 2;
-                %%%%PO = lowpass(PO, lowpassf, fs); %LP filter of noise
+                PO = lowpass(PO, lowpassf, fs); %LP filter of noise
                 PO = PO/max(abs(PO(:))); %Limit to 0 +/- 1 range by dividing signal by max(), else LP-filter introduce clipping                            
                 PO = (rms(calref .* pulse_lvldiff)/rms(PO)) .* PO; %Scale to match RMS of bakground level reference
 
@@ -422,13 +422,23 @@ for j = 1:numel(tin)
         %Decimal trigger padded with zeros in 1s, 2s, 4s and 8s column for 'GOgap' 'POpulse', 'GPgap', 'GPpulse'
         STI101_dec = bin2dec([num2str(has_tin(1)) num2str(tin_low(1)) num2str(has_nbn(1)) num2str(nbn_low(1)), '0', '0', '0', '0']);
         STI101_dec = repmat(STI101_dec,1,numel(Rstimlist));
-
+        
+        %Pad last two columns with zero if no PP in conditionm i.e. only if bkg and tin == 0.
+        if bkg(ii) ~= 0 && tin(j) ~= 0;
+            PPgap = zeros(1, numel(Rstimlist));
+            PPgap = zeros(1, numel(Rstimlist));
+        end
+        
         %varnames = {'Stim', 'STI101_dec', 'GOgap' 'POpulse', 'GPgap', 'GPpulse', 'PPgap', 'PPpulse', 'GO_onset', 'PO_onset'};
         stimtab = table(Rstimlist', STI101_dec', GOgap', POpulse', GPgap', GPpulse', PPgap', PPpulse', GapOnset', PulseOnset');%, 'VariableNames', varnames);
 
         %Write table and soundfile
-        writetable(stimtab, ['output/triglists/' fname '.txt'], 'Delimiter', '\t', 'WriteVariableNames', 0);
-        audiowrite(['output/audio/' fname '.wav'], stimnoise, fs);
-
+        if mode == 'exp'
+            writetable(stimtab, ['output/triglists/' fname '.txt'], 'Delimiter', '\t', 'WriteVariableNames', 0);
+            audiowrite(['output/audio/' fname '.wav'], stimnoise, fs);
+        elseif mode == 'cal'
+            writetable(stimtab, ['output/triglists/' fname '_cal.txt'], 'Delimiter', '\t', 'WriteVariableNames', 0);
+            audiowrite(['output/audio/' fname '_cal.wav'], stimnoise, fs);
+        end
     end
 end
