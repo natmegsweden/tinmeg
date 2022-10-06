@@ -8,7 +8,7 @@
 % only
 
 % Set to 'cal' for calibration or 'exp' for experiment files
-mode = 'exp';
+mode = 'cal';
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -60,7 +60,7 @@ for j = 1:numel(tin)
         
         bkg_lvl = 60-7;         %Background noise level (dB), -7 compensates for MSR speakers non-linearity when pulse is amplified to 90dB
         pp_lvl = bkg_lvl+10;    %Pulse level (dB)
-        tone_lvl = 40-7;        %Pure tone level in "tin" blocks (dB)
+        tone_lvl = bkg_lvl-10;  %Pure tone level in "tin" blocks (dB)
         
         %Name block
         temptin = num2str(tin(j));
