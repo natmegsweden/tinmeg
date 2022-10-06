@@ -25,7 +25,7 @@ parameter_window.remove_all();
 #Create an array of stimuli from file
 string fname = "stimlist.txt";
 int nCond = 9; #total n of conditions
-int nCol_stimlist = 3; #n of columns in trigtable (fname)
+int nCol_stimlist = 4; #n of columns in trigtable (fname)
 
 int nTin = 3;  #n conditions within "tinnitus"
 int nBkg = 3;  #n conditions within "tinnitus" + background
@@ -53,6 +53,7 @@ loop int r = 1 until r == (nCond + 1) begin
 	allCond[r][1] = myfile.get_string();
 	allCond[r][2] = myfile.get_string(); 
 	allCond[r][3] = myfile.get_string();
+	allCond[r][4] = myfile.get_string();
 
 	r=r+1;
 end;
@@ -71,8 +72,10 @@ array<int> b[] = {0, 1, 2};
 string TrialStatus = ""; #init text to screen
 string TrialName = ""; #init text to screen
 
-int numBlocks = 2;	#n of blocks (containing num_reps of all conditions)
+int numBlocks = 10;	#n of blocks (containing num_reps of all conditions)
 int idx = 0;			#initialize index for conditions
+
+int nrows;
 
 double current_time = 0;
 
@@ -92,15 +95,17 @@ loop int currBlock = 1 until currBlock > numBlocks begin
 			
 			idx = 3*t[tix]+1+1*b[bix];
 			
+			nrows = int(allCond[idx][4]);
+			
 			#prepare empty array for triglists
-			array<string> triglist[15][8];
+			array<string> triglist[nrows][10];
 			
 			#Parse triglist for idx condition
 			input_file mytrigs = new input_file; 
 			mytrigs.open(allCond[idx][3]);
 			
 			#Parse file
-			loop int r = 1 until r > 15 begin
+			loop int r = 1 until r > nrows begin
 				triglist[r][1] = mytrigs.get_string();
 				triglist[r][2] = mytrigs.get_string(); 
 				triglist[r][3] = mytrigs.get_string();
@@ -108,7 +113,9 @@ loop int currBlock = 1 until currBlock > numBlocks begin
 				triglist[r][5] = mytrigs.get_string(); 
 				triglist[r][6] = mytrigs.get_string();
 				triglist[r][7] = mytrigs.get_string();
-				triglist[r][8] = mytrigs.get_string(); 
+				triglist[r][8] = mytrigs.get_string();
+				triglist[r][9] = mytrigs.get_string(); 
+				triglist[r][10] = mytrigs.get_string(); 
 				r=r+1;
 			end;
 			mytrigs.close();
@@ -120,8 +127,10 @@ loop int currBlock = 1 until currBlock > numBlocks begin
 			4 POpulse
 			5 GPgap
 			6 GPpulse
-			7 Gap onset (ms)
-			8 Pulse Onset (ms)
+			7 PPgap
+			8 PPpulse
+			9 Gap onset (ms)
+			10 Pulse Onset (ms)
 			*/
 			
 			int AudioFileTTL = int(allCond[idx][2]);	#AudioFile trigger value
@@ -155,19 +164,22 @@ loop int currBlock = 1 until currBlock > numBlocks begin
 			#MEGport2.send_code(MegTTL2,20);
 
 			#Trigger-loop here
-			loop int i = 1 until i > 15 begin
+			loop int i = 1 until i > nrows begin
 				
 				int GOgap = int(triglist[i][3]);			# 1 if conditions contains gap-only gap
 				int POpulse = int(triglist[i][4]);		# 1 if conditions contains pulse-only pulse
 				int GPgap = int(triglist[i][5]);			# 1 if conditions contains gap+pulse gap
 				int GPpulse = int(triglist[i][6]);		# 1 if conditions contains gap+pulse pulse
 				
-				int GapWait = int(triglist[i][7]);		# 1 if conditions contains gap+pulse pulse
-				int PulseWait = int(triglist[i][8]);	# 1 if conditions contains gap+pulse pulse
+				int PPgap = int(triglist[i][7]);			# 1 if conditions contains pp+pulse gap
+				int PPpulse = int(triglist[i][8]);		# 1 if conditions contains pp+pulse pulse
+				
+				int GapWait = int(triglist[i][9]);		# 1 if conditions contains gap+pulse pulse
+				int PulseWait = int(triglist[i][10]);	# 1 if conditions contains gap+pulse pulse
 				
 				if GOgap == 1 then
 					wait_interval(GapWait);
-					MEGport.send_code(MegTTL+8,20); 
+					MEGport.send_code(MegTTL+32,20); 
 					current_time = clock.time_double()-starting_time;
 					#MEGport2.send_code(MegTTL2,20);
 					term.print_line(current_time);
@@ -175,7 +187,7 @@ loop int currBlock = 1 until currBlock > numBlocks begin
 				
 				if POpulse == 1 then
 					wait_interval(PulseWait);
-					MEGport.send_code(MegTTL+4,20); 
+					MEGport.send_code(MegTTL+16,20); 
 					current_time = clock.time_double()-starting_time;
 					#MEGport2.send_code(MegTTL2,20);
 					term.print_line(current_time);
@@ -183,13 +195,29 @@ loop int currBlock = 1 until currBlock > numBlocks begin
 				
 				if GPgap == 1 then
 					wait_interval(GapWait);
-					MEGport.send_code(MegTTL+2,20); 
+					MEGport.send_code(MegTTL+8,20); 
 					current_time = clock.time_double()-starting_time;
 					#MEGport2.send_code(MegTTL2,20);
 					term.print_line(current_time);
 				end;
 				
 				if GPpulse == 1 then
+					wait_interval(PulseWait);
+					MEGport.send_code(MegTTL+4,20); 
+					current_time = clock.time_double()-starting_time;
+					#MEGport2.send_code(MegTTL2,20);
+					term.print_line(current_time);
+				end;
+				
+				if PPgap == 1 then
+					wait_interval(GapWait);
+					MEGport.send_code(MegTTL+2,20); 
+					current_time = clock.time_double()-starting_time;
+					#MEGport2.send_code(MegTTL2,20);
+					term.print_line(current_time);
+				end;
+				
+				if PPpulse == 1 then
 					wait_interval(PulseWait);
 					MEGport.send_code(MegTTL+1,20); 
 					current_time = clock.time_double()-starting_time;
