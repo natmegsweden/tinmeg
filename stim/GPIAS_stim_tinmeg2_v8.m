@@ -8,7 +8,7 @@
 % only
 
 % Set to 'cal' for calibration or 'exp' for experiment files
-mode = 'cal';
+mode = 'exp';
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -38,7 +38,7 @@ rf_time = 0.002;    %rise/fall time after/before gap, always symmetric (sec)
 
 minITI = 2;         %Minimum inter-trial-interval
 
-pulse_lvl = 90-2;   %Pulse level (-2 compensates for MSR speakers)
+pulse_lvl = 90-4;   %Pulse level (-2 compensates for MSR speakers)
 
 cal_lvl = 90;       %Reference maximum level, all other are levels relative this.
 
@@ -430,7 +430,7 @@ for j = 1:numel(tin)
         end
         
         %varnames = {'Stim', 'STI101_dec', 'GOgap' 'POpulse', 'GPgap', 'GPpulse', 'PPgap', 'PPpulse', 'GO_onset', 'PO_onset'};
-        stimtab = table(Rstimlist', STI101_dec', GOgap', POpulse', GPgap', GPpulse', PPgap', PPpulse', GapOnset', PulseOnset');%, 'VariableNames', varnames);
+        stimtab = table(Rstimlist', STI101_dec', PPgap', PPpulse', GOgap', POpulse', GPgap', GPpulse', GapOnset', PulseOnset');%, 'VariableNames', varnames);
 
         %Write table and soundfile
         if mode == 'exp'
