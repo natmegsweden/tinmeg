@@ -13,27 +13,12 @@ out_path = '/home/nikedv/TinMEG1/headpos_output'        #### ! CHANGE THIS !
 #Subject 0859 gives maxfilter error (signal 11) for tinmeg1b.fif and script can't find all quat-files?
 
 subj_dates = [
-	'NatMEG_0838/210510',
-    'NatMEG_0839/210511',
-    'NatMEG_0840/210512',
-    'NatMEG_0841/210512',
-    'NatMEG_0842/210513',
-    'NatMEG_0845/210517',
-    'NatMEG_0847/210519',
-    'NatMEG_0849/210525',
-    'NatMEG_0850/210526',
-    'NatMEG_0852/210531',
-    'NatMEG_0853/210602',
-    'NatMEG_0856/210608',
-    'NatMEG_0857/210609',
-    'NatMEG_0858/210609',
-    'NatMEG_0861/210614',
-    'NatMEG_0862/210615',
-    'NatMEG_0863/210615'
+#	'NatMEG_0838/210510',
+    'NatMEG_0916/221010'
 ]
 
 # ADD FILENAME
-condition = 'restingstate'
+condition = 'tinmeg2'
 
 #%% IMPORT STUFF
 import os.path as op
