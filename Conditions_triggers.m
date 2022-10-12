@@ -34,3 +34,10 @@ save('../mat_data/cond.mat', 'cond');
 % A_70_i60: 49740
 % A_70_i120: 49708
 % A_70_i240: 49692
+
+%% Read subject list
+
+%Readtable of subjects (as string)
+sub_date = readtable('../sub_date.txt', 'Format', '%s%s');
+
+disp(['Number of subjects in table is ' num2str(height(sub_date))])
