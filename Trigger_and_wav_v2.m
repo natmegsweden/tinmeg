@@ -3,17 +3,17 @@
 
 triggers = struct();
 
-triggers.tin0_bkg0 = [0 1 2 4 8];
-triggers.tin0_bkg3 = triggers.tin0_bkg0 + 48;
-triggers.tin0_bkg8 = triggers.tin0_bkg0 + 32;
+triggers.tin0_bkg0 = [0 1 2 4 8 16 32];
+triggers.tin0_bkg3 = triggers.tin0_bkg0([1 4:7]) + 48;
+triggers.tin0_bkg8 = triggers.tin0_bkg0([1 4:7]) + 32;
 
-triggers.tin3_bkg0 = triggers.tin0_bkg0 + 192;
-triggers.tin3_bkg3 = triggers.tin0_bkg0 + 240;
-triggers.tin3_bkg8 = triggers.tin0_bkg0 + 224;
+triggers.tin3_bkg0 = triggers.tin0_bkg0([1 4:7]) + 192;
+triggers.tin3_bkg3 = triggers.tin0_bkg0([1 4:7]) + 240;
+triggers.tin3_bkg8 = triggers.tin0_bkg0([1 4:7]) + 224;
 
-triggers.tin8_bkg0 = triggers.tin0_bkg0 + 128;
-triggers.tin8_bkg3 = triggers.tin0_bkg0 + 176;
-triggers.tin8_bkg8 = triggers.tin0_bkg0 + 160;
+triggers.tin8_bkg0 = triggers.tin0_bkg0([1 4:7]) + 128;
+triggers.tin8_bkg3 = triggers.tin0_bkg0([1 4:7]) + 176;
+triggers.tin8_bkg8 = triggers.tin0_bkg0([1 4:7]) + 160;
 
 audiofiles = {'tin0_bkg0.wav',
               'tin0_bkg3.wav',
@@ -32,10 +32,12 @@ conditions = fieldnames(triggers);
 %% Loop over conditions in fif and extract triggers
 
 %read in fif
-infile = '/archive/20061_tinnitus/MEG/NatMEG_0905/220308/tinmeg2_trigtest.fif'
+%infile = '/home/nikedv/TinMEG1/headpos_output/NatMEG_0905/221006/nomeg_trigtest.fif'
 
 % 5kHz recording alternative:
-%infile = '/archive/20061_tinnitus/MEG/NatMEG_0905/220316/nomeg_5kHz.fif'
+%infile = '/archive/20061_tinnitus/MEG/NatMEG_0905/221006/nomeg_tintest_ny.fif'
+
+infile = '/archive/20061_tinnitus/MEG/NatMEG_0905/221010/nomeg_tintest.fif'
 
 %cfg for read header and event
 cfg                     = [];
@@ -77,7 +79,7 @@ for i = 1:(numel(conditions))
 
     %Convert to milliseconds and write the first 21 triggers (one trial block) to cell
     %Note first condition "tin0_bkg0" has filestart trigger = 0, ignore for evaluation
-    for ii = 1:21
+    for ii = 1:11
 
     fiftrig_cum(ii,i) = round(condtrigs(ii,2)/44.100, 0);
 
