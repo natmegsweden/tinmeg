@@ -3,7 +3,7 @@
 %all conditions
 conditions = ({'PO60', 'PO70', 'GP60', 'GP70', 'GO'});
 %Save structure of conditions
-save('../mat_data/conditions.mat', 'conditions');
+%save('../mat_data/conditions.mat', 'conditions');
 
 %Structure for triggers and labels
 cond = struct();
@@ -22,7 +22,7 @@ cond.GP70label  = ({'GP70_i0', 'GP70_i60', 'GP70_i120', 'GP70_i240'});
 cond.GOtrig     = [16386 16390];
 cond.GOlabel    = ({'GO_60', 'GO_70'});
 
-save('../mat_data/cond.mat', 'cond');
+%save('../mat_data/cond.mat', 'cond');
 
 %ISI pulse trigger (gaptrig = pulsetrig - 6)
 % A_C60_i0: 49800
