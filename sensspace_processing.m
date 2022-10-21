@@ -91,8 +91,6 @@ n_top_chan = 8;
 %Create empty cell array
 max_grad = cell(1,n_top_chan);
 
-load 
-
 %Overwrite mean_sub with grand average to maintain "labels"
 mean_sub.avg = gravg_cmb.PO60{5}; %col 5 = PO6090
 
@@ -105,6 +103,8 @@ for i = 1:n_top_chan
 end
 
 top_chan60 = unique(max_grad)';
+
+save('top_chan60.mat', 'top_chan60');
 
 %For 70dB Carrier
 %Create empty cell array
