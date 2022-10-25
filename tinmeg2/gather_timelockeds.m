@@ -1,12 +1,16 @@
-%% SHOULD load if exist
+%% To do:
+
+%Gather complete structure for subjects for multiplotER (PO & GPP)
+
+%% Gather timelocked - only averages
+
+% !!! Should load if exist !!!
 
 %Structure for subject timleockeds.avg
-tlk_sub = struct();
+tlk_avg = struct();
 
 %Structure for subject timleockeds.avg with combined planar gradiometers
-tlk_sub_cmb = struct();
-
-%% Gather timelockeds
+tlk_cmb_avg = struct();
 
 for ii = 1:numel(conditions)
 
@@ -28,11 +32,11 @@ nstim = numel(trig);
             load([fpath fname '_cmb.mat']);
             
             %Write averages to structs for easy access
-            tlk_sub.(conditions{ii}){i, iii} = timelockeds.avg;
-            tlk_sub.ID(i) = sub_date.ID{i};
+            tlk_avg.(conditions{ii}){i, iii} = timelockeds.avg;
+            tlk_avg.ID{i} = sub_date.ID{i};
 
-            tlk_sub_cmb.(conditions{ii}){i, iii} = timelockeds_cmb.avg;
-            tlk_sub_cmb.ID(i) = sub_date.ID{i};
+            tlk_cmb_avg.(conditions{ii}){i, iii} = timelockeds_cmb.avg;
+            tlk_cmb_avg.ID{i} = sub_date.ID{i};
 
             disp(['Gathered ' conditions{ii} ' for ID' num2str(sub_date.ID{i})]);
 
@@ -48,5 +52,5 @@ nstim = numel(trig);
 %For condition
 end
 
-save('../mat_data/timelockeds/tinmeg2/tlk_sub.mat', 'tlk_sub');
-save('../mat_data/timelockeds/tinmeg2/tlk_sub_cmb.mat', 'tlk_sub_cmb');
+save('../mat_data/timelockeds/tinmeg2/tlk_avg.mat', 'tlk_avg');
+save('../mat_data/timelockeds/tinmeg2/tlk_cmb_avg.mat', 'tlk_cmb_avg');

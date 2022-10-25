@@ -4,9 +4,9 @@ run('cond_trig_sub_tinmeg2.m');
 
 meg_data_path = '/archive/20061_tinnitus/MEG/';
 
-if ~exist('tlk_sub_cmb', 'var')
-    tlk_sub_cmb = load('../mat_data/timelockeds/tinmeg2/tlk_sub_cmb.mat');
-    tlk_sub_cmb = tlk_sub_cmb.tlk_sub_cmb;
+if ~exist('tlk_cmb_avg', 'var')
+    tlk_cmb_avg = load('../mat_data/timelockeds/tinmeg2/tlk_cmb_avg.mat');
+    tlk_cmb_avg = tlk_cmb_avg.tlk_cmb_avg;
 end
 
 %% Find tinmeg2-files for subject and create cell-array of file paths
@@ -256,44 +256,186 @@ for i = sub_date{i}
     run('tinmeg2'/create_timelockeds.m')
 end
 
-%% Preliminary plot function
+%% Frequency analysis
 
-%sort highest response grads (1:102) at 75-150ms (116:131)
-[val, ind] = sort(mean(tlk_sub_cmb.tin0_bkg0{1,3}(1:102,116:131),2), 'descend');
+% Run ft_freqanalysis
 
-for j = [0,3,8] %tin
+
+%% Two step grad selection: PO amp -> Inhib level
+
+sub = 2;
+
+%Tableau medium 10 palette
+% palette = [173 139 201;
+%     168 120 110;
+%     114 158 206;
+%     255 158 74;
+%     237 102 93;
+%     103 191 92;
+%     237 151 202;
+%     162 162 162;
+%     205 204 93;
+%     109 204 218]/256;
+
+% palette = ones(10,3);
+% palette(:,2) = linspace(0,0.8,10);
+% palette(:,3) = linspace(0,0.8,10);
+
+palette = viridis(8);
+
+%Load subject PO struct if you need it
+PO_00 = load(['../mat_data/timelockeds/ID' num2str(sub_date.ID{sub}) '/PO_00_tlks_cmb.mat']);
+PO_00 = PO_00.timelockeds_cmb;
+
+for j = 0 %[0,3,8] %tin
 
     for jjj = [0,3,8] %bkg
     
         name = ['tin' num2str(j) '_bkg' num2str(jjj)];
-    
-        figure('Position', [400 400 800 600]); tiledlayout(2,1, 'TileIndexing','columnmajor'); hold on;
+        figure('Position', [400 400 1100 800]); tiledlayout(2,1, 'TileIndexing','columnmajor'); hold on;
 
-        for jj = [3, 1]
+        %sort highest response grads (1:102) following pulse onset
+        [val, ind] = sort(mean(tlk_cmb_avg.(name){sub,3}(1:102,101:end),2), 'descend');
+        
+        topchan = PO_00.label(ind(1:8));
+        topchan
+
+        for jj = [3] % 3 is PO in tlk_cmb_avg.xxx{subject, 3}
 
             nexttile; hold on;
             
-            %Eight top-grads
-            for i = 1:8
-                plot(tlk_sub_cmb.(name){1,jj}(ind(i), :), 'Color', [0 0 0 0.5]);
-                temp(i,:) = tlk_sub_cmb.(name){1,jj}(ind(i), :);
-            end
-            plot(mean(temp), 'Color', [1 0 0], 'LineWidth', 2)
-            clear temp
+            % Set new default color palette
+            set(gca, 'ColorOrder', palette);
+
+            %Eight top-grads amplitude plot
+            plot(tlk_cmb_avg.(name){sub,jj}(ind(1:8), :)', 'LineWidth', 1.5);
+
+            legend(PO_00.label(ind(1:8)), 'Box','off', 'AutoUpdate','off', 'Location','northwest', 'FontSize', 8);
+
+            %mean amplitude
+            %plot(mean(tlk_cmb_avg.(name){sub,jj}(ind(1:8), :), 1), 'LineWidth', 1.5);
             
-            if jj == 3;
-                title([name '_PO'], 'Interpreter','none')
-            elseif jj == 1;
-                title([name '_GP'], 'Interpreter','none')
-            end
-            xlim([25 150])
+            title({['Pulse Only']; [name ': n = 8, max mean amp (0-500ms) gradiometers']}, 'Interpreter','none')
+
+%             if jj == 3;
+%                 title([name '_PO'], 'Interpreter','none')
+%             elseif jj == 1;
+%                 title([name '_GP'], 'Interpreter','none')
+%             end
+
+            xlim([21 201])
+            ylim([0*10^-11 1.5*10^-11])
             xline([101 101])
-            xticks(0:25:201)
+            xticks(1:25:201)
             xticklabels(-500:125:500)
-        
+            
+            % Inhib plot - !! jj (i.e cond col) is static
+            nexttile; hold on;
+            
+            set(gca, 'ColorOrder', palette);
+
+            %inhib = tlk_cmb_avg.(name){sub,3}(ind(1:8), :) - tlk_cmb_avg.(name){sub,1}(ind(1:8), :); %PO-GP
+            PO = tlk_cmb_avg.(name){sub,3}(ind(1:8), :);
+            GP = tlk_cmb_avg.(name){sub,1}(ind(1:8), :);
+            inhib =  ((PO-GP)./PO) .* 100; % 100.*((PO-GP)./PO)
+
+            plot(inhib', 'LineWidth', 1.5)
+
+            title({['Inhibition 100.*((PO-GP)./PO)']; [name ': same gradiometers']}, 'Interpreter','none')
+            
+            yline([0 0])
+            xlim([21 201])
+            %ylim([-6*10^-12 7.5*10^-12])
+            ylim([0 100])
+            xline([101 101])
+            xticks(1:25:201)
+            xticklabels(-500:125:500)
+            xlabel('Time (ms)')
+            ylabel('% Inhibition')
+
+            clear inhib
+
+
         end
     
-        saveas(gcf, ['../Analysis Output/' name '.svg'])
+        saveas(gcf, ['../Analysis Output/' name '_' num2str(sub) '_ratio.svg'])
+        close
+
+        % senshape test (move up to previous block)
+
+        %If not variable, load and segment mri and create skull mesh
+        if ~exist('mri_segmented', 'var')
+            load standard_mri;
+            template_mri = mri;
+            
+            cfg = [];
+            cfg.output = 'scalp';
+            
+            %Segment template MRI for head mesh
+            mri_segmented = ft_volumesegment(cfg, template_mri);
+            
+            %Transform to neuromag coordsys - same as for sensors
+            mri_segmented = ft_convert_coordsys(mri_segmented, 'neuromag');
+            
+            %Create mesh skull
+            cfg = [];
+            cfg.method = 'projectmesh';
+            cfg.tissue = 'scalp';
+            cfg.numvertices = 500;
+            
+            mesh_scalp = ft_prepare_mesh(cfg, mri_segmented);
+            
+            %Move scalp to not clip through sensors and be positioned nicely in helmet
+            mesh_scalp.pos(:,3) = mesh_scalp.pos(:,3) - 35; %Down
+            mesh_scalp.pos(:,2) = mesh_scalp.pos(:,2) - 15; %Back
+        
+            clear mri
+        end
+        
+        %If not variable, load sensors and labels
+        if ~exist('sensors', 'var')
+            tlks = load('../mat_data/timelockeds/ID0916/PO_00_tlks.mat');
+            tlks = tlks.timelockeds;
+        
+            sensors = tlks.grad;
+            clear tlks;
+        end
+        
+        %Plot higlighted sensors
+        %Write colour vector to row in mean_sub.label (+/-1 to row for all sensors on chip)
+        colors2 = ones(306, 3);
+        
+        %Index based on the first gradiometer in top_chan
+        %Sensshape needs idx for all 306 sensors which complicates this a bit.
+        for i = 1:numel(topchan)
+        top_chan_temp{i} = topchan{i}(1:end-5);
+        end
+        top_chan_idx = ismember(sensors.label, top_chan_temp);
+        %clear top_chan_temp
+        
+        %match "colors" to index
+        palind = 1;
+        for i = 1:8 % 8 highest grad amplitudes in condition from above
+            %find first sensor from cmb among all sensors (now alphabetical)
+            colrow = find(ismember(sensors.label, PO_00.label{ind(i)}(1:7)));
+            colors2(colrow, :) = palette(palind,:);
+            colors2(colrow+1, :) = palette(palind,:);
+            colors2(colrow-1, :) = palette(palind,:);
+            palind = palind+1; %advance to next color triplet in palette
+        end
+        
+        figure('Position', [400 200 1800 1000], 'Renderer','painters'); hold on
+        subplot(1,2,1)
+        ft_plot_sens(sensors, 'facecolor', colors2, 'facealpha', 1, 'label', 'off');
+        ft_plot_mesh(ft_convert_units(mesh_scalp, 'cm'), 'edgecolor', [0.6758 0.8438 0.8984]);
+        view([100 25])
+        
+        subplot(1,2,2)
+        ft_plot_sens(sensors, 'facecolor', colors2, 'facealpha', 1, 'label', 'off');
+        ft_plot_mesh(ft_convert_units(mesh_scalp, 'cm'), 'edgecolor', [0.6758 0.8438 0.8984]);
+        view([-100 25])
+        
+        %saveas(gcf, ['../Analysis Output/' name '_' num2str(sub) '_abs_head.svg'])
         close
 
     end
