@@ -1,5 +1,7 @@
 %% Source reconstruction (LCMV Beamformer)
 
+%Try ft_timelockeds separately for baseline_epoch & toi_epoch
+
 addpath('../');
 
 %Load MRI for interpolation/plot
@@ -16,33 +18,44 @@ data = data.tin0_bkg0_ica;
 headmodel = load('../mat_data/MRI_mat_tinmeg2/ID0916/meg_headmodel.mat');
 headmodel = headmodel.headmodel_meg;
 
+headmodel = ft_convert_units(headmodel, 'cm');
+
 %Create Leadfield
 cfg = [];
 cfg.senstype            = 'MEG';
 cfg.grad                = data.grad;
 cfg.headmodel           = headmodel;
 cfg.channel             = 'MEG';
-cfg.grid.resolution     = 1;
-cfg.grid.unit           = 'cm';
+cfg.resolution          = 1;
 
 leadfield = ft_prepare_leadfield(cfg);
 
-%Create timelockeds for trial of interest
+%Select data
 cfg = [];
 cfg.trials = data.trialinfo == 4; % 4 is PO trigger
-cfg.covariance = 'yes';
-cfg.covariancewindow = 'all';
-cfg.preproc.demean = 'yes';
-full_trial = ft_timelockanalysis(cfg, data);
+cfg.latency = [-0.500 0.500];
 
-%
-cfg = [];
-cfg.latency = [-0.500 -0.250];
+full_epoch = ft_selectdata(cfg, data);
 
-baseline_epoch = ft_selectdata(cfg, full_trial);
+cfg.latency = [-0.500 0];
+baseline_epoch = ft_selectdata(cfg, data);
 
 cfg.latency = [0 0.500];
-toi_epoch =  ft_selectdata(cfg, full_trial);
+toi_epoch = ft_selectdata(cfg, data);
+
+% Timelockeds for full epoch
+cfg = [];
+cfg.covariance         = 'yes';
+cfg.covariancewindow   = 'all';
+cfg.preproc.demean     = 'yes';
+full_trial = ft_timelockanalysis(cfg, full_epoch);
+
+% Timelockeds fo baseline and stimulation
+cfg = [];
+cfg.covariance         = 'yes';
+cfg.covariancewindow   = 'all';
+baseline_epoch = ft_timelockanalysis(cfg, baseline_epoch);
+toi_epoch = ft_timelockanalysis(cfg, toi_epoch);
 
 %Source reconstruction on full_trial to construct common spatial filter
 cfg = [];
@@ -56,13 +69,15 @@ cfg.senstype = 'MEG';
 
 source_all = ft_sourceanalysis(cfg, full_trial);
 
-cfg.sourcemodel.filter = source_all.avg.filter
+cfg.sourcemodel.filter = source_all.avg.filter;
+cfg.sourcemodel.filterdimord = source_all.avg.filterdimord;
 
 source_baseline = ft_sourceanalysis(cfg, baseline_epoch);
 source_toi = ft_sourceanalysis(cfg, toi_epoch);
 
 %Make contrast
-lcmv_contrast = source_all; %copy
+lcmv_contrast = source_toi; %copy
+
 lcmv_contrast.avg.pow = (source_toi.avg.pow - source_baseline.avg.pow) ./ source_baseline.avg.pow;
 
 %Interpolate contrast on MRI
@@ -70,7 +85,7 @@ cfg = [];
 cfg.parameter = 'pow';
 cfg.interpmethod = 'nearest';
 
-source_int = ft_sourceinterpolate(cfg, lcmv_contrast, mri_resliced)
+source_int = ft_sourceinterpolate(cfg, lcmv_contrast, mri_resliced);
 
 cfg = [];
 cfg.method = 'ortho';
@@ -78,6 +93,4 @@ cfg.funparameter = 'pow';
 cfg.funcolormap = 'jet';
 
 ft_sourceplot(cfg, source_int);
-
-
 
