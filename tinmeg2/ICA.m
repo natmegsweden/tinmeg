@@ -1,7 +1,7 @@
 % For every subject
 
-inpath = ['../mat_data/preprocessing/' 'ID' sub_date.ID{i} '/']
-outdir = ['../mat_data/ICA/' 'ID' sub_date.ID{i} '/']
+inpath = ['../../mat_data/preprocessing/' 'ID' sub_date.ID{i} '/'];
+outdir = ['../../mat_data/ICA/' 'ID' sub_date.ID{i} '/'];
 
 %Check if subject dir exist, create/define
 if ~exist(outdir, 'file');
@@ -10,23 +10,23 @@ end
 
 
 %Load preprocessed data
-load(['../mat_data/preprocessing/' 'ID' num2str(sub_date.ID{i}) '/' 'tin0_bkg0_ds_clean.mat']);
+load(['../../mat_data/preprocessing/' 'ID' num2str(sub_date.ID{i}) '/' 'tin0_bkg0_ds_clean.mat']);
 tin0_bkg0 = pre_tinmeg2_c;
-load(['../mat_data/preprocessing/' 'ID' num2str(sub_date.ID{i}) '/' 'tin0_bkg3_ds_clean.mat']);
+load(['../../mat_data/preprocessing/' 'ID' num2str(sub_date.ID{i}) '/' 'tin0_bkg3_ds_clean.mat']);
 tin0_bkg3 = pre_tinmeg2_c;
-load(['../mat_data/preprocessing/' 'ID' num2str(sub_date.ID{i}) '/' 'tin0_bkg8_ds_clean.mat']);
+load(['../../mat_data/preprocessing/' 'ID' num2str(sub_date.ID{i}) '/' 'tin0_bkg8_ds_clean.mat']);
 tin0_bkg8 = pre_tinmeg2_c;
-load(['../mat_data/preprocessing/' 'ID' num2str(sub_date.ID{i}) '/' 'tin3_bkg0_ds_clean.mat']);
+load(['../../mat_data/preprocessing/' 'ID' num2str(sub_date.ID{i}) '/' 'tin3_bkg0_ds_clean.mat']);
 tin3_bkg0 = pre_tinmeg2_c;
-load(['../mat_data/preprocessing/' 'ID' num2str(sub_date.ID{i}) '/' 'tin3_bkg3_ds_clean.mat']);
+load(['../../mat_data/preprocessing/' 'ID' num2str(sub_date.ID{i}) '/' 'tin3_bkg3_ds_clean.mat']);
 tin3_bkg3 = pre_tinmeg2_c;
-load(['../mat_data/preprocessing/' 'ID' num2str(sub_date.ID{i}) '/' 'tin3_bkg8_ds_clean.mat']);
+load(['../../mat_data/preprocessing/' 'ID' num2str(sub_date.ID{i}) '/' 'tin3_bkg8_ds_clean.mat']);
 tin3_bkg8 = pre_tinmeg2_c;
-load(['../mat_data/preprocessing/' 'ID' num2str(sub_date.ID{i}) '/' 'tin8_bkg0_ds_clean.mat']);
+load(['../../mat_data/preprocessing/' 'ID' num2str(sub_date.ID{i}) '/' 'tin8_bkg0_ds_clean.mat']);
 tin8_bkg0 = pre_tinmeg2_c;
-load(['../mat_data/preprocessing/' 'ID' num2str(sub_date.ID{i}) '/' 'tin8_bkg3_ds_clean.mat']);
+load(['../../mat_data/preprocessing/' 'ID' num2str(sub_date.ID{i}) '/' 'tin8_bkg3_ds_clean.mat']);
 tin8_bkg3 = pre_tinmeg2_c;
-load(['../mat_data/preprocessing/' 'ID' num2str(sub_date.ID{i}) '/' 'tin8_bkg8_ds_clean.mat']);
+load(['../../mat_data/preprocessing/' 'ID' num2str(sub_date.ID{i}) '/' 'tin8_bkg8_ds_clean.mat']);
 tin8_bkg8 = pre_tinmeg2_c;
 
 clear tinmeg2_pre_c

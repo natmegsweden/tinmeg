@@ -132,8 +132,8 @@ for i = 1:numel(sub_date.ID)
 
     title([sub_date.ID{i} ': Background: ' num2str(bkgs(ii))])
 
-    saveas(gcf, ['../Analysis Output/' [sub_date.ID{i} '_' num2str(bkgs(ii)) '.svg']]);
-    close
+    %saveas(gcf, ['../Analysis Output/' [sub_date.ID{i} '_' num2str(bkgs(ii)) '.svg']]);
+    %close
     clear tempdat
     
     %patch([rois(1)-patch_range rois(1)-patch_range rois(1)+patch_range rois(1)+patch_range], [ylims(1) ylims(2) ylims(2) ylims(1) ], [0 0 1], 'FaceAlpha', 0.2, 'EdgeAlpha', 0)

@@ -38,6 +38,6 @@ cond.tin8_bkg8label  = ({'GPP_88', 'GPG_88', 'PO_88', 'GO_88'});
 %% Read subject list
 
 %Readtable of subjects (as string)
-sub_date = readtable('../sub_date_tinmeg2.txt', 'Format', '%s%s');
+sub_date = readtable('../sub_date_tinmeg2.txt', 'Format', '%s%s%s');
 
 disp(['Number of subjects in table is ' num2str(height(sub_date))])

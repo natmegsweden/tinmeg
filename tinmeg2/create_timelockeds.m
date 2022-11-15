@@ -1,6 +1,6 @@
 
-%WIP
-subinpath = '../mat_data/ICA/ID0905/';
+% i is inherited from master_script :/
+subinpath = ['../../mat_data/ICA/ID' sub_date.ID{i} '/'];
 
 for ii = 1:numel(conditions)
 
@@ -13,16 +13,13 @@ nstim = numel(trig);
 
         %Only for pulse onset triggers (i.e GPP* PO* or PPP*)
         if any(regexp(triglabel{iii}, 'GPP_*')) || any(regexp(triglabel{iii}, 'PO_*')) || any(regexp(triglabel{iii}, 'PPP_*')) || any(regexp(triglabel{iii}, 'GO_*'))
-
-            for i = 2%1:numel(sub_date.ID)
     
             fname = [(cond.(([conditions{ii} 'label'])){iii}) '_tlks'];
-            fpath = ['../mat_data/timelockeds/ID' sub_date.ID{i} '/'];
+            fpath = ['../../mat_data/timelockeds/ID' sub_date.ID{i} '/'];
 
             if ~exist(fpath, 'file');
             mkdir(fpath);
             end
-            
 
             %check if file exist
             if exist([fpath fname '.mat'], 'file')
@@ -68,9 +65,6 @@ nstim = numel(trig);
             save([fpath fname '_cmb.mat'], 'timelockeds_cmb');
             
             clear timelockeds timelockeds_cmb;
-            
-            %For subjects
-            end
 
         % if trigger of interest    
         end

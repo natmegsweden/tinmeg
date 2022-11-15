@@ -4,7 +4,7 @@
 %WIP
 subinpath = '../mat_data/ICA/ID0905/';
 
-for ii = 1:numel(conditions)
+for ii = 1:3 %:numel(conditions)
 
 trig = cond.([conditions{ii} 'trig']);
 
@@ -15,7 +15,8 @@ nstim = numel(trig);
 
         %Only for pulse onset triggers (i.e GPP* PO* or PPP*)
         if any(regexp(triglabel{iii}, 'GPP_*')) || any(regexp(triglabel{iii}, 'PO_*')) %|| any(regexp(triglabel{iii}, 'PPP_*')) || any(regexp(triglabel{iii}, 'GO_*'))
-
+            
+            %For subject
             for i = 2%1:numel(sub_date.ID)
     
             fname = [(cond.(([conditions{ii} 'label'])){iii}) '_freq'];
@@ -38,10 +39,10 @@ nstim = numel(trig);
             cfg.output       = 'powandcsd';
             cfg.channel      = 'MEG';
             cfg.method       = 'mtmconvol';
-            cfg.foi          = 2:2:30;                         % analysis 2 to 30 Hz in steps of 2 Hz
-            cfg.t_ftimwin    = ones(length(cfg.foi),1).*0.5;   % length of time window = 0.5 sec
-            cfg.toi          = -0.5:0.05:0.5;                  % time window "slides" from -0.5 to 0.5 sec in steps of 0.05 sec (50 ms)
-            cfg.tapsmofrq    = 2;
+            cfg.foi          = [1:1:20];
+            cfg.t_ftimwin    = repmat(0.1,1,20);
+            cfg.toi          = '50%';
+            cfg.tapsmofrq    = repmat(5,1,20);
             cfg.trials = tempdat.trialinfo == trig(iii);
             
             freqs = ft_freqanalysis(cfg, tempdat);
@@ -65,17 +66,48 @@ end
 
 %% MultiplotTFR
 
-freqs = load('../mat_data/freqanalysis/ID0905/PO_00_freq.mat');
-freqs = freqs.freqs;
+freqsPO = load('../mat_data/freqanalysis/ID0905/PO_00_freq.mat');
+freqsPO = freqsPO.freqs;
+
+freqsGP = load('../mat_data/freqanalysis/ID0905/GPP_00_freq.mat');
+freqsGP = freqsGP.freqs;
 
 cfg = [];
-freqs_cmb = ft_combineplanar(cfg, freqs);
+freqsPO_cmb = ft_combineplanar(cfg, freqsPO);
+
+cfg = [];
+freqsGP_cmb = ft_combineplanar(cfg, freqsGP);
 
 cfg = [];
 cfg.layout = 'neuromag306cmb.lay';
-cfg.baseline = [-0.5 0];
+cfg.baseline = [0 0.2];
+cfg.title = 'PO';
+ft_multiplotTFR(cfg, freqsPO_cmb);
 
-ft_multiplotTFR(cfg, freqs_cmb);
+cfg.title = 'GP';
+cfg.baseline = [0 0.2];
+ft_multiplotTFR(cfg, freqsGP_cmb);
+
+
+cfg.channel = 'MEG1612+1613'
+ft_singleplotTFR(cfg, freqsPO_cmb)
+ax = gca;
+ax.XLim = [0 0.2];
+ax.Colormap = viridis(8)
+
+
+
+freqsPO = load('../mat_data/freqanalysis/ID0905/PO_00_freq.mat');
+freqsPO = freqsPO.freqs;
+
+cfg = [];
+freqsPO_cmb = ft_combineplanar(cfg, freqsPO);
+
+cfg = [];
+cfg.layout = 'neuromag306cmb.lay';
+cfg.baseline = [-0.4 0];
+cfg.title = 'PO';
+ft_multiplotTFR(cfg, freqsPO_cmb);
 
 
 
