@@ -1,537 +1,343 @@
-%% Load conditions for subjects, average trials
+%% Load vars and gathered timelocked data
 
-%Load tlk_sub.mat -- see obsidian notes
+% Run setup for common variables if not already loaded
+if exist('sub_date', 'var') == 0; run Conditions_triggers.m; end;
 
-%NB, fs_ds = 200 is hardcoded in for adapting TOI to gap in identifying amp and lat
+tlk_sub_cmb = load('../mat_data/timelockeds/tlk_sub_cmb.mat');
+tlk_sub_cmb = tlk_sub_cmb.tlk_sub_cmb;
 
-all_cmb_avg = load('../mat_data/timelockeds/all_cmb_avg.mat');
-all_cmb_avg = all_cmb_avg.all_cmb_avg;
+%Load test data from one example subject
+timelockeds_cmb = load(['../mat_data/timelockeds/ID' sub_date.ID{1} '/PO60_90_tlks_cmb.mat']);
+timelockeds_cmb = timelockeds_cmb.timelockeds_cmb;
 
-gravg_cmb = load('../mat_data/timelockeds/grand_avg_cmb.mat');
-gravg_cmb = gravg_cmb.gravg_cmb;
+timelockeds = load(['../mat_data/timelockeds/ID' sub_date.ID{1} '/PO60_90_tlks.mat']);
+timelockeds = timelockeds.timelockeds;
 
-mean_sub = load(['../mat_data/timelockeds/mean_sub.mat']);
-mean_sub = mean_sub.timelockeds_cmb;
-mean_sub.time = round(mean_sub.time,3); %Round to avoid issues with floating point precision in plots
+%Get sensor positions and labels
+sensors = timelockeds.grad;
 
-%Load sensor positions from one subjects data
-sensors = load('../mat_data/preprocessing/ID0539/PO60_ds_clean.mat');
-sensors = sensors.cleaned4mat.grad;
+senslab = timelockeds_cmb.label;
+senspos = timelockeds_cmb.grad.chanpos;
+timevec = round(timelockeds_cmb.time,3);
 
-%find n = 8(?) top_chan in control condition (PO60/70 90)
-%plot amplitude of topchans
-%boxplot of top_chans
-%helmet
-%permutations test
+clear timlockeds_cmb timelockeds
 
+%% Sensshape plot with L and R chips highlighted
 
-
-%% Sensshape plot with highlighted chips
-
-cfg = [];
-cfg.output = 'scalp';
-
-%Segment template MRI for head mesh
-mri_segmented = ft_volumesegment(cfg, template_mri);
-
-%Transform to neuromag coordsys - same as for sensors
-mri_segmented = ft_convert_coordsys(mri_segmented, 'neuromag');
-
-%Create mesh skull
-cfg = [];
-cfg.method = 'projectmesh';
-cfg.tissue = 'scalp';
-cfg.numvertices = 1000;
-
-mesh_scalp = ft_prepare_mesh(cfg, mri_segmented);
-
-%Move scalp to not clip through sensors and be positioned nicely in helmet
-mesh_scalp.pos(:,3) = mesh_scalp.pos(:,3) - 35; %Down
-mesh_scalp.pos(:,2) = mesh_scalp.pos(:,2) - 15; %Back
-
-%Plot higlighted sensors
-%Write colour vector to row in mean_sub.label (+/-1 to row for all sensors on chip)
-colors2 = ones(306, 3);
-
-%Index based on the first gradiometer in top_chan
-%Sensshape needs idx for all 306 sensors which complicates this a bit.
-for i = 1:numel(top_chan60)
-top_chan_temp{i} = top_chan60{i}(1:end-5);
-end
-top_chan_idx = ismember(sensors.label, top_chan_temp);
-clear top_chan_temp
-
-%match "colors" to index
-for i = 1:numel(sensors.label)
-    if top_chan_idx(i) == 1
-    colors2(i, :) = [0.85 0.325 0.098];
-    colors2(i+1, :) = [0.85 0.325 0.098];
-    colors2(i-1, :) = [0.85 0.325 0.098];
-    end
-end
-
-[top_chan60 top_chan70]
-warning('Note that sensors are the same for PO60 and PO70 - 90dB when n of sensors = 8');
-
-% figure('Position', [400 200 1800 1000]); hold on
-% subplot(1,2,1)
-% ft_plot_sens(sensors, 'facecolor', colors2, 'facealpha', 0.7);
-% ft_plot_mesh(ft_convert_units(mesh_scalp, 'cm'), 'edgecolor', [173/256 216/256 230/256]);
-% view([100 25])
-% 
-% subplot(1,2,2)
-% ft_plot_sens(sensors, 'facecolor', colors2, 'facealpha', 0.7);
-% ft_plot_mesh(ft_convert_units(mesh_scalp, 'cm'), 'edgecolor', [173/256 216/256 230/256]);
-% view([-100 25])
-
-%% Sanity check figure of identified gradiometers
-
-%Find index for gradiometers only
-grad_idx = ismember(mean_sub.label, top_chan60);
-
-figure; hold on;
-for i = 1:102 %102 gradiometers
-    if grad_idx(i) == 1
-        plot(mean(gravg_cmb.PO60{5}(i,1:165),1), 'r');
-    else plot(mean(gravg_cmb.PO60{5}(i,1:165),1), 'Color', [0 0 0 0.25]);
-    end
-end
-
-%% Grand average for SOI only
-gravg_soi = struct;
-
-%Find index for gradiometers only
-grad_idx = ismember(mean_sub.label, top_chan60);
-
-%For each condition
-for i = 1:numel(conditions);
-    %Each stim
-    for ii = 1:numel(cond.([conditions{i} 'label']))
-        j=1; %keep track of rows in temp
-        %Create temp struct of SOI
-        for iii = 1:102 %102 gradiometers
-            if grad_idx(iii) == 1
-               temp(j,:) = gravg_cmb.(conditions{i}){ii}(iii,1:165);
-               j=j+1;
-
-               %Write mean of temp and clear
-               gravg_soi.(conditions{i}){ii} = mean(temp,1);
-
-            end
-        end
-        clear j temp
-    end
-end
-
-%% Find biggest response per subject
-
-sub_sens_amp = struct;
-
-%Keep only soi per subject and find max of mean of soi
-%NB, max between 50-150ms (sample 111-131)
-for i = 1:numel(sub_date.ID)
-
-    sub_sens_amp.subjects{i,1} = sub_date.ID{i};
+if ~exist('mri_segmented', 'var')
     
-    for ii = 1:numel(conditions)
+    load standard_mri;
+    template_mri = mri;
+    clear mri;
     
-    nstim = numel(cond.([conditions{ii} 'trig']));
+    cfg = [];
+    cfg.output = 'scalp';
     
-        for stim_index = 1:nstim
-        
-        temp = mean(all_cmb_avg.(conditions{ii}){i,stim_index}(grad_idx,:),1);
-        maxresp = max(temp(111:131));
-
-        sub_sens_amp.(conditions{ii})(i, stim_index) = maxresp;
-        
-        clear temp maxresp;
-        %For stim
-        end
+    %Segment template MRI for head mesh
+    mri_segmented = ft_volumesegment(cfg, template_mri);
     
-    %For conditions
-    end
-
-%For subjects
+    %Transform to neuromag coordsys - same as for sensors
+    mri_segmented = ft_convert_coordsys(mri_segmented, 'neuromag');
 end
 
-
-
-%% Manuscript figures
-
-%Load and arrange statistics to plot
-%60dB carrier
-if exist("p_allchan", "var") == 0; load('../mat_data/stats/clustertest_p_allchan.mat'); end
-if exist("p_soichan", "var") == 0; load('../mat_data/stats/clustertest_p_soichan.mat'); 
-
-    %Make matrices same size for imagesc
-    p_soichan = [repmat(1, 8, 110), p_soichan repmat(1, 8, 34)];
+if ~exist('mesh_scalp', 'var')
+    %Create mesh skull
+    cfg = [];
+    cfg.method = 'projectmesh';
+    cfg.tissue = 'scalp';
+    cfg.numvertices = 1000;
     
-    % New, separate values, for colors in imagesc
-    p_allchan = p_allchan<0.01;
-    p_soichan = p_soichan<0.01;
+    mesh_scalp = ft_prepare_mesh(cfg, mri_segmented);
     
-    p_allchan = double(p_allchan);
-    p_soichan = double(p_soichan);
-    
-    p_soichan(p_soichan==1) = 2;
-    
-    p_soichan(:, 1:110) = repmat([3 3], 8, 110/2);
-    p_soichan(:, 132:165) = repmat([3 3], 8, 34/2);
-
+    %Move scalp to not clip through sensors and be positioned nicely in helmet
+    mesh_scalp.pos(:,3) = mesh_scalp.pos(:,3) - 35; %Down
+    mesh_scalp.pos(:,2) = mesh_scalp.pos(:,2) - 15; %Back
 end
 
-%70dB carrier
-if exist("p_allchan70", "var") == 0; load('../mat_data/stats/clustertest_p_allchan70.mat'); end
-if exist("p_soichan70", "var") == 0; load('../mat_data/stats/clustertest_p_soichan70.mat'); 
+%Create color matrix
+colors2 = zeros(306, 3);
 
-    %Make matrices same size for imagesc
-    p_soichan70 = [repmat(1, 8, 110), p_soichan70 repmat(1, 8, 34)];
-    
-    % New, separate values, for colors in imagesc
-    p_allchan70 = p_allchan70<0.01;
-    p_soichan70 = p_soichan70<0.01;
-    
-    p_allchan70 = double(p_allchan70);
-    p_soichan70 = double(p_soichan70);
-    
-    p_soichan70(p_soichan70==1) = 2;
-    
-    p_soichan70(:, 1:110) = repmat([3 3], 8, 110/2);
-    p_soichan70(:, 132:165) = repmat([3 3], 8, 34/2);
+colors2(:,1) = sensors.chanpos(:,1) > 0;
+colors2(:,3) = sensors.chanpos(:,1) < 0;
 
-end
-
-%colorbar for imagesc
-c = [1 1 1; 0 0.4470 0.7410; 0.8500 0.3250 0.0980; 0.2 0.2 0.2];
-
-% Inherited from raster plots
-xtick = [1:20:165];
-xticklab = [-500:100:320];
-triglinex = [101 101];
-xrange = [41 161];
-
-txtsize = 10;
-
-lineylims = [0 1.6*10^-11];
-boxylims = [0 1.6*10^-11];
-
-%Tableau medium 10 palette
-colors = [173 139 201;
-    168 120 110;
-    114 158 206;
-    255 158 74;
-    237 102 93;
-    103 191 92;
-    237 151 202;
-    162 162 162;
-    205 204 93;
-    109 204 218]/256;
-
-%No idea why the colors are read backwards for boxplot
-boxcolors = flip(colors(1:6,:));
-isiboxcolors = flip(colors(7:10,:));
-
-figure('Units', 'centimeters', 'Position',  [5 5 50 30], 'Renderer','painters');
-tiledlayout(4,4, 'TileSpacing','tight', 'Padding','tight');
-
-%PO60
-nexttile; hold on;
-patch('Faces', [1 2 3 4], 'Vertices', [111 lineylims(1); 111 lineylims(2); 131 lineylims(2); 131 lineylims(1)], 'FaceColor', [0 0 0], 'FaceAlpha', 0.1, 'EdgeAlpha', 0)
-for i = 1:6
-    plot(gravg_soi.PO60{i}, 'Color', colors(i,:))
-end
-
-plot(triglinex, lineylims, 'k --');
-ax = gca;
-ax.XTick = xtick;
-ax.XTickLabel = [xticklab];
-ax.XGrid = 'on';
-ax.FontSize = txtsize;
-ylim(lineylims);
-xlim(xrange);
-xlabel("Time (ms)");
-
-ylabel({"60dB carrier", "Gradiometer ERF"})
-
-title({'Pulse only trials', 'Different pulse level'});
-
-legend({"", "70", "75", "80", "85", "90", "95"}, 'Location', 'northwest'); %First one empty to skip patch
-legend('boxoff');
-
-nexttile; hold on;
-boxplot(sub_sens_amp.PO60(:, :), [70:5:95], 'Symbol', 'ok');
-
-title({'Pulse only response amplitude', 'Different pulse level'});
-
-ylim(boxylims)
-ax = gca;
-ax.FontSize = txtsize;
-ax.Box = 'off';
-
-set(findobj(gca,'type','line'),'lineStyle','-');
-
-xlabel("Pulse level");
-
-%[normx, normy] = coord2norm(ax, [5 5], [-18*10^-5 -20*10^-5]); %https://se.mathworks.com/matlabcentral/fileexchange/54254-coord2norm
-%annotation('arrow', normx, normy);
-
-h = findobj(gcf,'tag','Outliers');
-set(h,'MarkerSize',4);
-
-h = findobj(gca,'Tag','Box');
-for j=1:6
-    patch(get(h(j),'XData'),get(h(j),'YData'),boxcolors(j,:),'FaceAlpha',.5);
-end
-
-lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
-set(lines, 'Color', 'k');
-
-title({'Pulse only response amplitude', 'Different pulse level'});
-
-%GP60
-nexttile; hold on;
-patch('Faces', [1 2 3 4], 'Vertices', [111 lineylims(1); 111 lineylims(2); 131 lineylims(2); 131 lineylims(1)], 'FaceColor', [0 0 0], 'FaceAlpha', 0.1, 'EdgeAlpha', 0)
-for i = 1:4
-    plot(gravg_soi.GP60{i}, 'Color', colors(i+6,:))
-end
-plot(triglinex, lineylims, 'k --');
-ylim(lineylims)
-
-ax = gca;
-ax.XTick = xtick;
-ax.XTickLabel = [xticklab];
-ax.XGrid = 'on';
-ax.FontSize = txtsize;
-ylim(lineylims);
-xlim(xrange);
-
-xlabel("Time (ms)");
-
-legend({"", "0 ms", "60 ms", "120 ms", "240 ms"}, 'Location', 'northwest'); %First one empty to skip patch
-legend('boxoff');
-
-title({'Gap + Pulse trials', 'Different ISI'});
-
-nexttile; boxplot(sub_sens_amp.GP60(:, :), [0 60 120 240], 'Symbol', 'ok');
-ylim(boxylims)
-ax = gca;
-ax.FontSize = txtsize;
-xlabel("ISI duration")
-ax.Box = 'off';
-
-set(findobj(gca,'type','line'),'lineStyle','-');
-
-h = findobj(gcf,'tag','Outliers');
-set(h,'MarkerSize',4);
-
-h = findobj(gca,'Tag','Box');
-for j=1:4
-    patch(get(h(j),'XData'),get(h(j),'YData'),isiboxcolors(j,:),'FaceAlpha',.5);
-end
-
-lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
-set(lines, 'Color', 'k');
-
-title({'Gap + Pulse response amplitude', 'Different ISI'});
-
-%PO70
-nexttile; hold on;
-patch('Faces', [1 2 3 4], 'Vertices', [111 lineylims(1); 111 lineylims(2); 131 lineylims(2); 131 lineylims(1)], 'FaceColor', [0 0 0], 'FaceAlpha', 0.1, 'EdgeAlpha', 0)
-for i = 1:5
-    plot(gravg_soi.PO70{i}, 'Color', colors(i+1,:)) %+1 to color to match PO60
-end
-plot(triglinex, lineylims, 'k --');
-ylim(lineylims)
-
-ax = gca;
-ax.XTick = xtick;
-ax.XTickLabel = [xticklab];
-ax.XGrid = 'on';
-ax.FontSize = txtsize;
-ylim(lineylims);
-xlim(xrange);
-ylabel({"70dB carrier", "Gradiometer ERF"})
-xlabel("Time (ms)");
-
-legend({"", "75", "80", "85", "90", "95"}, 'Location', 'northwest'); %First one empty to skip patch
-legend('boxoff');
-
-%NaNs to pad missing 70dB pulse in 70dB carrier
-nexttile; boxplot([repmat(NaN, 1, 22)' sub_sens_amp.PO70(:, 1:5)], [70:5:95], 'Symbol', 'ok');
-ylim(boxylims)
-ax = gca;
-ax.FontSize = txtsize;
-xlabel("Pulse level")
-ax.Box = 'off';
-
-set(findobj(gca,'type','line'),'lineStyle','-');
-
-h = findobj(gcf,'tag','Outliers');
-set(h,'MarkerSize',4);
-
-h = findobj(gca,'Tag','Box');
-for j=1:5
-    patch(get(h(j),'XData'),get(h(j),'YData'),boxcolors(j,:),'FaceAlpha',.5);
-end
-
-lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
-set(lines, 'Color', 'k');
-
-%GP70
-nexttile; hold on;
-patch('Faces', [1 2 3 4], 'Vertices', [111 lineylims(1); 111 lineylims(2); 131 lineylims(2); 131 lineylims(1)], 'FaceColor', [0 0 0], 'FaceAlpha', 0.1, 'EdgeAlpha', 0)
-for i = 1:4
-    plot(gravg_soi.GP70{i}, 'Color', colors(i+6,:))
-end
-plot(triglinex, lineylims, 'k --');
-ylim(lineylims)
-
-ax = gca;
-ax.XTick = xtick;
-ax.XTickLabel = [xticklab];
-ax.XGrid = 'on';
-
-ax.FontSize = txtsize;
-ylim(lineylims);
-xlim(xrange);
-xlabel("Time (ms)");
-
-legend({"", "0 ms", "60 ms", "120 ms", "240 ms"}, 'Location', 'northwest'); %First one empty to skip patch
-legend('boxoff');
-
-nexttile; boxplot(sub_sens_amp.GP70(:, :), [0 60 120 240], 'Symbol', 'ok');
-ylim(boxylims)
-ax = gca;
-ax.FontSize = txtsize;
-xlabel("ISI duration")
-ax.Box = 'off';
-
-set(findobj(gca,'type','line'),'lineStyle','-');
-
-h = findobj(gcf,'tag','Outliers');
-set(h,'MarkerSize',4);
-
-h = findobj(gca,'Tag','Box');
-for j=1:4
-    patch(get(h(j),'XData'),get(h(j),'YData'),isiboxcolors(j,:),'FaceAlpha',.5);
-end
-
-lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
-set(lines, 'Color', 'k');
-
-
-%Stat amplitude 60
-nexttile; hold on;
-patch('Faces', [1 2 3 4], 'Vertices', [111 lineylims(1); 111 lineylims(2); 131 lineylims(2); 131 lineylims(1)], 'FaceColor', [0 0 0], 'FaceAlpha', 0.1, 'EdgeAlpha', 0)
-plot(gravg_soi.PO60{5}, 'Color', colors(5,:)); %Manually specify colors to match other plots
-plot(gravg_soi.GP60{4}, 'Color', colors(10,:)); % -''-
-
-plot(triglinex, lineylims, 'k --');
-ax = gca;
-ax.XTick = xtick;
-ax.XTickLabel = [xticklab];
-ax.XGrid = 'on';
-ax.FontSize = txtsize;
-ylim(lineylims);
-xlim(xrange);
-
-ylabel({"Gradiometer ERF"})
-
-legend({"", "Pulse (90 dB)", "Gap + Pulse (ISI 240 ms)"}, 'Location', 'northwest');
-legend('boxoff');
-
-title({'Inhibition of response - 60dB carrier'});
-
-%Stat amplitude 70
-nexttile; hold on;
-patch('Faces', [1 2 3 4], 'Vertices', [111 lineylims(1); 111 lineylims(2); 131 lineylims(2); 131 lineylims(1)], 'FaceColor', [0 0 0], 'FaceAlpha', 0.1, 'EdgeAlpha', 0)
-plot(gravg_soi.PO70{5}, 'Color', colors(5,:)); %Manually specify colors to match other plots
-plot(gravg_soi.GP70{4}, 'Color', colors(10,:)); % -''-
-
-plot(triglinex, lineylims, 'k --');
-ax = gca;
-ax.XTick = xtick;
-ax.XTickLabel = [xticklab];
-ax.XGrid = 'on';
-ax.FontSize = txtsize;
-ylim(lineylims);
-xlim(xrange);
-
-ylabel({"Gradiometer ERF"})
-
-legend({"", "Pulse (90 dB)", "Gap + Pulse (ISI 240 ms)"}, 'Location', 'northwest');
-legend('boxoff');
-
-title({'Inhibition of response - 70dB carrier'});
-
-%Head and sensshape1
-nexttile(11, [2 1]); hold on;
+figure('Position', [400 200 1800 1000]); hold on
+subplot(1,2,1)
 ft_plot_sens(sensors, 'facecolor', colors2, 'facealpha', 0.7);
 ft_plot_mesh(ft_convert_units(mesh_scalp, 'cm'), 'edgecolor', [173/256 216/256 230/256]);
 view([100 25])
 
-%Head and sensshape2
-nexttile(12, [2 1]); hold on;
+subplot(1,2,2)
 ft_plot_sens(sensors, 'facecolor', colors2, 'facealpha', 0.7);
 ft_plot_mesh(ft_convert_units(mesh_scalp, 'cm'), 'edgecolor', [173/256 216/256 230/256]);
 view([-100 25])
 
-% Probabilities 60
-nexttile(13);
-imagesc([p_allchan(1:102,:); p_soichan])
-colormap(c)
-xlim(xrange)
-xticks(xtick);
-xticklabels(xticklab);
-ylim([-8 120])
-ylabel("Channel number");
-set(gca, 'XGrid', 'on')
-set(gca, 'YGrid', 'on')
-set(gca, "Box", "off");
-xlabel("Time (ms)");
+%% Find highest POXX_90-response grad for Left and Right hemishphere per subject
 
-%some weird loop for legend in imagesc
-hold on;
-for K = 1 : 3; hidden_h(K) = surf(uint8(K-[1 1;1 1]), 'edgecolor', 'none'); end
-hold off
-leg = legend({'', 'All Gradiometers', 'Selected Gradiometers'}, 'Location', 'southwest' )
-title(leg,'p < 0.01')
-set(gca, "Box", "off");
-clear K hidden_h
+%Prepare structures
+L_topgrads = struct();
+R_topgrads = struct();
 
-title({'Difference probability per channel - 60dB carrier'});
+%Define TOI 1 (50 - 150 ms)
+toi1 = find(timevec == 0.050);
+toi2 = find(timevec == 0.150);
 
-ax = gca;
-ax.FontSize = txtsize;
+%Get labels for Right and Left sensors
+Rchan_lab = senslab(senspos(:,1) > 0, :);
+Lchan_lab = senslab(senspos(:,1) < 0, :);
 
-% Probabilities 70
-nexttile(14);
-imagesc([p_allchan70(1:102,:); p_soichan70])
-colormap(c)
-xlim(xrange)
-xticks(xtick);
-xticklabels(xticklab);
-ylim([-8 120])
-ylabel("Channel number");
-set(gca, 'XGrid', 'on')
-set(gca, 'YGrid', 'on')
-set(gca, "Box", "off");
-xlabel("Time (ms)");
+for ii = [1, 2] %For condition PO60 and PO70 (index in var: 'conditions')
 
-%some weird loop for legend in imagesc
-hold on;
-for K = 1 : 3; hidden_h(K) = surf(uint8(K-[1 1;1 1]), 'edgecolor', 'none'); end
-hold off
-leg = legend({'', 'All Gradiometers', 'Selected Gradiometers'}, 'Location', 'southwest' )
-title(leg,'p < 0.01')
-clear K hidden_h
+    for i = 1:numel(sub_date.ID)
+        
+        %Select stim level 90dB as index in var: 'cond'
+        if ii == 1
+            iii = 5;
+        elseif ii == 2;
+            iii = 4;
+        end
 
-title({'Difference probability per channel - 70dB carrier'});
+        %The condition and stimuli
+        %name = cond.([conditions{ii} 'label']){iii};
 
-ax = gca;
-ax.FontSize = txtsize;
+        %Define Right and Left sensors based on x-coordinate of sensor position
+        Rchan = tlk_sub_cmb.(conditions{ii}){i, iii}(senspos(:,1) > 0, :);
+        Lchan = tlk_sub_cmb.(conditions{ii}){i, iii}(senspos(:,1) < 0, :);
+        
+        %Find sensor on RIGHT side with biggest amplitude response in TOI
+        [datR, indR] = sort(mean(Rchan(:,toi1:toi2), 2), 'descend');
+        topRname = Rchan_lab{indR(1)};
+        topRind = find(ismember(senslab, topRname));
+        
+        %Find sensor on LEFT side with biggest amplitude response in TOI
+        [datL, indL] = sort(mean(Lchan(:,toi1:toi2), 2), 'descend');
+        topLname = Lchan_lab{indL(1)};
+        topLind = find(ismember(senslab, topLname));
+    
+        %Write top channel index (out of 204)
+        L_topgrads.([conditions{ii} 'chind']){i,:} = topLind;
+        R_topgrads.([conditions{ii} 'chind']){i,:} = topRind;
 
-saveas(gcf, ['../Analysis Output/MEG_manus_sensspace.svg']);
-close
+        %Write top channel label/name
+        L_topgrads.([conditions{ii} 'chan']){i,:} = topLname;
+        R_topgrads.([conditions{ii} 'chan']){i,:} = topRname;
+
+    %For subject
+    end
+
+%For conditions
+end
+
+[count60L, name60L] = groupcounts(L_topgrads.PO60chan);
+[count60R, name60R] = groupcounts(R_topgrads.PO60chan);
+
+[count70L, name70L] = groupcounts(L_topgrads.PO70chan);
+[count70R, name70R] = groupcounts(R_topgrads.PO70chan);
+
+%% Gather response from all conditions from SOIs identified for POXX_90
+
+topgrad_dat = struct();
+
+for ii = 1:numel(conditions); %For condition PO60 and GP60 (index [1,3] in var: 'conditions')
+
+    for iii = 1:numel(cond.([conditions{ii} 'label']));
+    
+            %The condition and stimuli
+            name = cond.([conditions{ii} 'label']){iii};
+            disp(name); %helps to monitor what's going on
+    
+        for i = 1:numel(sub_date.ID)
+            
+            if ii == 1 || ii == 3 || ii == 5 && iii == 1 %if 60 dB carrier
+                
+                temp = tlk_sub_cmb.(conditions{ii}){i,iii};
+                topgrad_dat.([conditions{ii} '_L']){1,iii}(i,:) = temp(L_topgrads.PO60chind{i},:); 
+
+                temp = tlk_sub_cmb.(conditions{ii}){i,iii};
+                topgrad_dat.([conditions{ii} '_R']){1,iii}(i,:) = temp(R_topgrads.PO60chind{i},:);
+
+            elseif ii == 2 || ii == 4 || ii == 5 && iii == 2 %if 70 dB carrier
+                
+                temp = tlk_sub_cmb.(conditions{ii}){i,iii};
+                topgrad_dat.([conditions{ii} '_L']){1,iii}(i,:) = temp(L_topgrads.PO70chind{i},:); 
+
+                temp = tlk_sub_cmb.(conditions{ii}){i,iii};
+                topgrad_dat.([conditions{ii} '_R']){1,iii}(i,:) = temp(R_topgrads.PO70chind{i},:);
+
+            end
+        %For subject
+        end
+
+    %For stims 
+    end
+
+%For conditions
+end
 
 
+%% Figures of top gradiometers
+
+% [185, 202, 254] light blue RGB values
+% [1, 55, 203] dark blue RGB values
+% [241, 215, 177] light orange RGB values
+% [252, 96, 10] dark orange RGB values
+
+%Blue color gradient
+bluecol(:,1) = linspace(185, 1, 6) ./256; % R
+bluecol(:,2) = linspace(202, 55, 6) ./256; % G
+bluecol(:,3) = linspace(254, 203, 6) ./256; % B
+
+%Orange color gradient
+orgcol(:,1) = linspace(241, 252, 6) ./256; % R
+orgcol(:,2) = linspace(215, 96, 6) ./256; % G
+orgcol(:,3) = linspace(177, 10, 6) ./256; % B
+
+%PO60
+figure; hold on;
+for i = 1:6 % Six stim (0-240ms ISI) in GP60 condition
+    plot(mean(topgrad_dat.PO60_L{1,i}', 2), 'Color', bluecol(i,:), 'LineWidth', 1.5)
+    plot(mean(topgrad_dat.PO60_R{1,i}', 2), 'Color', orgcol(i,:), 'LineWidth', 1.5)
+end
+
+%legend({}, 'Location', 'northwest');
+
+xlabel('Time (ms)')
+ylabel('Top gradiometer ERF amplitude')
+
+xline(100, '--k')
+
+% xline(111, 'k')
+% xline(131, 'k')
+
+xticks([0:20:165])
+xticklabels([-500:100:320])
+xlim([40 160])
+
+ylim([0 1.3*10^-11])
+
+%saveas(gcf, '../Analysis Output/L_R_POtest.svg')
+
+
+%GP60
+yoffset = 0.25*10^-11;
+
+figure; hold on;
+for i = 1:4 % Six stim (70-95db Pulse) in PO60 condition
+    if i == 1;
+    plot(mean(topgrad_dat.GP60_L{1,i}', 2), 'Color', bluecol(6,:), 'LineWidth', 1.5)
+    plot(mean(topgrad_dat.GP60_R{1,i}', 2), 'Color', orgcol(6,:), 'LineWidth', 1.5)
+    else
+    plot(mean(topgrad_dat.GP60_L{1,i}', 2)+(i-1)*yoffset, 'Color', bluecol(6,:), 'LineWidth', 1.5)
+    plot(mean(topgrad_dat.GP60_R{1,i}', 2)+(i-1)*yoffset, 'Color', orgcol(6,:), 'LineWidth', 1.5)
+    end
+end
+
+ylim([0 1.3*10^-11])
+
+xline(100, '--k')
+xticks([0:20:165])
+xticklabels([-500:100:320])
+xlim([40 160])
+
+%% Sensshape with gradients for n of top sensor
+
+if ~exist('mri_segmented', 'var')
+    
+    load standard_mri;
+    template_mri = mri;
+    clear mri;
+    
+    cfg = [];
+    cfg.output = 'scalp';
+    
+    %Segment template MRI for head mesh
+    mri_segmented = ft_volumesegment(cfg, template_mri);
+    
+    %Transform to neuromag coordsys - same as for sensors
+    mri_segmented = ft_convert_coordsys(mri_segmented, 'neuromag');
+end
+
+if ~exist('mesh_scalp', 'var')
+    %Create mesh skull
+    cfg = [];
+    cfg.method = 'projectmesh';
+    cfg.tissue = 'scalp';
+    cfg.numvertices = 1000;
+    
+    mesh_scalp = ft_prepare_mesh(cfg, mri_segmented);
+    
+    %Move scalp to not clip through sensors and be positioned nicely in helmet
+    mesh_scalp.pos(:,3) = mesh_scalp.pos(:,3) - 35; %Down
+    mesh_scalp.pos(:,2) = mesh_scalp.pos(:,2) - 15; %Back
+end
+
+%Create color matrix
+colors2 = ones(306, 3);
+
+%How many n of most common grad
+mostgrad = max([count60L; count60R; count70L; count70R]);
+
+clear bluecol orgcol
+%Blue color gradient
+bluecol(:,1) = linspace(185, 1, mostgrad) ./256; % R
+bluecol(:,2) = linspace(202, 55, mostgrad) ./256; % G
+bluecol(:,3) = linspace(254, 203, mostgrad) ./256; % B
+
+%Orange color gradient
+orgcol(:,1) = linspace(241, 252, mostgrad) ./256; % R
+orgcol(:,2) = linspace(215, 96, mostgrad) ./256; % G
+orgcol(:,3) = linspace(177, 10, mostgrad) ./256; % B
+
+%Color left blue
+for i = 1:numel(count60L)
+    [M,I] = sort(count60L, 'descend')
+    name60L{I(1)}
+    count60L(I(1))
+    
+    %Find sensor label and put gradient according to n of sensor in colorspace
+    sensind = find(ismember(sensors.label, name60L{I(i)}(1:7))); %Search for first gradiometer
+    colors2(sensind,:) = bluecol(count60L(I(i)),:) %Color first gradiometer
+    colors2(sensind-1,:) = bluecol(count60L(I(i)),:) %Color other magnetometer
+    colors2(sensind+1,:) = bluecol(count60L(I(i)),:) %Color other gradiomter
+end
+
+%Color right orange
+for i = 1:numel(count60R)
+    [M,I] = sort(count60R, 'descend')
+    name60R{I(1)}
+    count60R(I(1))
+    
+    %Find sensor label and put gradient according to n of sensor in colorspace
+    sensind = find(ismember(sensors.label, name60R{I(i)}(1:7))); %Search for first gradiometer
+    colors2(sensind,:) = orgcol(count60R(I(i)),:) %Color first gradiometer
+    colors2(sensind-1,:) = orgcol(count60R(I(i)),:) %Color other magnetometer
+    colors2(sensind+1,:) = orgcol(count60R(I(i)),:) %Color other gradiomter
+end
+
+figure('Position', [400 200 1800 1000]); hold on
+subplot(1,2,1)
+ft_plot_sens(sensors, 'facecolor', colors2, 'facealpha', 0.9);
+%ft_plot_mesh(ft_convert_units(mesh_scalp, 'cm'), 'edgecolor', [173/256 216/256 230/256]);
+view([100 25])
+
+subplot(1,2,2)
+ft_plot_sens(sensors, 'facecolor', colors2, 'facealpha', 0.9);
+%ft_plot_mesh(ft_convert_units(mesh_scalp, 'cm'), 'edgecolor', [173/256 216/256 230/256]);
+view([-100 25])
+
+%Some suspect sensors
+find(ismember(L_topgrads.PO60chan, 'MEG2042+2043'))
+find(ismember(L_topgrads.PO60chan, 'MEG0122+0123'))
+find(ismember(L_topgrads.PO60chan, 'MEG0342+0343'))
+
+find(ismember(R_topgrads.PO60chan, 'MEG2032+2033'))
+find(ismember(R_topgrads.PO60chan, 'MEG1212+1213'))
+
+%inspect others
+%topoplot
+%PO vs GP
+%quantify
+
+%inspect sub 4
+figure; hold on;
+plot(tlk_sub_cmb.PO60{4,5}(8,:)) %favvisen (0242)
+plot(tlk_sub_cmb.PO60{4,5}(12,:)) %irl

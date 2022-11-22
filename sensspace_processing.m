@@ -49,7 +49,7 @@ nstim = numel(trig);
         cfg.preproc.lpfilter = 'yes';
         cfg.preproc.lpfreq = 70;
         cfg.preproc.hpfilter = 'no';
-        
+        cfg.channel = 'MEG';
         cfg.trials = tempdat.trialinfo == trig(iii);
         
         timelockeds = ft_timelockanalysis(cfg, tempdat);
@@ -79,116 +79,4 @@ clear i ii iii trig nstim
 
 save('../mat_data/timelockeds/tlk_sub.mat', 'tlk_sub');
 save('../mat_data/timelockeds/tlk_sub_cmb.mat', 'tlk_sub_cmb');
-
-%% Find 8 combined gradiometers with biggest response in grand average of subjects in PO60/70 90-trials
-
-%WIP WIP WIP
-
-%How many combined grads of interest?
-n_top_chan = 8;
-
-%For 60dB Carrier
-%Create empty cell array
-max_grad = cell(1,n_top_chan);
-
-%Overwrite mean_sub with grand average to maintain "labels"
-mean_sub.avg = gravg_cmb.PO60{5}; %col 5 = PO6090
-
-%find max of first 102 chan (grads) at mean of samples 116:131 (75-150ms)
-[val, ind] = sort(mean(mean_sub.avg(1:102,116:131),2), 'descend');
-
-%write top i cmb_grads to struct
-for i = 1:n_top_chan
-    max_grad{1,i} = mean_sub.label{ind(i)};
-end
-
-top_chan60 = unique(max_grad)';
-
-save('top_chan60.mat', 'top_chan60');
-
-%For 70dB Carrier
-%Create empty cell array
-max_grad = cell(1,n_top_chan);
-
-%Overwrite mean_sub with grand average to maintain "labels"
-mean_sub.avg = gravg_cmb.PO70{4}; %col 5 = PO7090
-
-%find max of first 102 chan (grads) at mean of samples 116:131 (75-150ms)
-[val, ind] = sort(mean(mean_sub.avg(1:102,116:131),2), 'descend');
-
-%write top i cmb_grads to struct
-for i = 1:n_top_chan
-    max_grad{1,i} = mean_sub.label{ind(i)};
-end
-
-top_chan70 = unique(max_grad)';
-
-i = 4;
-
-%i240 N1
-mean_sub.avg = gravg_cmb.GP60{1,i};
-
-cfg = [];
-cfg.parameter = 'avg';
-cfg.layout = 'neuromag306mag.lay';
-cfg.colorbar = 'no';
-cfg.comment = 'no';
-cfg.zlim = [zlimlow zlimhigh];
-
-cfg.xlim = [0.050 0.150];
-cfg.baseline = [-0.390 -0.290];
-
-ft_topoplotER(cfg, mean_sub);
-title(([cond.GP60label{i} ' Pulse N1']), 'Interpreter', 'none');
-
-colormap(flipud(brewermap(64,'RdBu'))) % change the colormap
-
-% saveas(gcf, ['../Analysis Output/topo_' cond.GP60label{i} '_pulN1.svg']);
-% close
-
-%i240 P2
-mean_sub.avg = gravg_cmb.GP60{1,i};
-
-cfg = [];
-cfg.parameter = 'avg';
-cfg.layout = 'neuromag306mag.lay';
-cfg.colorbar = 'no';
-cfg.comment = 'no';
-cfg.zlim = [zlimlow zlimhigh];
-
-cfg.xlim = [0.150 0.250];
-cfg.baseline = [-0.390 -0.290];
-
-ft_topoplotER(cfg, mean_sub);
-title(([cond.GP60label{i} ' Pulse P2']), 'Interpreter', 'none');
-
-colormap(flipud(brewermap(64,'RdBu'))) % change the colormap
-
-% saveas(gcf, ['../Analysis Output/topo_' cond.GP60label{i} '_pulP2.svg']);
-% close
-
-
-i = 3;
-%i120 P2
-mean_sub.avg = gravg_cmb.GP60{1,i};
-
-cfg = [];
-cfg.parameter = 'avg';
-cfg.layout = 'neuromag306mag.lay';
-cfg.colorbar = 'no';
-cfg.comment = 'no';
-cfg.zlim = [zlimlow zlimhigh];
-
-cfg.xlim = [0.150 0.250];
-cfg.baseline = [-0.270 -0.170];
-
-ft_topoplotER(cfg, mean_sub);
-title(([cond.GP60label{i} ' Pulse P2']), 'Interpreter', 'none');
-
-colormap(flipud(brewermap(64,'RdBu'))) % change the colormap
-
-% saveas(gcf, ['../Analysis Output/topo_' cond.GP60label{i} '_pulP2.svg']);
-% close
-
-
 
