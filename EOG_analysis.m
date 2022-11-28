@@ -4,6 +4,7 @@ load(['../mat_data/timelockeds/epochs_eog_avgrast.mat']);
 load('../mat_data/timelockeds/epochs_eog.mat');
 load('../mat_data/timelockeds/epochs_eog_resp.mat');
 
+load('../mat_data/timelockeds/epochs_eog_all_clean_avg.mat');
 load('../mat_data/timelockeds/epochs_eog_clean_resp.mat');
 
 %% load EOG data to structure
@@ -341,8 +342,10 @@ end
 %save(['../mat_data/timelockeds/epochs_eog_clean_resp.mat'], 'epochs_eog_clean_resp');
 
 %Export EOG amps as CSV
-%EOG_clean_resp_csv = struct2table(epochs_eog_clean_resp);
-%writetable(EOG_clean_resp_csv);
+csvwrite('../R data/EOG_PO60', epochs_eog_clean_resp.PO60);
+csvwrite('../R data/EOG_PO70', epochs_eog_clean_resp.PO70);
+csvwrite('../R data/EOG_GP660', epochs_eog_clean_resp.GP60);
+csvwrite('../R data/EOG_GP70', epochs_eog_clean_resp.GP70);
 
 %% Find biggest response in all trials (conditions of interest)
 
