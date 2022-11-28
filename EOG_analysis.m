@@ -344,7 +344,7 @@ end
 %Export EOG amps as CSV
 csvwrite('../R data/EOG_PO60', epochs_eog_clean_resp.PO60);
 csvwrite('../R data/EOG_PO70', epochs_eog_clean_resp.PO70);
-csvwrite('../R data/EOG_GP660', epochs_eog_clean_resp.GP60);
+csvwrite('../R data/EOG_GP60', epochs_eog_clean_resp.GP60);
 csvwrite('../R data/EOG_GP70', epochs_eog_clean_resp.GP70);
 
 %% Find biggest response in all trials (conditions of interest)
