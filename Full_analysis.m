@@ -142,7 +142,7 @@ for i = 1:length(sub_date.ID);
     continue
     end
     
-    run('C2_ICA.m');
+    run('C_ICA.m');
     
 end
 
@@ -255,6 +255,9 @@ for i = 1:4%length(sub_date.ID);
     fig = figure('Position', [400 300 1800 800], 'Name', ['SUBJECT: ' sub_date.ID{i}], 'NumberTitle', 'off'); %Postion: [Left Bottom Width Height]
     hold on;
     
+    %Check units
+    %headmodel_meg = ft_convert_units(headmodel_meg, 'cm')
+
     subplot(1,2,1)
     ft_plot_sens(sensshape)    
     ft_plot_headshape(headshape)

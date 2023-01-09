@@ -1,7 +1,10 @@
 %% Beamformer LCMV
 % https://github.com/natmegsweden/meeg_course/blob/master/tutorial_05_beamformer.md
 
-for i = 6:22%length(sub_date.ID);
+%Contrasts of interest
+coi = {'POvsB', 'GPPvsB', 'GPPvsPO'};
+
+for i = 1:25%length(sub_date.ID);
     
     meg_inpath = ['../mat_data/ICA/' 'ID' sub_date.ID{i} '/'];
     mri_inpath = ['../mat_data/MRI_mat/ID' sub_date.ID{i} '/'];
@@ -10,75 +13,72 @@ for i = 6:22%length(sub_date.ID);
     %load headmodel
     headmodel_meg = load([mri_inpath 'meg_headmodel.mat']); 
     headmodel_meg = headmodel_meg.headmodel_meg;
+    headmodel_meg = ft_convert_units(headmodel_meg, 'cm');
     
     %Load subject sourcemodel in template grid format (based on MNI)
-    subject_grid = load([mri_inpath 'subject_grid.mat']);
-    subject_grid = subject_grid.subject_grid;
+    %subject_grid = load([mri_inpath 'subject_grid.mat']);
+    %subject_grid = subject_grid.subject_grid;
     
     %Check if subject dir exist, create/define
     if ~exist(outdir, 'file');
     mkdir(outdir);
     end
 
-    %Load all MEG-files
-    GOica = load([meg_inpath 'GOica.mat']);
-    GOica = GOica.GOica;
+    %Load MEG files of interest
+    %GOica = load([meg_inpath 'GOica.mat']);
+    %GOica = GOica.GOica;
     PO60ica = load([meg_inpath 'PO60ica.mat']);
     PO60ica = PO60ica.PO60ica;
-    PO70ica = load([meg_inpath 'PO70ica.mat']);
-    PO70ica = PO70ica.PO70ica;
+    %PO70ica = load([meg_inpath 'PO70ica.mat']);
+    %PO70ica = PO70ica.PO70ica;
     GP60ica = load([meg_inpath 'GP60ica.mat']);
     GP60ica = GP60ica.GP60ica;
-    GP70ica = load([meg_inpath 'GP70ica.mat']);
-    GP70ica = GP70ica.GP70ica;
+    %GP70ica = load([meg_inpath 'GP70ica.mat']);
+    %GP70ica = GP70ica.GP70ica;
     
     %Append data
     cfg = [];
     cfg.keepsampleinfo = 'no'; %if keeping, error because of overlaps
-    appended = ft_appenddata(cfg, PO60ica, PO70ica, GP60ica, GP70ica, GOica);
+    %appended = ft_appenddata(cfg, PO60ica, PO70ica, GP60ica, GP70ica, GOica);
+    appended = ft_appenddata(cfg, PO60ica, GP60ica);
     
-    clear GOica PO60ica PO70ica GP60ica GP70ica;
+    %Specify triggers
+    POtrig = 33288;
+    GPPtrig = 49688;
     
-    %Loose ECG/EOG channels
-    cfg = [];
-    cfg.channel = 'meg';
-    appended = ft_selectdata(cfg, appended);
-    
-    
-    %Load or create leadfield
-    if ~exist([outdir 'leadfield.mat'], 'file');
-
-    cfg.senstype        = 'meg'; %??
-    cfg.grad            = appended.grad;
-    cfg.headmodel       = headmodel_meg;
-    cfg.sourcemodel     = subject_grid;
-    cfg.channel         = 'meg';
-    %cfg.grid.resolution = 1;            % Grid spacing 1x1x1 of unit defined below
-    %cfg.grid.unit       = 'cm';         % Grid unit
-
-    leadfield = ft_prepare_leadfield(cfg);
-    save([outdir 'leadfield.mat'], 'leadfield');
-    
-    elseif exist([outdir 'leadfield.mat'], 'file');
-    
-    leadfield = load([outdir 'leadfield.mat']);
-    leadfield = leadfield.leadfield;
-    
-    end
-    
-    
-    %Create noise covarmatrix for denoise_whiten
-    cfg.latency = [-0.500 -0.300];
+    %Select prestim noise for prewhiten
+    cfg.latency = [-0.500 -0.250];
     baseline_noise = ft_selectdata(cfg, appended);
     
+    %Keep trials of interest and MEG channels only in baseline_noise
+    cfg = [];
+    cfg.channel = 'meg';
+    %PO60_90 = 33288, GP60_i240 = 49688
+    cfg.trials = baseline_noise.trialinfo == POtrig | baseline_noise.trialinfo == GPPtrig;
+    baseline_noise = ft_selectdata(cfg, baseline_noise);
+
+    %Keep trials of interest and MEG channels only in data
+    cfg = [];
+    cfg.channel = 'meg';
+    %PO60_90 = 33288, GP60_i240 = 49688
+    cfg.trials = appended.trialinfo == POtrig | appended.trialinfo == GPPtrig;
+    data = ft_selectdata(cfg, appended);
+
+    %clear GOica PO60ica PO70ica GP60ica GP70ica;
+   
+    %Create covmatrix for denoise_whiten using baseline_noise
     cfg            = [];
     cfg.covariance = 'yes';
+    cfg.covariancewindow = 'all';
     baseline_noise   = ft_timelockanalysis(cfg, baseline_noise);
     
     %Select mags and grads
     selmag  = ft_chantype(baseline_noise.label, 'megmag');
     selgrad = ft_chantype(baseline_noise.label, 'megplanar');
     
+    % C = baseline_noise.cov([find(selmag);find(selgrad)],[find(selmag);find(selgrad)]);
+    % figure;imagesc(C);hold on;plot(102.5.*[1 1],[0 306],'w','linewidth',2);plot([0 306],102.5.*[1 1],'w','linewidth',2);
+
     %Denoise_Whiten, see: https://www.fieldtriptoolbox.org/workshop/paris2019/handson_sourceanalysis/
     %Detect the location of the first large 'cliff' in the singular value spectrum of the grads and mags
     [u,s_mag,v]  = svd(baseline_noise.cov(selmag,  selmag));
@@ -90,127 +90,136 @@ for i = 6:22%length(sub_date.ID);
     
     kappa = min(kappa_mag,kappa_grad);
     
+    % Singular values of mag and grad covariance matrix
+    % figure;plot(log10(diag(s_mag)),'o');
+    % figure;plot(log10(diag(s_grad)),'o');
+    
     cfg            = [];
     cfg.channel    = 'meg';
     cfg.kappa      = kappa;
-    appended_pw    = ft_denoise_prewhiten(cfg, appended, baseline_noise);
- 
-    clear baseline_noise appended;
+    data_pw    = ft_denoise_prewhiten(cfg, data, baseline_noise);
+
+    save([outdir 'pw_tlks.mat'], "data_pw");
+
+    %clear baseline_noise appended;
     clear d_mag kappa_mag d_grad kappa_grad u v s_mag s_grad selmag selgrad;
     
+    %Load or create leadfield
+    if ~exist([outdir 'leadfield.mat'], 'file');
+
+    cfg.senstype        = 'meg';
+    cfg.grad            = data_pw.grad;
+    cfg.headmodel       = headmodel_meg;
+    %cfg.sourcemodel     = subject_grid;
+    cfg.channel         = 'meg';
+    cfg.grid.resolution = 1;
+    cfg.grid.unit       = 'cm';
+
+    leadfield = ft_prepare_leadfield(cfg);
+    save([outdir 'leadfield.mat'], 'leadfield');
     
-    %Calculate Filter covariance matrix
-    cfg = [];
-    cfg.covariance          = 'yes';
-    cfg.covariancewindow    = 'all';
-    cfg.channel             = 'MEG';
-    data_cov = ft_timelockanalysis(cfg, appended_pw);
-
+    elseif exist([outdir 'leadfield.mat'], 'file');
     
-    %Do initial source analysis to calculte filters
-    cfg = [];
-    cfg.method              = 'lcmv';
-    cfg.channel             = 'meg';
-    cfg.lcmv.keepfilter     = 'yes';
-    cfg.lcmv.fixedori       = 'yes';
-    cfg.lcmv.lambda         = '5%';
-    cfg.lcmv.kappa          = kappa;
-    cfg.lcmv.projectmom     = 'yes';
-
-    cfg.lcmv.weightnorm     = 'unitnoisegain'; %experiment with this one
-
-    % Original
-    cfg.headmodel           = headmodel_meg;
-    cfg.sourcemodel         = leadfield;
-    source_org = ft_sourceanalysis(cfg, data_cov);
+    leadfield = load([outdir 'leadfield.mat']);
+    leadfield = leadfield.leadfield;
     
-    clear data_cov
-    
-    save([outdir 'source_org.mat'], 'source_org');
-    
-    
-    for iii = [1 3]%1:numel(conditions);
-    
-        %Currently only for PO60, consider: cond.([conditions{1} 'trig'])(1)
-        for ii = 1:length(cond.([conditions{iii} 'trig']));
-
-        %Select event data (manual trigger, should refer to structure: cond)
-        trigger = cond.([conditions{iii} 'trig'])(ii);
-
-        cfg = [];
-        cfg.trials = appended_pw.trialinfo == trigger;
-        cfg.latency = [0 0.300];
-
-        stim = ft_selectdata(cfg, appended_pw);
-
-        %Select baseline
-        cfg = [];
-        cfg.trials = appended_pw.trialinfo == trigger;
-        
-        if ismember(conditions{iii}, {'GO60', 'GO70', 'PO60', 'PO70'});
-        %Baseline window: 200ms before pulse onset in PO trials
-        cfg.latency = [-0.200 0];
-        elseif ismember(conditions{iii}, {'GP60', 'GP70'});
-            %Baseline window variable timepoint: 200ms before gap onset in GP trials
-            if ii == 1 %ISI 0
-            cfg.latency = [-0.250 -0.050];
-            elseif ii == 2 %ISI 60
-                cfg.latency = [-0.310 -0.110];
-            elseif ii == 3 %ISI 120
-                cfg.latency = [-0.370 -0.170];
-            elseif ii == 4 %ISI 240
-                cfg.latency = [-0.490 -0.290];
-            end
-        end
-
-        base = ft_selectdata(cfg, appended_pw);
-
-
-        %Compute covariance matrix for data and baseline
-        cfg = [];
-        cfg.covariance              = 'yes';
-        cfg.covariancewindow        = 'all';
-        cfg.preproc.demean          = 'yes';
-        cfg.keeptrials              = 'no'; %Y/N makes no difference?
-
-        stim_cov = ft_timelockanalysis(cfg, stim);
-        base_cov = ft_timelockanalysis(cfg, base);
-        
-        clear stim base;
-
-        %Source analysis on baseline and stim data
-        cfg=[];
-        cfg.method              = 'lcmv';
-        cfg.sourcemodel         = leadfield;
-        cfg.sourcemodel.filter  = source_org.avg.filter;  % Reuse avg filter
-        cfg.headmodel           = headmodel_meg;
-        cfg.channel             = 'meg'; %grad & mag
-        cfg.senstype            = 'MEG';
-
-        stim_source = ft_sourceanalysis(cfg, stim_cov);
-        base_source = ft_sourceanalysis(cfg, base_cov);
-        
-        clear stim_cov base_cov;
-
-        save([outdir cond.([conditions{iii} 'label']){ii} '_stim_source.mat'], 'stim_source');
-        save([outdir cond.([conditions{iii} 'label']){ii} '_base_source.mat'], 'base_source');
-        
-        cfg = [];
-        cfg.parameter = 'pow';
-        cfg.operation = 'x1 - mean(x2)'; %Different window duration
-        powdiff_sub = ft_math(cfg, stim_source, base_source);
-        
-        save([outdir cond.([conditions{iii} 'label']){ii} '_powdiff.mat'], 'powdiff_sub');
-        
-        clear powdiff_sub stim_source base_source;
-        
-        %For trial
-        end
-        
-    %For condition
     end
 
-clear appended_pw;
+    %Covariance for full epoch all conditions
+    cfg = [];
+    cfg.preproc.demean = 'yes';
+    cfg.preproc.baselinewindow = [-0.500 -0.250];
+    cfg.covariance = 'yes';
+    data_cov = ft_timelockanalysis(cfg, data_pw);
+
+%     C = data_cov.cov([find(selmag);find(selgrad)],[find(selmag);find(selgrad)]);
+%     figure;imagesc(C);hold on;plot(102.5.*[1 1],[0 306],'w','linewidth',2);plot([0 306],102.5.*[1 1],'w','linewidth',2);
+
+    %Source reconstruction on full_trial to construct common spatial filter
+    cfg = [];
+    cfg.method = 'lcmv';
+    cfg.grid = leadfield;
+    cfg.headmodel = headmodel_meg;
+    cfg.lcmv.keepfilter = 'yes';
+    cfg.lcmv.lambda = '5%';
+    cfg.channel = 'MEG';
+    cfg.senstype = 'MEG';
+    
+    source_all = ft_sourceanalysis(cfg, data_cov);
+    
+    %For contrasts of interest
+    for ii = 1:numel(coi)
+
+        %Testing the basic one: PulseOnly response vs pre-stim baseline
+        if ismember(coi(ii), 'POvsB')
+
+            %Select baseline and toi
+            cfg.trials = data_pw.trialinfo == POtrig;
+            cfg.latency = [-0.500 -0.250]; % -200 to 0 ms before pulse
+            baseline = ft_selectdata(cfg, data_pw);
+
+            %Select experimental stim condition and toi
+            cfg.trials = data_pw.trialinfo == POtrig;
+            cfg.latency = [0.050 0.150]; % 50 to 150 ms after pulse
+            stim = ft_selectdata(cfg, data_pw);
+        
+            % Timelockeds for baseline and stimulation
+            cfg = [];
+            cfg.covariance         = 'yes';
+            cfg.covariancewindow   = 'all';
+            baseline_cov = ft_timelockanalysis(cfg, baseline);
+            stim_cov = ft_timelockanalysis(cfg, stim);
+            
+            %config for sourcemodel stim vs baseline
+            cfg = [];
+            cfg.method = 'lcmv';
+            cfg.grid = leadfield;
+            cfg.headmodel = headmodel_meg;
+            cfg.lcmv.keepfilter = 'yes';
+            cfg.lcmv.lambda = '5%';
+            cfg.channel = 'MEG';
+            cfg.senstype = 'MEG';
+            %Use sourcemodel.filter for all full trials
+            cfg.sourcemodel.filter = source_all.avg.filter;
+            cfg.sourcemodel.filterdimord = source_all.avg.filterdimord;
+            
+            source_baseline = ft_sourceanalysis(cfg, baseline_cov);
+            source_stim = ft_sourceanalysis(cfg, stim_cov);
+            
+            %Make contrast
+            lcmv_contrast = source_stim; %copy
+
+            %invert GPPvsPO so "inhibition" is positive
+            if ismember(coi(ii), 'GPPvsPO'); 
+                lcmv_contrast.avg.pow = (source_baseline.avg.pow - source_stim.avg.pow) ./ source_baseline.avg.pow;
+            else
+                lcmv_contrast.avg.pow = (source_stim.avg.pow - source_baseline.avg.pow) ./ source_baseline.avg.pow;
+            end
+
+            %Interpolate contrast on template MRI
+            cfg = [];
+            cfg.parameter = 'pow';
+            cfg.interpmethod = 'nearest';
+            
+            load([mri_inpath 'mri_resliced.mat'])
+
+            source_int = ft_sourceinterpolate(cfg, lcmv_contrast, mri_resliced);
+
+            figure('Position', [683,74,1095,1091])
+            cfg = [];
+            cfg.method = 'ortho';
+            cfg.funparameter = 'pow';
+            cfg.funcolormap = 'jet';
+
+            ft_sourceplot(cfg, source_int);
+
+            saveas(gcf, ['../mat_data/source_reconstruction/testfigures/' sub_date.ID{i} '.png'])
+            close;
+
+        end
+    
+    %for contrasts
+    end
 
 %For subject
 end
