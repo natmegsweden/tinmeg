@@ -27,6 +27,9 @@ load standard_mri;
 template_mri = mri;
 clear mri;
 
+%specify downsampled freq(Hz)
+fs_ds = 200;
+
 %Specify conditions, event triggers and subject list
 
 run('Conditions_triggers.m');
@@ -77,9 +80,6 @@ end
 %%  Loop over A_Preprocess.m for subjects without output files
 %   Also downsamples and saves with '_ds' in filename
 
-%specify downsampled freq(Hz)
-fs_ds = 200;
-
 for i = 1:length(sub_date.ID);
     
     run('A_Preprocess.m');
@@ -87,6 +87,48 @@ for i = 1:length(sub_date.ID);
 end
 
 clear('i', 'ii', 'iii', 'logheight', 'fs_ds', 'trigs', 'rawcondlog', 'fname', 'nstim', 'outdir', 'rawlogheight');
+
+%% Pre-process empty room
+
+% Create cell array for subjects filepaths
+subpaths_er = cell(1);
+
+for i = 1:numel(sub_date.ID);
+
+% Find files in subjects path with keywords specified for find_files(folder, inc_str, exc_str)
+subpath = [meg_data_path 'NatMEG_' char(sub_date.ID{i}) '/' char(sub_date.date{i}) '/'];
+fnames = find_files(subpath, {'empty_room_after', 'tsss'}, 'ds');
+
+subpaths_er{i,1} = char(sub_date.ID{i}); %Include ID for tracking
+
+    for fileindex = 1:length(fnames);
+        subpaths_er{i,1+fileindex} = [subpath char(fnames(fileindex))]; % NB! n of files differ between rows, some subjects have empty columns
+    end
+clear fnames subpath i fileindex
+end
+
+% Onse subject is missing empty room - copy from same day
+subpaths_er{1,2} = subpaths_er{2,2};
+
+%For all subjects
+for i = 1:numel(sub_date.ID);
+
+    outfile = ['../mat_data/preprocessing/' 'ID' sub_date.ID{i} '/emptyroom.mat'];
+
+    if exist(outfile, 'file');
+    
+        warning(['emptyroom.mat exist for subject ' sub_date.ID{i}])
+        continue
+    
+    else
+    
+        run('preprocess_emptyroom.m')
+    
+    %end if exist
+    end
+
+%for subject
+end
 
 %% Loop over B_Clean.m for subjects and condititions with no cleaned output
 

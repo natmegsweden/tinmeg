@@ -4,7 +4,7 @@
 %Contrasts of interest
 coi = {'POvsB', 'GPPvsB', 'GPPvsPO'};
 
-for i = 1:25%length(sub_date.ID);
+for i = 10 %1:25%length(sub_date.ID);
     
     meg_inpath = ['../mat_data/ICA/' 'ID' sub_date.ID{i} '/'];
     mri_inpath = ['../mat_data/MRI_mat/ID' sub_date.ID{i} '/'];
@@ -40,13 +40,21 @@ for i = 1:25%length(sub_date.ID);
     cfg = [];
     cfg.keepsampleinfo = 'no'; %if keeping, error because of overlaps
     %appended = ft_appenddata(cfg, PO60ica, PO70ica, GP60ica, GP70ica, GOica);
-    appended = ft_appenddata(cfg, PO60ica, GP60ica);
+    %appended = ft_appenddata(cfg, PO60ica, GP60ica);
     
     %Specify triggers
     POtrig = 33288;
     GPPtrig = 49688;
+
+    % TEST
+    cfg = [];
+    cfg.channel = 'meg';
+    cfg.trials = PO60ica.trialinfo == POtrig;
+
+    appended = ft_selectdata(cfg, PO60ica);
     
     %Select prestim noise for prewhiten
+    cfg =[];
     cfg.latency = [-0.500 -0.250];
     baseline_noise = ft_selectdata(cfg, appended);
     
@@ -128,7 +136,7 @@ for i = 1:25%length(sub_date.ID);
     %Covariance for full epoch all conditions
     cfg = [];
     cfg.preproc.demean = 'yes';
-    cfg.preproc.baselinewindow = [-0.500 -0.250];
+    %cfg.preproc.baselinewindow = [-0.500 -0.250];
     cfg.covariance = 'yes';
     data_cov = ft_timelockanalysis(cfg, data_pw);
 
@@ -154,11 +162,13 @@ for i = 1:25%length(sub_date.ID);
         if ismember(coi(ii), 'POvsB')
 
             %Select baseline and toi
+            cfg = [];
             cfg.trials = data_pw.trialinfo == POtrig;
             cfg.latency = [-0.500 -0.250]; % -200 to 0 ms before pulse
             baseline = ft_selectdata(cfg, data_pw);
 
             %Select experimental stim condition and toi
+            cfg = [];
             cfg.trials = data_pw.trialinfo == POtrig;
             cfg.latency = [0.050 0.150]; % 50 to 150 ms after pulse
             stim = ft_selectdata(cfg, data_pw);
@@ -213,8 +223,8 @@ for i = 1:25%length(sub_date.ID);
 
             ft_sourceplot(cfg, source_int);
 
-            saveas(gcf, ['../mat_data/source_reconstruction/testfigures/' sub_date.ID{i} '.png'])
-            close;
+            %saveas(gcf, ['../mat_data/source_reconstruction/testfigures2/' sub_date.ID{i} '.png'])
+            %close;
 
         end
     
