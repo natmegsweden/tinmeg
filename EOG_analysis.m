@@ -4,8 +4,15 @@ load(['../mat_data/timelockeds/epochs_eog_avgrast.mat']);
 load('../mat_data/timelockeds/epochs_eog.mat');
 load('../mat_data/timelockeds/epochs_eog_resp.mat');
 
+% These two for Form9 manuscript
 load('../mat_data/timelockeds/epochs_eog_all_clean_avg.mat');
 load('../mat_data/timelockeds/epochs_eog_clean_resp.mat');
+
+% Load one subject struct for time-info etc.
+eog_timelockeds = load(['../mat_data/timelockeds/ID' num2str(sub_date.ID{1}) '/EOG/PO60_90_eog.mat'])
+eog_timelockeds = eog_timelockeds.eog_timelockeds;
+
+timevec = eog_timelockeds.time;
 
 %% load EOG data to structure
 
@@ -309,6 +316,10 @@ end
 
 epochs_eog_clean_resp = struct;
 
+%From visual inspection of plots
+toion = 111; %50ms
+toioff = 147; %230ms
+
 %Calculate max response for subjects
 %NB, min between 50-150ms (sample 111-131)
 for i = 1:numel(sub_date.ID)
@@ -323,7 +334,7 @@ for i = 1:numel(sub_date.ID)
         for stim_index = 1:nstim
         
         %minresponse in sample 111-131
-        minresp = min(epochs_eog_clean.(conditions{ii}){i,stim_index}(111:131));
+        minresp = min(epochs_eog_clean.(conditions{ii}){i,stim_index}(toion:toioff));
         
         %replace "minresp" with [M, I] and use I for latency in separate
         %structure
@@ -1105,7 +1116,9 @@ set(lines, 'Color', 'k');
 
 %saveas(gcf, ['../Analysis Output/MEG_manus_EOG.svg']);
 
-%% Mauscript plots_V2
+%% Mauscript plots_V2 60 dB carrier
+
+% Form 9, fig 1
 % V2: Using cleaned up EOG responses
 
 %load('../mat_data/timelockeds/epochs_eog_all_clean_avg.mat');
@@ -1128,10 +1141,14 @@ xticklab = [-500:100:320];
 triglinex = [101 101];
 xrange = [41 161];
 
-txtsize = 10;
+txtsize = 12;
+linew = 1.5;
 
 lineylims = [-9*10^-5 1*10^-5];
 boxylims = [-2*10^-4 0.5*10^-4];
+
+toion = 111; %50ms
+toioff = 147; %230ms
 
 %Tableau medium 10 palette
 colors = [173 139 201;
@@ -1149,14 +1166,14 @@ colors = [173 139 201;
 boxcolors = flip(colors(1:6,:));
 isiboxcolors = flip(colors(7:10,:));
 
-figure('Units', 'centimeters', 'Position',  [5 5 50 30]);
-tiledlayout(3,4, 'TileSpacing','compact', 'Padding','compact');
+figure('Units', 'centimeters', 'Position',  [5 5 30 20], 'Renderer','painters');
+tiledlayout(2,2, 'TileSpacing','compact', 'Padding','compact');
 
 %PO60
 nexttile; hold on;
-patch('Faces', [1 2 3 4], 'Vertices', [111 lineylims(1); 111 lineylims(2); 131 lineylims(2); 131 lineylims(1)], 'FaceColor', [0 0 0], 'FaceAlpha', 0.1, 'EdgeAlpha', 0)
+patch('Faces', [1 2 3 4], 'Vertices', [toion lineylims(1); toion lineylims(2); toioff lineylims(2); toioff lineylims(1)], 'FaceColor', [0 0 0], 'FaceAlpha', 0.1, 'EdgeAlpha', 0)
 for i = 1:6
-    plot(EOG_GA_clean.PO60(i,:), 'Color', colors(i,:))
+    plot(EOG_GA_clean.PO60(i,:), 'Color', colors(i,:), 'LineWidth', linew)
 end
 
 plot(triglinex, lineylims, 'k --');
@@ -1210,9 +1227,9 @@ title({'Pulse only response amplitude', 'Different pulse level'});
 
 %GP60
 nexttile; hold on;
-patch('Faces', [1 2 3 4], 'Vertices', [111 lineylims(1); 111 lineylims(2); 131 lineylims(2); 131 lineylims(1)], 'FaceColor', [0 0 0], 'FaceAlpha', 0.1, 'EdgeAlpha', 0)
+patch('Faces', [1 2 3 4], 'Vertices', [toion lineylims(1); toion lineylims(2); toioff lineylims(2); toioff lineylims(1)], 'FaceColor', [0 0 0], 'FaceAlpha', 0.1, 'EdgeAlpha', 0)
 for i = 1:4
-    plot(EOG_GA_clean.GP60(i,:), 'Color', colors(i+6,:))
+    plot(EOG_GA_clean.GP60(i,:), 'Color', colors(i+6,:), 'LineWidth', linew)
 end
 plot(triglinex, lineylims, 'k --');
 ylim(lineylims)
@@ -1226,6 +1243,7 @@ ylim(lineylims);
 xlim(xrange);
 
 xlabel("Time (ms)");
+ylabel({"60dB carrier", "EOG Amplitude (V)"})
 
 legend({"", "0 ms", "60 ms", "120 ms", "240 ms"}, 'Location', 'southwest'); %First one empty to skip patch
 legend('boxoff');
@@ -1255,11 +1273,208 @@ set(lines, 'Color', 'k');
 title({'Gap + Pulse response amplitude', 'Different ISI'});
 
 
+% %PO70
+% nexttile; hold on;
+% patch('Faces', [1 2 3 4], 'Vertices', [toion lineylims(1); toion lineylims(2); toioff lineylims(2); toioff lineylims(1)], 'FaceColor', [0 0 0], 'FaceAlpha', 0.1, 'EdgeAlpha', 0)
+% for i = 1:5
+%     plot(EOG_GA_clean.PO70(i,:), 'Color', colors(i+1,:), 'LineWidth', linew) %+1 to color to match PO60
+% end
+% plot(triglinex, lineylims, 'k --');
+% ylim(lineylims)
+% 
+% ax = gca;
+% ax.XTick = xtick;
+% ax.XTickLabel = [xticklab];
+% ax.XGrid = 'on';
+% ax.FontSize = txtsize;
+% ylim(lineylims);
+% xlim(xrange);
+% ylabel({"70dB carrier", "EOG Amplitude (V)"})
+% xlabel("Time (ms)");
+% 
+% legend({"", "75", "80", "85", "90", "95"}, 'Location', 'southwest'); %First one empty to skip patch
+% legend('boxoff');
+% 
+% %NaNs to pad missing 70dB pulse in 70dB carrier
+% nexttile; boxplot([repmat(NaN, 1, 22)' epochs_eog_clean_resp.PO70(:, 1:5)], [70:5:95], 'Symbol', 'ok');
+% ylim(boxylims)
+% ax = gca;
+% ax.FontSize = txtsize;
+% xlabel("Pulse level")
+% ax.Box = 'off';
+% 
+% set(findobj(gca,'type','line'),'lineStyle','-');
+% 
+% h = findobj(gcf,'tag','Outliers');
+% set(h,'MarkerSize',4);
+% 
+% h = findobj(gca,'Tag','Box');
+% for j=1:5
+%     patch(get(h(j),'XData'),get(h(j),'YData'),boxcolors(j,:),'FaceAlpha',.5);
+% end
+% 
+% lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
+% set(lines, 'Color', 'k');
+% 
+% %GP70
+% nexttile; hold on;
+% patch('Faces', [1 2 3 4], 'Vertices', [toion lineylims(1); toion lineylims(2); toioff lineylims(2); toioff lineylims(1)], 'FaceColor', [0 0 0], 'FaceAlpha', 0.1, 'EdgeAlpha', 0)
+% for i = 1:4
+%     plot(EOG_GA_clean.GP70(i,:), 'Color', colors(i+6,:), 'LineWidth', linew)
+% end
+% plot(triglinex, lineylims, 'k --');
+% ylim(lineylims)
+% 
+% ax = gca;
+% ax.XTick = xtick;
+% ax.XTickLabel = [xticklab];
+% ax.XGrid = 'on';
+% 
+% ax.FontSize = txtsize;
+% ylim(lineylims);
+% xlim(xrange);
+% xlabel("Time (ms)");
+% 
+% legend({"", "0 ms", "60 ms", "120 ms", "240 ms"}, 'Location', 'southwest'); %First one empty to skip patch
+% legend('boxoff');
+% 
+% nexttile; boxplot(epochs_eog_clean_resp.GP70(:, :), [0 60 120 240], 'Symbol', 'ok');
+% ylim(boxylims)
+% ax = gca;
+% ax.FontSize = txtsize;
+% xlabel("ISI duration")
+% ax.Box = 'off';
+% 
+% set(findobj(gca,'type','line'),'lineStyle','-');
+% 
+% h = findobj(gcf,'tag','Outliers');
+% set(h,'MarkerSize',4);
+% 
+% h = findobj(gca,'Tag','Box');
+% for j=1:4
+%     patch(get(h(j),'XData'),get(h(j),'YData'),isiboxcolors(j,:),'FaceAlpha',.5);
+% end
+% 
+% lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
+% set(lines, 'Color', 'k');
+
+%Inhib PO6090 & ISI240
+% nexttile; hold on;
+% 
+% patch('Faces', [1 2 3 4], 'Vertices', [toion lineylims(1); toion lineylims(2); toioff lineylims(2); toioff lineylims(1)], 'FaceColor', [0 0 0], 'FaceAlpha', 0.1, 'EdgeAlpha', 0)
+% plot(EOG_GA_clean.PO60(5,:), 'Color', colors(5,:), 'LineWidth', linew); %Manually specify colors to match other plots
+% plot(EOG_GA_clean.GP60(4,:), 'Color', colors(10,:), 'LineWidth', linew); % -''-
+% 
+% % %plot clusters
+% % for j = 1:numel(clusters60c)
+% %     plot(clusters60c{j}, repmat(0.5*10^-5, 1, numel(clusters60c{j})), 'red', 'LineWidth', 3)
+% % end
+% 
+% ylim(lineylims);
+% xlim(xrange);
+% 
+% ax = gca;
+% ax.FontSize = txtsize;
+% ax.XTick = xtick;
+% ax.XTickLabel = xticklab;
+% ax.XGrid = 'on';
+% xline([101], '--k')
+% 
+% xlabel("Time (ms)");
+% 
+% legend({"", "Pulse (90 dB)", "Gap + Pulse (ISI 240 ms)"}, 'Location', 'southwest');
+% legend('boxoff');
+% 
+% title({'Inhibition of EOG response', '60 dB carrier'});
+
+%%%%%%%%%%%%%
+% %Inhib PO7090 & ISI240
+% nexttile; hold on;
+% plot(mean(PO70_clean_avg,2), 'Color', colors(5,:)); %Manually specify colors to match other plots
+% plot(mean(GP70_clean_avg,2), 'Color', colors(10,:)); % -''-
+% 
+% %plot clusters
+% for j = 1:numel(clusters70c)
+%     plot(clusters70c{j}, repmat(0.5*10^-5, 1, numel(clusters70c{j})), 'red', 'LineWidth', 3)
+% end
+% 
+% ylim(lineylims);
+% xlim(xrange);
+% 
+% ax = gca;
+% ax.FontSize = txtsize;
+% ax.XTick = xtick;
+% ax.XTickLabel = xticklab;
+% ax.XGrid = 'on';
+% 
+% xlabel("Time (ms)");
+% 
+% legend({"Pulse (90 dB)", "Gap + Pulse (ISI 240 ms)", "Cluster, p = 0.01"}, 'Location', 'southwest');
+% legend('boxoff');
+% 
+% title({'Inhibition of EOG response', '70 dB carrier'});
+
+saveas(gcf, ['../Analysis Output/Fig1_form9.svg']);
+
+%% Mauscript plots_V2 70 dB carrier
+
+% Form 9, fig 1
+% V2: Using cleaned up EOG responses
+
+%load('../mat_data/timelockeds/epochs_eog_all_clean_avg.mat');
+
+%Make a grand average EOG response
+for i = 1:numel(conditions)
+    for ii = 1:numel(cond.([(conditions{i}) 'label']))
+        for iii = 1:numel(sub_date.ID)
+            temp(iii,:) = epochs_eog_clean.(conditions{i}){iii,ii};
+        end
+    %SEM calculation goes here
+    EOG_GA_clean.(conditions{i})(ii,:) = mean(temp,1);
+    clear temp
+    end
+end
+
+% Inherited from raster plots
+xtick = [1:20:165];
+xticklab = [-500:100:320];
+triglinex = [101 101];
+xrange = [41 161];
+
+txtsize = 12;
+linew = 1.5;
+
+lineylims = [-9*10^-5 1*10^-5];
+boxylims = [-2*10^-4 0.5*10^-4];
+
+toion = 111; %50ms
+toioff = 147; %230ms
+
+%Tableau medium 10 palette
+colors = [173 139 201;
+    168 120 110;
+    114 158 206;
+    255 158 74;
+    237 102 93;
+    103 191 92;
+    237 151 202;
+    162 162 162;
+    205 204 93;
+    109 204 218]/256;
+
+%No idea why the colors are read backwards for boxplot
+boxcolors = flip(colors(1:6,:));
+isiboxcolors = flip(colors(7:10,:));
+
+figure('Units', 'centimeters', 'Position',  [5 5 30 20], 'Renderer','painters');
+tiledlayout(2,2, 'TileSpacing','compact', 'Padding','compact');
+
+
 %PO70
 nexttile; hold on;
-patch('Faces', [1 2 3 4], 'Vertices', [111 lineylims(1); 111 lineylims(2); 131 lineylims(2); 131 lineylims(1)], 'FaceColor', [0 0 0], 'FaceAlpha', 0.1, 'EdgeAlpha', 0)
+patch('Faces', [1 2 3 4], 'Vertices', [toion lineylims(1); toion lineylims(2); toioff lineylims(2); toioff lineylims(1)], 'FaceColor', [0 0 0], 'FaceAlpha', 0.1, 'EdgeAlpha', 0)
 for i = 1:5
-    plot(EOG_GA_clean.PO70(i,:), 'Color', colors(i+1,:)) %+1 to color to match PO60
+    plot(EOG_GA_clean.PO70(i,:), 'Color', colors(i+1,:), 'LineWidth', linew) %+1 to color to match PO60
 end
 plot(triglinex, lineylims, 'k --');
 ylim(lineylims)
@@ -1277,8 +1492,10 @@ xlabel("Time (ms)");
 legend({"", "75", "80", "85", "90", "95"}, 'Location', 'southwest'); %First one empty to skip patch
 legend('boxoff');
 
+title({'Pulse only trials', 'Different pulse level'});
+
 %NaNs to pad missing 70dB pulse in 70dB carrier
-nexttile; boxplot([repmat(NaN, 1, 22)' epochs_eog_clean_resp.PO70(:, 1:5)], [70:5:95], 'Symbol', 'ok');
+nexttile; boxplot(epochs_eog_clean_resp.PO70(:, 1:5), [75:5:95], 'Symbol', 'ok');
 ylim(boxylims)
 ax = gca;
 ax.FontSize = txtsize;
@@ -1298,11 +1515,13 @@ end
 lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
 set(lines, 'Color', 'k');
 
+title({'Pulse only response amplitude', 'Different pulse level'});
+
 %GP70
 nexttile; hold on;
-patch('Faces', [1 2 3 4], 'Vertices', [111 lineylims(1); 111 lineylims(2); 131 lineylims(2); 131 lineylims(1)], 'FaceColor', [0 0 0], 'FaceAlpha', 0.1, 'EdgeAlpha', 0)
+patch('Faces', [1 2 3 4], 'Vertices', [toion lineylims(1); toion lineylims(2); toioff lineylims(2); toioff lineylims(1)], 'FaceColor', [0 0 0], 'FaceAlpha', 0.1, 'EdgeAlpha', 0)
 for i = 1:4
-    plot(EOG_GA_clean.GP70(i,:), 'Color', colors(i+6,:))
+    plot(EOG_GA_clean.GP70(i,:), 'Color', colors(i+6,:), 'LineWidth', linew)
 end
 plot(triglinex, lineylims, 'k --');
 ylim(lineylims)
@@ -1316,9 +1535,12 @@ ax.FontSize = txtsize;
 ylim(lineylims);
 xlim(xrange);
 xlabel("Time (ms)");
+ylabel({"70dB carrier", "EOG Amplitude (V)"})
 
 legend({"", "0 ms", "60 ms", "120 ms", "240 ms"}, 'Location', 'southwest'); %First one empty to skip patch
 legend('boxoff');
+
+title({'Gap + Pulse trials amplitude', 'Different ISI'});
 
 nexttile; boxplot(epochs_eog_clean_resp.GP70(:, :), [0 60 120 240], 'Symbol', 'ok');
 ylim(boxylims)
@@ -1340,60 +1562,65 @@ end
 lines = findobj(gcf, 'type', 'line', 'Tag', 'Median');
 set(lines, 'Color', 'k');
 
+title({'Gap + Pulse response amplitude', 'Different ISI'});
+
 %Inhib PO6090 & ISI240
-nexttile; hold on;
-plot(mean(PO60_clean_avg,2), 'Color', colors(5,:)); %Manually specify colors to match other plots
-plot(mean(GP60_clean_avg,2), 'Color', colors(10,:)); % -''-
-
-%plot clusters
-for j = 1:numel(clusters60c)
-    plot(clusters60c{j}, repmat(0.5*10^-5, 1, numel(clusters60c{j})), 'red', 'LineWidth', 3)
-end
-
-ylim(lineylims);
-xlim(xrange);
-
-ax = gca;
-ax.FontSize = txtsize;
-ax.XTick = xtick;
-ax.XTickLabel = xticklab;
-ax.XGrid = 'on';
-
-xlabel("Time (ms)");
-
-legend({"Pulse (90 dB)", "Gap + Pulse (ISI 240 ms)", "Cluster, p = 0.01"}, 'Location', 'southwest');
-legend('boxoff');
-
-title({'Inhibition of EOG response', '60 dB carrier'});
+% nexttile; hold on;
+% 
+% patch('Faces', [1 2 3 4], 'Vertices', [toion lineylims(1); toion lineylims(2); toioff lineylims(2); toioff lineylims(1)], 'FaceColor', [0 0 0], 'FaceAlpha', 0.1, 'EdgeAlpha', 0)
+% plot(EOG_GA_clean.PO60(5,:), 'Color', colors(5,:), 'LineWidth', linew); %Manually specify colors to match other plots
+% plot(EOG_GA_clean.GP60(4,:), 'Color', colors(10,:), 'LineWidth', linew); % -''-
+% 
+% % %plot clusters
+% % for j = 1:numel(clusters60c)
+% %     plot(clusters60c{j}, repmat(0.5*10^-5, 1, numel(clusters60c{j})), 'red', 'LineWidth', 3)
+% % end
+% 
+% ylim(lineylims);
+% xlim(xrange);
+% 
+% ax = gca;
+% ax.FontSize = txtsize;
+% ax.XTick = xtick;
+% ax.XTickLabel = xticklab;
+% ax.XGrid = 'on';
+% xline([101], '--k')
+% 
+% xlabel("Time (ms)");
+% 
+% legend({"", "Pulse (90 dB)", "Gap + Pulse (ISI 240 ms)"}, 'Location', 'southwest');
+% legend('boxoff');
+% 
+% title({'Inhibition of EOG response', '60 dB carrier'});
 
 %%%%%%%%%%%%%
-%Inhib PO7090 & ISI240
-nexttile; hold on;
-plot(mean(PO70_clean_avg,2), 'Color', colors(5,:)); %Manually specify colors to match other plots
-plot(mean(GP70_clean_avg,2), 'Color', colors(10,:)); % -''-
+% %Inhib PO7090 & ISI240
+% nexttile; hold on;
+% plot(mean(PO70_clean_avg,2), 'Color', colors(5,:)); %Manually specify colors to match other plots
+% plot(mean(GP70_clean_avg,2), 'Color', colors(10,:)); % -''-
+% 
+% %plot clusters
+% for j = 1:numel(clusters70c)
+%     plot(clusters70c{j}, repmat(0.5*10^-5, 1, numel(clusters70c{j})), 'red', 'LineWidth', 3)
+% end
+% 
+% ylim(lineylims);
+% xlim(xrange);
+% 
+% ax = gca;
+% ax.FontSize = txtsize;
+% ax.XTick = xtick;
+% ax.XTickLabel = xticklab;
+% ax.XGrid = 'on';
+% 
+% xlabel("Time (ms)");
+% 
+% legend({"Pulse (90 dB)", "Gap + Pulse (ISI 240 ms)", "Cluster, p = 0.01"}, 'Location', 'southwest');
+% legend('boxoff');
+% 
+% title({'Inhibition of EOG response', '70 dB carrier'});
 
-%plot clusters
-for j = 1:numel(clusters70c)
-    plot(clusters70c{j}, repmat(0.5*10^-5, 1, numel(clusters70c{j})), 'red', 'LineWidth', 3)
-end
-
-ylim(lineylims);
-xlim(xrange);
-
-ax = gca;
-ax.FontSize = txtsize;
-ax.XTick = xtick;
-ax.XTickLabel = xticklab;
-ax.XGrid = 'on';
-
-xlabel("Time (ms)");
-
-legend({"Pulse (90 dB)", "Gap + Pulse (ISI 240 ms)", "Cluster, p = 0.01"}, 'Location', 'southwest');
-legend('boxoff');
-
-title({'Inhibition of EOG response', '70 dB carrier'});
-
-%saveas(gcf, ['../Analysis Output/MEG_manus_EOG3.svg']);
+saveas(gcf, ['../Analysis Output/FigSup1_form9.svg']);
 
 %% Supplementary figure of latency variability for all subjects all stimuli
 

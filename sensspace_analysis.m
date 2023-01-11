@@ -324,8 +324,8 @@ xlabel('Time (ms relative pulse onset)')
 ax = gca;
 ax.XGrid = 'on';
 
-saveas(gcf, '../Analysis Output/Figure1amps.svg');
-close;
+%saveas(gcf, '../Analysis Output/Figure1amps.svg');
+%close;
 
 %% Sensshape with gradients for n of top sensor
 
@@ -544,3 +544,159 @@ ylim([0 1.5*10^-11])
 xticklabels({'0', '60', '120', '240'})
 xlabel('ISI (ms)')
 
+
+%% Form 9 Fig 2
+
+%patch 112 132
+
+% [185, 202, 254] light blue RGB values
+% [1, 55, 203] dark blue RGB values
+% [241, 215, 177] light orange RGB values
+% [252, 96, 10] dark orange RGB values
+
+txtsize = 12;
+
+%Blue color gradient
+bluecol(:,1) = linspace(185, 1, 6) ./256; % R
+bluecol(:,2) = linspace(202, 55, 6) ./256; % G
+bluecol(:,3) = linspace(254, 203, 6) ./256; % B
+
+%Orange color gradient
+orgcol(:,1) = linspace(241, 252, 6) ./256; % R
+orgcol(:,2) = linspace(215, 96, 6) ./256; % G
+orgcol(:,3) = linspace(177, 10, 6) ./256; % B
+
+%PO60
+figure('Units', 'centimeters', 'Position',  [5 5 32 20], 'Renderer','painters');; tiledlayout(3,4, 'TileSpacing','tight', 'TileIndexing','columnmajor');
+nexttile(1,1:2); hold on;
+
+patch([112 112 132 132], [0 1.3*10^-11 1.3*10^-11 0], [0.2 0.2 0.2], 'FaceAlpha', 0.125, 'EdgeAlpha', 0)
+
+for i = 1:6 % Six stim (0-240ms ISI) in GP60 condition
+    plot(mean(topgrad_dat.PO60_L{1,i}', 2), 'Color', bluecol(i,:), 'LineWidth', 1.5)
+    plot(mean(topgrad_dat.PO60_R{1,i}', 2), 'Color', orgcol(i,:), 'LineWidth', 1.5)
+end
+
+%legend({}, 'Location', 'northwest');
+
+set(gca, 'FontSize', txtsize)
+ylabel('ERF amp (T/cm)');
+
+xline(101, '--k')
+
+% xline(111, 'k')
+% xline(131, 'k')
+
+xline(101, '--k')
+xticks([1:20:165])
+xticklabels([])
+xlim([41 161])
+
+ylim([0 1.3*10^-11])
+
+ax = gca;
+ax.XGrid = 'on';
+
+%Fake legend to modify
+legend({'', '70', '75', '80', '85', '90', '95', 'LEFT', 'RIGHT'}, 'Box','off', 'Location','northwest', 'AutoUpdate','off')
+
+%saveas(gcf, '../Analysis Output/L_R_POtest.svg')
+
+
+%GP60
+% Consider line() to mark gap locations
+
+yoffset = 0.25*10^-11;
+
+nexttile(2,1:2); hold on;
+
+patch([112 112 132 132], [0 1.3*10^-11 1.3*10^-11 0], [0.2 0.2 0.2], 'FaceAlpha', 0.125, 'EdgeAlpha', 0)
+
+for i = 1:4; % Four stim (ISI0-240) in GP60 condition flip for order preference
+    if i == 1;
+    plot(mean(topgrad_dat.GP60_L{1,i}', 2), 'Color', bluecol(6,:), 'LineWidth', 1.5)
+    plot(mean(topgrad_dat.GP60_R{1,i}', 2), 'Color', orgcol(6,:), 'LineWidth', 1.5)
+    else
+    plot(mean(topgrad_dat.GP60_L{1,i}', 2)+(i-1)*yoffset, 'Color', bluecol(6,:), 'LineWidth', 1.5)
+    plot(mean(topgrad_dat.GP60_R{1,i}', 2)+(i-1)*yoffset, 'Color', orgcol(6,:), 'LineWidth', 1.5)
+    end
+end
+
+ylim([0 1.3*10^-11])
+
+xline(101, '--k')
+xticks([1:20:165])
+xticklabels([])
+xlim([41 161])
+
+ylabel('Relative ERF amp');
+set(gca, 'FontSize', txtsize)
+
+ax = gca;
+ax.XGrid = 'on';
+
+plot([43 53 67 77 79 89 91 101], [0.9 0.9 0.61 0.61 0.38 0.38 0.1 0.1]*10^-11, '|k', 'MarkerSize', 22)
+
+nexttile(3,1:2); hold on;
+
+patch([112 112 132 132], [0 1.3*10^-11 1.3*10^-11 0], [0.2 0.2 0.2], 'FaceAlpha', 0.125, 'EdgeAlpha', 0)
+
+plot(mean(topgrad_dat.PO60_R{1,5}', 2), 'Color', orgcol(6,:), 'LineWidth', 1.5)
+plot(mean(topgrad_dat.PO60_L{1,5}', 2), 'Color', bluecol(6,:), 'LineWidth', 1.5)
+
+%GPISI240
+plot(mean(topgrad_dat.GP60_R{1,4}', 2), ':', 'Color', orgcol(6,:), 'LineWidth', 1.5)
+plot(mean(topgrad_dat.GP60_L{1,4}', 2), ':', 'Color', bluecol(6,:), 'LineWidth', 1.5)
+
+legend({'', 'Pulse only RIGHT', 'Pulse only LEFT', 'Gap+Pulse (isi 240ms) RIGHT', 'Gap+Pulse (isi 240ms) LEFT'}, 'Box','off', 'Location','northwest', 'AutoUpdate','off')
+
+ylim([0 1.3*10^-11])
+
+xline(101, '--k')
+xticks([1:20:165])
+xticklabels([-500:100:320])
+xlim([41 161])
+
+ylabel('ERF amp (T/cm)');
+xlabel('Time (ms relative pulse onset)')
+set(gca, 'FontSize', txtsize)
+
+ax = gca;
+ax.XGrid = 'on';
+
+%PO box L
+nexttile(7); hold on;
+boxchart(amp.PO60_L(:,:), 'BoxFaceColor', blue, 'BoxFaceAlpha', 1, 'BoxLineColor', [1 1 1], 'MarkerColor', blue, 'MarkerSize', 3)
+ylim([0 1.5*10^-11])
+xticklabels({'70', '75', '80', '85', '90', '95'})
+ylabel('N1 ERF amp (T/cm)')
+xlabel('Pulse level (dB)')
+set(gca, 'FontSize', txtsize)
+
+%PO box R
+nexttile(10); hold on;
+boxchart(amp.PO60_R(:,:), 'BoxFaceColor', orange, 'BoxFaceAlpha', 1, 'BoxLineColor', [1 1 1], 'MarkerColor', orange, 'MarkerSize', 3)
+ylim([0 1.5*10^-11])
+xticklabels({'70', '75', '80', '85', '90', '95'})
+xlabel('Pulse level (dB)')
+set(gca, 'FontSize', txtsize)
+
+%GP Box L
+nexttile(8); hold on;
+boxchart(amp.GP60_L(:,:), 'BoxFaceColor', blue, 'BoxFaceAlpha', 1, 'BoxLineColor', [1 1 1], 'MarkerColor', blue, 'MarkerSize', 3)
+ylim([0 1.5*10^-11])
+xticklabels({'0', '60', '120', '240'})
+ylabel('N1 ERF amp (T/cm)')
+xlabel('ISI (ms)')
+set(gca, 'FontSize', txtsize)
+
+%GP box R
+nexttile(11); hold on;
+boxchart(amp.GP60_R(:,:), 'BoxFaceColor', orange, 'BoxFaceAlpha', 1, 'BoxLineColor', [1 1 1], 'MarkerColor', orange, 'MarkerSize', 3)
+ylim([0 1.5*10^-11])
+xticklabels({'0', '60', '120', '240'})
+xlabel('ISI (ms)')
+set(gca, 'FontSize', txtsize)
+
+saveas(gcf, '../Analysis Output/Fig2_form9.svg')
+close;
