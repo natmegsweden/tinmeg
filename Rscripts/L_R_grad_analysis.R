@@ -183,6 +183,12 @@ paste(mean(amp_GP70_L$ISI240), sd(amp_GP70_L$ISI240), sep=",")
 paste(mean(amp_GP70_R$ISI240), sd(amp_GP70_R$ISI240), sep=",")
 1 - (mean(amp_GP70_R$ISI240)/(mean(amp_PO70_R$`90`)))
 
+# inhib per subject
+Left <- 1 - (amp_GP60_L$ISI240)/(amp_PO60_L$`90`)
+Right <- 1 - (amp_GP60_R$ISI240)/(amp_PO60_R$`90`)
+
+sd(Left)
+sd(Right)
 
 
 
