@@ -72,6 +72,23 @@ t_GP70_ISI60
 t_GP70_ISI120
 t_GP70_ISI240
 
+#view mean and sd, 60dB carrier
+paste(mean(EOG_PO60$`90`), sd(EOG_PO60$`90`), sep=",")
+
+paste(mean(EOG_GP60$ISI0), sd(EOG_GP60$ISI0), sep=",")
+paste(mean(EOG_GP60$ISI60), sd(EOG_GP60$ISI60), sep=",")
+paste(mean(EOG_GP60$ISI120), sd(EOG_GP60$ISI120), sep=",")
+paste(mean(EOG_GP60$ISI240), sd(EOG_GP60$ISI240), sep=",")
+
+#70 db Carrier
+paste(mean(EOG_PO70$`90`), sd(EOG_PO70$`90`), sep=",")
+
+paste(mean(EOG_GP70$ISI0), sd(EOG_GP70$ISI0), sep=",")
+paste(mean(EOG_GP70$ISI60), sd(EOG_GP70$ISI60), sep=",")
+paste(mean(EOG_GP70$ISI120), sd(EOG_GP70$ISI120), sep=",")
+paste(mean(EOG_GP70$ISI240), sd(EOG_GP70$ISI240), sep=",")
+
+
 # list and correct p-values
 
 p_values = c(t_GP60_ISI0$p.value, t_GP60_ISI60$p.value, t_GP60_ISI120$p.value, t_GP60_ISI240$p.value,
