@@ -107,8 +107,9 @@ subpaths_er{i,1} = char(sub_date.ID{i}); %Include ID for tracking
 clear fnames subpath i fileindex
 end
 
-% Onse subject is missing empty room - copy from same day
+% Two subjects are missing empty room - copy from same day
 subpaths_er{1,2} = subpaths_er{2,2};
+subpaths_er{23,2} = subpaths_er{8,2};
 
 %For all subjects
 for i = 1:numel(sub_date.ID);

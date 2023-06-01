@@ -233,34 +233,43 @@ for i = 1:25%length(sub_date.ID);
             saveas(gcf, ['../mat_data/source_reconstruction/no_prewhite/' sub_date.ID{i} '.png'])
             close;
 
-%             %sensorlevel sanity check
-%             cfg = [];
-%             cfg.trials = PO60ica.trialinfo == POtrig;
-%             
-%             %select PO trigger
-%             PO60_90 = ft_selectdata(cfg, PO60ica);
-%             
-%             %combine planar
-%             cfg = [];
-%             PO60_90 = ft_combineplanar(cfg, PO60_90)
-%             
-%             %select right grad selected in sensspace analysis
-%             cfg.channel = 'MEG1332+1333';
-%             PO60_90 = ft_selectdata(cfg,PO60_90);
-% 
-%             %unpack data
-%             for j = 1:numel(PO60_90.trial)
-%                 tempdat(j,:) = PO60_90.trial{1,j};
-%             end
-% 
-%             %plot
-%             figure;
-%             plot(mean(tempdat', 2));
-%             xline(101, '--k');
-%             xticks([1:20:165]);
-%             xticklabels([-500:100:320]);
-%             xlim([41 161]);
+            %sensorlevel sanity check
+            cfg = [];
+            cfg.trials = PO60ica.trialinfo == POtrig;
+            
+            %select PO trigger
+            PO60_90 = ft_selectdata(cfg, PO60ica);
+            
+            %combine planar
+            cfg = [];
+            PO60_90 = ft_combineplanar(cfg, PO60_90)
+            
+            %select right grad selected in sensspace analysis
+            cfg.channel = 'MEG1332+1333';
+            PO60_90 = ft_selectdata(cfg,PO60_90);
 
+            %unpack data
+            for j = 1:numel(PO60_90.trial)
+                tempdat(j,:) = PO60_90.trial{1,j};
+            end
+
+            %plot
+            figure('Position', [1249,694,1133,491]);
+            plot(mean(tempdat', 2));
+            xline(101, '--k');
+            xticks([1:20:165]);
+            xticklabels([-500:100:320]);
+            xlim([41 161]);
+
+
+            ax = gca;
+            ylim([ax.YLim(1) ax.YLim(2)])
+            patch([81 81 101 101], [ax.YLim(1) ax.YLim(2) ax.YLim(2) ax.YLim(1)], 'green', 'FaceAlpha', 0.2, 'EdgeAlpha', 0)
+            patch([111 111 131 131], [ax.YLim(1) ax.YLim(2) ax.YLim(2) ax.YLim(1)], 'red', 'FaceAlpha', 0.2, 'EdgeAlpha', 0)
+            legend({'MEG1332+1333','','Baseline', 'Stim'})
+
+            saveas(gcf, ['../mat_data/source_reconstruction/no_prewhite/' sub_date.ID{i} '_sens.png'])
+            close;
 
         end
     

@@ -4,7 +4,7 @@
 %Contrasts of interest
 coi = {'POvsB', 'GPPvsB', 'GPPvsPO'};
 
-for i = 10 %1:25%length(sub_date.ID);
+for i = 5%:25%length(sub_date.ID);
     
     meg_inpath = ['../mat_data/ICA/' 'ID' sub_date.ID{i} '/'];
     mri_inpath = ['../mat_data/MRI_mat/ID' sub_date.ID{i} '/'];
@@ -35,6 +35,10 @@ for i = 10 %1:25%length(sub_date.ID);
     GP60ica = GP60ica.GP60ica;
     %GP70ica = load([meg_inpath 'GP70ica.mat']);
     %GP70ica = GP70ica.GP70ica;
+
+    %load empty room 
+    emptyroom = load(['../mat_data/preprocessing/ID' sub_date.ID{i} '/emptyroom.mat']);
+    emptyroom = emptyroom.data_er;
     
     %Append data
     cfg = [];
@@ -53,17 +57,17 @@ for i = 10 %1:25%length(sub_date.ID);
 
     appended = ft_selectdata(cfg, PO60ica);
     
-    %Select prestim noise for prewhiten
-    cfg =[];
-    cfg.latency = [-0.500 -0.250];
-    baseline_noise = ft_selectdata(cfg, appended);
-    
-    %Keep trials of interest and MEG channels only in baseline_noise
-    cfg = [];
-    cfg.channel = 'meg';
-    %PO60_90 = 33288, GP60_i240 = 49688
-    cfg.trials = baseline_noise.trialinfo == POtrig | baseline_noise.trialinfo == GPPtrig;
-    baseline_noise = ft_selectdata(cfg, baseline_noise);
+%     %Select prestim noise for prewhiten
+%     cfg =[];
+%     cfg.latency = [-0.500 -0.250];
+%     baseline_noise = ft_selectdata(cfg, appended);
+%     
+%     %Keep trials of interest and MEG channels only in baseline_noise
+%     cfg = [];
+%     cfg.channel = 'meg';
+%     %PO60_90 = 33288, GP60_i240 = 49688
+%     cfg.trials = baseline_noise.trialinfo == POtrig | baseline_noise.trialinfo == GPPtrig;
+%     baseline_noise = ft_selectdata(cfg, baseline_noise);
 
     %Keep trials of interest and MEG channels only in data
     cfg = [];
@@ -74,11 +78,11 @@ for i = 10 %1:25%length(sub_date.ID);
 
     %clear GOica PO60ica PO70ica GP60ica GP70ica;
    
-    %Create covmatrix for denoise_whiten using baseline_noise
+    %Create covmatrix for denoise_whiten using emptyroom 
     cfg            = [];
     cfg.covariance = 'yes';
     cfg.covariancewindow = 'all';
-    baseline_noise   = ft_timelockanalysis(cfg, baseline_noise);
+    baseline_noise   = ft_timelockanalysis(cfg, emptyroom);
     
     %Select mags and grads
     selmag  = ft_chantype(baseline_noise.label, 'megmag');
@@ -149,8 +153,8 @@ for i = 10 %1:25%length(sub_date.ID);
     cfg.grid = leadfield;
     cfg.headmodel = headmodel_meg;
     cfg.lcmv.keepfilter = 'yes';
-    cfg.lcmv.lambda = '5%';
-    cfg.channel = 'MEG';
+    %cfg.lcmv.lambda = '5%';
+    cfg.channel = 'meggrad';
     cfg.senstype = 'MEG';
     
     source_all = ft_sourceanalysis(cfg, data_cov);
@@ -185,9 +189,10 @@ for i = 10 %1:25%length(sub_date.ID);
             cfg.method = 'lcmv';
             cfg.grid = leadfield;
             cfg.headmodel = headmodel_meg;
-            cfg.lcmv.keepfilter = 'yes';
-            cfg.lcmv.lambda = '5%';
-            cfg.channel = 'MEG';
+            cfg.lcmv.keepfilter = 'no';
+            %cfg.lcmv.lambda = '5%';
+            %cfg.lcmv.kappa = 
+            cfg.channel = 'meggrad';
             cfg.senstype = 'MEG';
             %Use sourcemodel.filter for all full trials
             cfg.sourcemodel.filter = source_all.avg.filter;
@@ -199,12 +204,12 @@ for i = 10 %1:25%length(sub_date.ID);
             %Make contrast
             lcmv_contrast = source_stim; %copy
 
-            %invert GPPvsPO so "inhibition" is positive
-            if ismember(coi(ii), 'GPPvsPO'); 
-                lcmv_contrast.avg.pow = (source_baseline.avg.pow - source_stim.avg.pow) ./ source_baseline.avg.pow;
-            else
+%             %invert GPPvsPO so "inhibition" is positive
+%             if ismember(coi(ii), 'GPPvsPO'); 
+%                 lcmv_contrast.avg.pow = (source_baseline.avg.pow - source_stim.avg.pow) ./ source_baseline.avg.pow;
+%             else
                 lcmv_contrast.avg.pow = (source_stim.avg.pow - source_baseline.avg.pow) ./ source_baseline.avg.pow;
-            end
+%             end
 
             %Interpolate contrast on template MRI
             cfg = [];
@@ -225,6 +230,35 @@ for i = 10 %1:25%length(sub_date.ID);
 
             %saveas(gcf, ['../mat_data/source_reconstruction/testfigures2/' sub_date.ID{i} '.png'])
             %close;
+
+            %sensorlevel sanity check
+            cfg = [];
+            cfg.trials = PO60ica.trialinfo == POtrig;
+            
+            %select PO trigger
+            PO60_90 = ft_selectdata(cfg, PO60ica);
+            
+            %combine planar
+            cfg = [];
+            PO60_90 = ft_combineplanar(cfg, PO60_90)
+            
+            %select right grad selected in sensspace analysis
+            cfg.channel = 'MEG1332+1333';
+            PO60_90 = ft_selectdata(cfg,PO60_90);
+
+            %unpack data
+            for j = 1:numel(PO60_90.trial)
+                tempdat(j,:) = PO60_90.trial{1,j};
+            end
+
+            %plot
+            figure;
+            plot(mean(tempdat', 2));
+            xline(101, '--k');
+            xticks([1:20:165]);
+            xticklabels([-500:100:320]);
+            xlim([41 161]);
+
 
         end
     
