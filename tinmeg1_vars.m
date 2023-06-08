@@ -5,9 +5,6 @@ conditions = ({'PO60', 'PO70', 'GP60', 'GP70', 'GO'});
 %Save structure of conditions
 %save('../mat_data/conditions.mat', 'conditions');
 
-%Structure for triggers and labels
-cond = struct();
-
 %trigger at pulse onset
 cond.PO60trig   = [40968 36872 34824 33800 33288 33032];
 cond.PO60label  = ({'PO60_70', 'PO60_75', 'PO60_80', 'PO60_85', 'PO60_90', 'PO60_95'});
@@ -38,6 +35,6 @@ cond.GOlabel    = ({'GO_60', 'GO_70'});
 %% Read subject list
 
 %Readtable of subjects (as string)
-sub_date = readtable('../sub_date.txt', 'Format', '%s%s');
+sub_date = readtable('../sub_date.txt', 'Format', '%s%s%s');
 
 disp(['Number of subjects in table is ' num2str(height(sub_date))])

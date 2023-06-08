@@ -8,9 +8,6 @@ conditions = ({'tin0_bkg0', 'tin0_bkg3', 'tin0_bkg8', ...
 %Save structure of conditions
 %save('../mat_data/conditions.mat', 'conditions');
 
-%Structure for triggers and labels
-cond = struct();
-
 %trigger at pulse onset
 cond.tin0_bkg0trig   = [1 2 4 8 16 32];
 cond.tin0_bkg0label  = ({'GPP_00', 'GPG_00', 'PO_00', 'GO_00', 'PPP_00', 'PPG_00'});
@@ -38,6 +35,6 @@ cond.tin8_bkg8label  = ({'GPP_88', 'GPG_88', 'PO_88', 'GO_88'});
 %% Read subject list
 
 %Readtable of subjects (as string)
-sub_date = readtable('../sub_date_tinmeg2.txt', 'Format', '%s%s%s');
+sub_date2 = readtable('../sub_date_tinmeg2.txt', 'Format', '%s%s%s');
 
-disp(['Number of subjects in table is ' num2str(height(sub_date))])
+disp(['Number of subjects in table is ' num2str(height(sub_date2))])

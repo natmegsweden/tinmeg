@@ -1,14 +1,9 @@
 %% Read subjects and dates
 
 %To do: 
-%implement "run for who" to re-run single subject/testing purposes - stop
-%if invalid ID
-
-% Run for who?
-% runwho = input('Who are we analysing today? specify all (default) or specific ID \n', 's');
-% if isempty(runwho)
-%     runwho = 'all'
-% end
+%New MRI_ID for TinMEG1 (to be verbose)
+%Preprocess TinMEG2
+%Preprocess TinMEG3 (new BIDS compliant path)
 
 % Specify MEG data path
 meg_data_path = '/archive/20061_tinnitus/MEG/';
@@ -31,8 +26,9 @@ clear mri;
 fs_ds = 200;
 
 %Specify conditions, event triggers and subject list
+cond = struct();
 
-run('Conditions_triggers.m');
+run('tinmeg1_vars.m');
 
 %% Find relevant files for subject and create cell-array of file paths
 
