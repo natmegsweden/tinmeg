@@ -33,7 +33,7 @@ fs_ds = 200;
 %% Find raw data files to include
 run('find_fif.m')
 
-%% Preprocess data to timelockeds
+%% Preprocess data to epochs
 
 %Load subpaths if not a variable
 if exist('subpaths','var') == 0
@@ -59,6 +59,40 @@ else
     end
 
 end
+
+%% Process EOG
+
+for i = 1:numel(sub_date.ID)
+
+    outdir = ['../processed_data/timelockeds/' 'ID' sub_date.ID{i} '/EOG/'];
+    figoutdir = ['../processed_data/timelockeds/figures/' 'ID' sub_date.ID{i} '/'];
+
+    %Check if dir for sub exist and skip or create
+    if exist(outdir, 'file');
+        warning(['EOG folder already exist for subject: ' sub_date.ID{i}])
+    continue
+    elseif ~exist(outdir, 'file');
+        mkdir(outdir);
+    end
+    
+    %What experiement version
+    exp_ver = sub_date.Exp{i};
+
+    if sub_date.Exp{i} == 'tinmeg1'
+       temp_cond = cond.tinmeg1.all;
+       temp_stim = cond.tinmeg1;
+    elseif sub_date.Exp{i} == 'tinmeg2'
+       temp_cond = cond.tinmeg2.all;
+       temp_stim = cond.tinmeg2;
+    elseif sub_date.Exp{i} == 'tinmeg3'
+       temp_cond = cond.tinmeg3.all;
+       temp_stim = cond.tinmeg3;
+    end
+
+    run('process_EOG.m')
+
+end
+
 
 %% Loop over downsampled data and remove high variance trials/channels manually
 
@@ -170,14 +204,6 @@ for i = 1:numel(sub_date.ID)
     outdir = ['../processed_data/timelockeds/' 'ID' sub_date.ID{i} '/'];
     figoutdir = ['../processed_data/timelockeds/figures/' 'ID' sub_date.ID{i} '/'];
 
-    %Check if dir for sub exist and skip or create
-    if exist(outdir, 'file');
-        warning(['Timelockeds folder already exist for subject: ' sub_date.ID{i}])
-    continue
-    elseif ~exist(outdir, 'file');
-        mkdir(outdir);
-    end
-    
     %What experiement version
     exp_ver = sub_date.Exp{i};
 
@@ -196,3 +222,39 @@ for i = 1:numel(sub_date.ID)
 
 end
 
+%% Gather timelockeds
+
+%Load if not already in workspace
+if exist('tlk_all_sub','var') == 0
+    tlk_all_sub = load('../processed_data/timelockeds/aggregated/tlk_all_sub_cmb.mat');
+    tlk_all_sub = tlk_all_sub.tlk_all_sub;
+else
+    %Create empty structure
+    tlk_all_sub = struct();
+end
+
+%For each subject
+for i = 1:numel(sub_date.ID)
+
+    %Get experiment version
+    temp_exp = (sub_date.Exp{i});
+    
+    IDs = find(~cellfun(@isempty, tlk_all_sub.(temp_exp).ID));
+    
+    %Find first empty cell for ID
+    empty_IDx = 1 + IDs(end);
+    
+    %Check if subject is already in struct and skip
+    if any(ismember(tlk_all_sub.(temp_exp).ID, sub_date.ID{i}))
+        warning([sub_date.ID{i} ' is already in tlk structure'])
+        continue
+    else
+        run('gather_tlks.m')
+    
+    %if subject already in struct
+    end
+
+%For subject
+end
+
+save('../processed_data/timelockeds/aggregated/tlk_all_sub_cmb.mat', 'tlk_all_sub');

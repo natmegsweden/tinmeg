@@ -1,10 +1,7 @@
-%% Process timelockeds per condition, gather subject - and grand average
+%% Process EOG
 
 %Structure for subject timleockeds.avg
-tlk_sub = struct();
-
-%Structure for subject timleockeds.avg with combined planar gradiometers
-tlk_sub_cmb = struct();
+tlk_sub_eog = struct();
 
 %For each condition
 for ii = 1:length(temp_cond)
@@ -15,12 +12,6 @@ nstim = numel(trig);
 
     for iii = 1:nstim
 
-        %Check if output file exist and skip
-        if exist([outdir cond.(sub_date.Exp{i}).([temp_cond{ii} 'label']){iii} '_tlk_cmb.mat'], 'file');
-            warning([temp_cond{ii} ' timlockeds already exist for subject: ' sub_date.ID{i}])
-        continue
-        else
-
         subinpath = ['../processed_data/ICA/' 'ID' sub_date.ID{i} '/'];
         
         tempdat = load([subinpath temp_cond{ii} '_ica.mat']);
@@ -29,7 +20,7 @@ nstim = numel(trig);
         cfg = [];
         cfg.covariance = 'no';
         cfg.covariancewindow = 'prestim';
-        cfg.keeptrials = 'no'; %if yes, no avg in output variable "timelockeds"
+        cfg.keeptrials = 'yes'; % Keep all trials to clean later
         cfg.preproc.demean = 'yes';
         
         %Adjust baseline for experiment version and condition
@@ -63,27 +54,19 @@ nstim = numel(trig);
         cfg.preproc.lpfilter = 'yes';
         cfg.preproc.lpfreq = 70;
         cfg.preproc.hpfilter = 'no';
-        cfg.channel = 'MEG';
+        cfg.channel = {'EOG002'};
         cfg.trials = tempdat.trialinfo == trig(iii);
         
-        tlk_sub = ft_timelockanalysis(cfg, tempdat);
+        tlk_sub_eog = ft_timelockanalysis(cfg, tempdat);
         
         clear tempdat
         
         %save individual timelockeds
-        save([outdir cond.(sub_date.Exp{i}).([temp_cond{ii} 'label']){iii} '_tlk.mat'], 'tlk_sub'); %clear tlk_sub
-                
-        cfg = [];
-        tlk_sub_cmb = ft_combineplanar(cfg, tlk_sub);
-
-        %save individual timelockeds with combined planar
-        save([outdir cond.(sub_date.Exp{i}).([temp_cond{ii} 'label']){iii} '_tlk_cmb.mat'], 'tlk_sub_cmb'); %clear tlk_sub_cmb
+        save([outdir cond.(sub_date.Exp{i}).([temp_cond{ii} 'label']){iii} '_EOG.mat'], 'tlk_sub_eog'); %clear tlk_sub
         
-        %if exist
-        end
-
     end
 
 end
 
 clear ii iii trig nstim 
+

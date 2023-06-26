@@ -48,7 +48,7 @@ cfg.trl = cfg.trl(cfg.trl(:,2) < max([cfg.event.sample]),:);
 
     %offset PO-trials with 50ms in TinMEG1
     %to compensate for ERROR in presentation-script that had trigger wait for gap duration (50ms) even when no gap
-    if sub_date.Exp{i} == 'TinMEG1'
+    if sub_date.Exp{i} == 'tinmeg1'
     
         for r = 1:length(cfg.trl)
             if (ismember(cfg.trl(r,4), [temp_stim.PO70trig temp_stim.PO60trig]))
@@ -71,7 +71,7 @@ cfg.channel    = {'MEG', 'ECG', 'EOG'};
 preproc = ft_preprocessing(cfg);
 
     %adjust time-variable to match offset for PO-trials
-    if sub_date.Exp{i} == 'TinMEG1'
+    if sub_date.Exp{i} == 'tinmeg1'
         if any(ismember(temp_cond{ii}, {'PO60', 'PO70'}))
             cfg = [];
             cfg.offset = 250;
