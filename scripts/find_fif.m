@@ -27,7 +27,7 @@ for i = 1:numel(sub_date.ID);
 
 end
 
-writetable(cell2table(subpaths), '../analysis_ouput/logs/included_filepaths.csv') %Write log
+writetable(cell2table(subpaths), '../analysis_output/logs/included_filepaths.csv') %Write log
 
 clear fnames subpath fileindex i
 

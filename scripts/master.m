@@ -60,40 +60,6 @@ else
 
 end
 
-%% Process EOG
-
-for i = 1:numel(sub_date.ID)
-
-    outdir = ['../processed_data/timelockeds/' 'ID' sub_date.ID{i} '/EOG/'];
-    figoutdir = ['../processed_data/timelockeds/figures/' 'ID' sub_date.ID{i} '/'];
-
-    %Check if dir for sub exist and skip or create
-    if exist(outdir, 'file');
-        warning(['EOG folder already exist for subject: ' sub_date.ID{i}])
-    continue
-    elseif ~exist(outdir, 'file');
-        mkdir(outdir);
-    end
-    
-    %What experiement version
-    exp_ver = sub_date.Exp{i};
-
-    if sub_date.Exp{i} == 'tinmeg1'
-       temp_cond = cond.tinmeg1.all;
-       temp_stim = cond.tinmeg1;
-    elseif sub_date.Exp{i} == 'tinmeg2'
-       temp_cond = cond.tinmeg2.all;
-       temp_stim = cond.tinmeg2;
-    elseif sub_date.Exp{i} == 'tinmeg3'
-       temp_cond = cond.tinmeg3.all;
-       temp_stim = cond.tinmeg3;
-    end
-
-    run('process_EOG.m')
-
-end
-
-
 %% Loop over downsampled data and remove high variance trials/channels manually
 
 %Run preprocessing for each subject
@@ -144,6 +110,38 @@ for i = 1:numel(sub_date.ID)
 
 end
 
+%% Process EOG
+
+for i = 1:numel(sub_date.ID)
+
+    outdir = ['../processed_data/timelockeds/' 'ID' sub_date.ID{i} '/EOG/'];
+    figoutdir = ['../processed_data/timelockeds/figures/' 'ID' sub_date.ID{i} '/'];
+
+    %Check if dir for sub exist and skip or create
+    if exist(outdir, 'file');
+        warning(['EOG folder already exist for subject: ' sub_date.ID{i}])
+    continue
+    elseif ~exist(outdir, 'file');
+        mkdir(outdir);
+    end
+    
+    %What experiement version
+    exp_ver = sub_date.Exp{i};
+
+    if sub_date.Exp{i} == 'tinmeg1'
+       temp_cond = cond.tinmeg1.all;
+       temp_stim = cond.tinmeg1;
+    elseif sub_date.Exp{i} == 'tinmeg2'
+       temp_cond = cond.tinmeg2.all;
+       temp_stim = cond.tinmeg2;
+    elseif sub_date.Exp{i} == 'tinmeg3'
+       temp_cond = cond.tinmeg3.all;
+       temp_stim = cond.tinmeg3;
+    end
+
+    run('process_EOG.m')
+
+end
 
 %% MRI processing - Step 1: Require some manual input of fiducials and confirming coordsys
 
@@ -225,13 +223,12 @@ end
 %% Gather timelockeds
 
 %Load if not already in workspace
-if exist('tlk_all_sub','var') == 0
+if exist('tlk_all_sub','var') == 0;
     tlk_all_sub = load('../processed_data/timelockeds/aggregated/tlk_all_sub_cmb.mat');
     tlk_all_sub = tlk_all_sub.tlk_all_sub;
-else
-    %Create empty structure
-    tlk_all_sub = struct();
 end
+
+%create empty struct if file doesnd exist
 
 %For each subject
 for i = 1:numel(sub_date.ID)
@@ -258,3 +255,57 @@ for i = 1:numel(sub_date.ID)
 end
 
 save('../processed_data/timelockeds/aggregated/tlk_all_sub_cmb.mat', 'tlk_all_sub');
+
+%% Gather EOG
+
+%Load if not already in workspace
+if exist('EOG_all_sub','var') == 0;
+
+    %Create empty if file doesnt exist
+    if exist('../processed_data/timelockeds/aggregated/EOG_all_sub.mat', 'file') == 0;
+        
+        %Create empty structure
+        EOG_all_sub = struct();
+    
+    %else load
+    else
+        EOG_all_sub = load('../processed_data/timelockeds/aggregated/EOG_all_sub.mat');
+        EOG_all_sub = EOG_all_sub.EOG_all_sub;
+    end
+end
+
+%For each subject
+for i = 1:numel(sub_date.ID)
+
+    %Get experiment version
+    temp_exp = (sub_date.Exp{i});
+
+    %If no field for experiment, create it
+    if ~any(ismember(fieldnames(EOG_all_sub), temp_exp))
+       EOG_all_sub.(temp_exp).ID = {};
+    end
+    
+    %if ID array is empty, write to first line
+    if isempty(EOG_all_sub.(temp_exp).ID)
+        empty_IDx = 1;
+
+    %else, find the first empty cell
+    else
+        IDs = find(~cellfun(@isempty, EOG_all_sub.(temp_exp).ID));
+        empty_IDx = 1 + IDs(end);
+    end
+    
+    %Check if subject is already in struct and skip
+    if any(ismember(EOG_all_sub.(temp_exp).ID, sub_date.ID{i}))
+        warning([sub_date.ID{i} ' is already in tlk structure'])
+        continue
+    else
+        run('gather_EOG.m')
+    
+    %if subject already in struct
+    end
+
+%For subject
+end
+
+save('../processed_data/timelockeds/aggregated/EOG_all_sub.mat', 'EOG_all_sub');
