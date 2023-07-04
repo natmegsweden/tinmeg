@@ -309,3 +309,57 @@ for i = 1:numel(sub_date.ID)
 end
 
 save('../processed_data/timelockeds/aggregated/EOG_all_sub.mat', 'EOG_all_sub');
+
+%% Clean EOG
+
+%Load if not already in workspace
+if exist('EOG_clean','var') == 0;
+
+    %Create empty if file doesnt exist
+    if exist('../processed_data/timelockeds/aggregated/EOG_clean.mat', 'file') == 0;
+        
+        %Create empty structure
+        EOG_clean = struct();
+    
+    %else load
+    else
+        EOG_clean = load('../processed_data/timelockeds/aggregated/EOG_clean.mat');
+        EOG_clean = EOG_clean.EOG_clean;
+    end
+end
+
+%For each subject
+for i = 1%:numel(sub_date.ID)
+
+    %Get experiment version
+    temp_exp = (sub_date.Exp{i});
+
+    %If no field for experiment, create it
+    if ~any(ismember(fieldnames(EOG_clean), temp_exp))
+       EOG_clean.(temp_exp).ID = {};
+    end
+    
+    %if ID array is empty, write to first line
+    if isempty(EOG_clean.(temp_exp).ID)
+        empty_IDx = 1;
+
+    %else, find the first empty cell
+    else
+        IDs = find(~cellfun(@isempty, EOG_clean.(temp_exp).ID));
+        empty_IDx = 1 + IDs(end);
+    end
+    
+    %Check if subject is already in struct and skip
+    if any(ismember(EOG_clean.(temp_exp).ID, sub_date.ID{i}))
+        warning([sub_date.ID{i} ' is already in EOG_clean structure'])
+        continue
+    else
+        run('clean_EOG.m')
+    
+    %if subject already in struct
+    end
+
+%For subject
+end
+
+save('../processed_data/timelockeds/aggregated/EOG_clean.mat', 'EOG_clean');
