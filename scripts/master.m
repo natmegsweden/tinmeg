@@ -312,6 +312,12 @@ save('../processed_data/timelockeds/aggregated/EOG_all_sub.mat', 'EOG_all_sub');
 
 %% Clean EOG
 
+%Load EOG data to clean up
+if exist('EOG_all_sub','var') == 0;
+    EOG_all_sub = load('../processed_data/timelockeds/aggregated/EOG_all_sub.mat');
+    EOG_all_sub = EOG_all_sub.EOG_all_sub;
+end
+
 %Load if not already in workspace
 if exist('EOG_clean','var') == 0;
 

@@ -22,8 +22,14 @@ if ~any(ismember(EOG_clean.(temp_exp).ID, sub_date.ID{i}))
             %Get data for stim
             y = EOG_all_sub.(temp_exp).(temp_cond).(temp_stim){i}';
 
-            %Get time
-            t = (1:height(y))';
+            %Get timepoints
+            t = (1:numel(EOG_all_sub.(temp_exp).time))';
+
+            %Get trigger point, i.e. time 0
+            trigpoint = find(EOG_all_sub.(temp_exp).time == 0);
+
+            xlab_start = EOG_all_sub.(temp_exp).time(1);
+            xlab_end = EOG_all_sub.(temp_exp).time(end);
             
             %n trials
             n_trials = length(y);
@@ -35,14 +41,15 @@ if ~any(ismember(EOG_clean.(temp_exp).ID, sub_date.ID{i}))
             % Plot data
             figure('Position',[800 800 1000 800])
             hLines = plot(t, y, 'k');
-            xline([101 101]);   %%%%%%%%%%%%%%%% not static plz
-            xlim([1 201]);
-            xticks([1:20:201]);
-            xticklabels([-500:100:500]);
+            xline([trigpoint trigpoint]);   %%%%%%%%%%%%%%%% not static plz
+            xlim([1 numel(t)]);
+            xticks([1:20:numel(t)]);
+            xticklabels([xlab_start:0.100:xlab_end].*1000);
+            title(['Stim: ' temp_stim], 'Interpreter', 'none', 'FontSize', 20);
             
             % Start brushing mode and wait for user to hit "Enter" when done
             brush on
-            disp('Hit Enter in comand window when done brushing')
+            disp('Box any point on trials to Exclude - Hit Enter in comand window when done brushing')
             pause
             
             % Loop through each graphics object
