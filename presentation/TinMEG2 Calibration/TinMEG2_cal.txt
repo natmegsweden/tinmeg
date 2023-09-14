@@ -1,0 +1,5 @@
+tin0_bkg8_cal75	High	0	0	31	33
+tin0_bkg3_cal60	High	0	0	32	33
+tin0_bkg0_cal60	High	0	0	34	33
+tin0_bkg0_cal80	High	0	0	33	33
+pulse_lvl_cal	High	0	0	44	33

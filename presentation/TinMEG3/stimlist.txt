@@ -1,0 +1,6 @@
+tin0_bkg0	22	tin0_bkg0.txt	20
+tin0_bkg3	23	tin0_bkg3.txt	15
+tin0_bkg8	24	tin0_bkg8.txt	15
+tin0_bkg0	22	tin0_bkg0.txt	20
+tin0_bkg3	23	tin0_bkg3.txt	15
+tin0_bkg8	24	tin0_bkg8.txt	15

@@ -1,0 +1,289 @@
+#Init AudioFile
+begin; #
+	
+	# INITIALIZE PARALLELL PORTS
+
+	output_port MEGport = output_port_manager.get_port(1);
+	output_port audiofile = output_port_manager.get_port(2);
+	output_port MEGport2 = output_port_manager.get_port(3);
+
+	#output_port audioTrigger = output_port_manager.get_port(3);
+	
+
+	###>> Init subject specific vars *****************************
+	#Generate unique result file name	
+	string thisDate = date_time("yymmdd");	
+	string thisTime = date_time("hhnnss");
+	string userName = "Niklas" + thisDate + "_" + thisTime;
+
+	#Define subject name
+	string enterfname = logfile.subject();
+
+	#Start presentation with default settings
+	default.present();
+	parameter_window.remove_all();
+	
+
+	#TRIAL LISTA - DINA STIMULI OCH TRIGGERS
+	int numBlocks = 10;
+		
+	#TRIAL SET 1: 60 db
+		string fname60 = "Niklas_60db.txt"; 
+		int numTrials60 = 55; 		
+
+		array<string> alltrials60[numTrials60][9];
+		array<string> origtrials60[numTrials60][9];
+		input_file myfile60 = new input_file; 
+		myfile60.open(fname60); 
+
+		#Parse file ******
+		int stimFile60Offset = 1; 
+		loop int r=stimFile60Offset until r == (numTrials60+stimFile60Offset) begin
+			alltrials60[r][1] = myfile60.get_string();
+			alltrials60[r][2] = myfile60.get_string(); 
+			alltrials60[r][3] = myfile60.get_string();
+			alltrials60[r][4] = myfile60.get_string();
+			alltrials60[r][5] = myfile60.get_string();
+			alltrials60[r][6] = myfile60.get_string();
+			alltrials60[r][7] = myfile60.get_string();
+			alltrials60[r][8] = myfile60.get_string();
+			alltrials60[r][9] = myfile60.get_string();
+			r=r+1;
+		end;
+		myfile60.close();
+		origtrials60= alltrials60;
+
+
+	#TRIAL SET 2: 70 db
+		string fname70 = "Niklas_70db.txt"; 
+		int numTrials70 = 50; 		
+
+		array<string> alltrials70[numTrials70][9];
+		array<string> origtrials70[numTrials70][9];
+		input_file myfile70 = new input_file; 
+		myfile70.open(fname70); 
+
+		#Parse file ******
+		int stimFile70Offset = 1; 
+		loop int r=stimFile70Offset until r == (numTrials70+stimFile70Offset) begin
+			alltrials70[r][1] = myfile70.get_string();
+			alltrials70[r][2] = myfile70.get_string(); 
+			alltrials70[r][3] = myfile70.get_string();
+			alltrials70[r][4] = myfile70.get_string();
+			alltrials70[r][5] = myfile70.get_string();
+			alltrials70[r][6] = myfile70.get_string();
+			alltrials70[r][7] = myfile70.get_string();
+			alltrials70[r][8] = myfile70.get_string();
+			alltrials70[r][9] = myfile70.get_string();
+			r=r+1;
+		end;
+		myfile70.close();
+		origtrials70= alltrials70;
+
+	
+	###>> Trial handler ******************************************************************************************************
+
+	int myITI = 0; #continuous 
+	#int myITI = 500; #chopped 500
+	
+	int silenceDuration = 2000; #2000 --
+	int currBlock = 0;
+	int currTrial = 0;
+	int currRound = 0;
+	string myEar = ""; 
+	string myTone = ""; 
+	string myModulation = ""; 
+	int myMegTTL = 0; 
+	int myMegTTL2 = 0; 
+	int myAudioFileTTL = 0; 
+	string myStatus = "daniel";
+	int myDMS = clock.time_dms();
+	int lastDMS = 0; 
+	int myTime = 0;
+	int timeCompensation = 8 + 50; 
+	int stimDuration = 1000 - timeCompensation; #2000  #STIMULUS DURATION SPECIFIED HERE; 1000
+	int stimJitter = 500;   # 500
+	string mySound = "";
+	int myGap = 0; 
+	int myPulse = 0; 
+	int myPulseDuration = 0; #nik
+	int myGapDuration;
+	int myPreDuration;
+	int myGapStartleSOA;
+	int myPostDuration;
+	
+	#tr_break.present();	
+	# MAIN TRIAL LOOP HERE
+	
+	string tinmeg_file_name = "tinMEG1_" + thisDate + "_" + thisTime + ".txt";
+	output_file tinmeg_log = new output_file;
+	tinmeg_log.open(tinmeg_file_name);
+	tinmeg_log.print("mySound" + "\n");
+	tinmeg_log.close();
+	
+	#LOOP 10 times across the EXP
+	currBlock = 1;
+	loop currBlock = 1; until currBlock > numBlocks begin 
+
+		alltrials60 = origtrials60;
+		alltrials60.shuffle();
+		
+		#PRESENT THE 55 TRIALS IN THE 60 DB set, randomized order
+		currTrial = 1;
+		loop currTrial= 1; until currTrial > numTrials60 begin
+			myGapDuration = 50; 
+			myPulseDuration = 20; 
+
+			# STIMULUS DELIVEVY				
+				mySound = (alltrials60[currTrial][1]);
+				myAudioFileTTL = int(alltrials60[currTrial][2]);
+				myMegTTL = int(alltrials60[currTrial][3]);
+				myMegTTL2 = int(alltrials60[currTrial][4]);
+				myPreDuration = int(alltrials60[currTrial][6]); #DL ändrade här ---------------------
+				myGap = int(alltrials60[currTrial][7]); 
+				myPulse = int(alltrials60[currTrial][8]); 
+				myGapStartleSOA = int(alltrials60[currTrial][9]);
+
+				# timer stuff
+				myTime = clock.time_dms() - myDMS - lastDMS;
+				lastDMS = clock.time_dms() - myDMS;
+				
+				# write info on screen
+				myStatus = mySound + "\n" + ": Round " + string(currRound) + " : Block " + string(currBlock) + " : Trial " + string(currTrial)+ " : AFTrig " + string(myAudioFileTTL);
+				myStatusText.set_caption(myStatus);
+				myStatusText.redraw();
+				tr_statusText.present();
+				term.print_line(myStatus);
+				
+				##And log
+				tinmeg_log.open_append(tinmeg_file_name);
+				tinmeg_log.print(mySound + "\n");
+				tinmeg_log.close();
+				
+				# load and present stimulus
+				# audiofile = parallellport #1
+				audiofile.send_code(myAudioFileTTL,80); #preload sound - use first 7 bits
+				wait_interval(50);
+				audiofile.send_code(128,10); #trigger sound - use bit 8
+				MEGport.send_code(myMegTTL,20); 
+				MEGport2.send_code(myMegTTL2,20); #DL ändrade här ---------------------
+					
+				#wait the minimum duration until a gap occurs
+				wait_interval(myPreDuration); #DL ändrade här ---------------------
+				
+				if myGap == 1 then; #col 7
+					MEGport.send_code(((myMegTTL-1)+2),20);  #DL ändrade här ---------------------
+					MEGport2.send_code(myMegTTL2,20); #DL ändrade här ---------------------
+				end; 
+				#if there's a gap, then let the MEG systen know when it occurs
+				
+				wait_interval(myGapDuration);#DL ändrade här ---------------------
+				#wait the minimum duration of a gap 
+				
+				if myGapStartleSOA > 0 then; 
+					wait_interval(myGapStartleSOA); #DL ändrade här ---------------------
+				#wait the variable soa between gap and startle. If 0 then of course no wait....
+				end; 
+			
+				if myPulse == 1 then; #col 8
+					MEGport.send_code(((myMegTTL-1)+8),20);  #DL ändrade här ---------------------
+					MEGport2.send_code(myMegTTL2,20); #DL ändrade här ---------------------
+				end; 
+				#if there's a pulse, then let the MEG systen know when it occurs
+				
+
+				#@Niklas: ITI and jitter here!
+					myPostDuration = 2000; #DL ändrade här ---------------------
+						#waiting a minimum duration of 2000 msec post previous events for a 2 sec ITI
+					stimJitter = myPostDuration + random(1,500); #DL ändrade här --------------------- 
+					wait_interval(stimJitter); #DL ändrade här --------------------- 
+						#add a jitter on top of the ITI so there's a jittered (2000+)1-500 msec jitter period post events
+	
+			currTrial=currTrial+1;
+		end;
+	
+		alltrials70 = origtrials70;
+		alltrials70.shuffle();
+		
+		#PRESENT THE 50 TRIALS IN THE 70 DB set, randomized order
+		currTrial = 1;
+		loop currTrial = 1; until currTrial > numTrials70 begin
+			myGapDuration = 50; 
+			myPulseDuration = 20; 
+
+			# STIMULUS DELIVEVY				
+				mySound = (alltrials70[currTrial][1]);
+				myAudioFileTTL = int(alltrials70[currTrial][2]);
+				myMegTTL = int(alltrials70[currTrial][3]);
+				myMegTTL2 = int(alltrials70[currTrial][4]);
+				myPreDuration = int(alltrials70[currTrial][6]); #DL ändrade här ---------------------
+				myGap = int(alltrials70[currTrial][7]); 
+				myPulse = int(alltrials70[currTrial][8]); 
+				myGapStartleSOA = int(alltrials70[currTrial][9]);
+
+				# timer stuff
+				myTime = clock.time_dms() - myDMS - lastDMS;
+				lastDMS = clock.time_dms() - myDMS;
+				
+				# write info on screen
+				myStatus = mySound + "\n" + ": Round " + string(currRound) + " : Block " + string(currBlock) + " : Trial " + string(currTrial)+ " : AFTrig " + string(myAudioFileTTL);
+				myStatusText.set_caption(myStatus);
+				myStatusText.redraw();
+				tr_statusText.present();
+				term.print_line(myStatus);
+				
+				##And log trial
+				tinmeg_log.open_append(tinmeg_file_name);
+				tinmeg_log.print(mySound + "\n");
+				tinmeg_log.close();
+				
+				# load and present stimulus
+				# audiofile = parallellport #1
+				audiofile.send_code(myAudioFileTTL,80); #preload sound - use first 7 bits
+				wait_interval(50);
+				audiofile.send_code(128,10); #trigger sound - use bit 8
+				MEGport.send_code(myMegTTL,20); 
+				MEGport2.send_code(myMegTTL2,20); #DL ändrade här ---------------------
+					
+				#wait the minimum duration until a gap occurs
+				wait_interval(myPreDuration); #DL ändrade här ---------------------
+				
+				if myGap == 1 then; #col 7
+					MEGport.send_code(((myMegTTL-1)+2),20);  #DL ändrade här ---------------------
+					MEGport2.send_code(myMegTTL2,20); #DL ändrade här ---------------------
+				end; 
+				#if there's a gap, then let the MEG systen know when it occurs
+				
+				wait_interval(myGapDuration);#DL ändrade här ---------------------
+				#wait the minimum duration of a gap 
+				
+				if myGapStartleSOA > 0 then; 
+					wait_interval(myGapStartleSOA); #DL ändrade här ---------------------
+				#wait the variable soa between gap and startle. If 0 then of course no wait....
+				end; 
+			
+				if myPulse == 1 then; #col 8
+					MEGport.send_code(((myMegTTL-1)+8),20);  #DL ändrade här ---------------------
+					MEGport2.send_code(myMegTTL2,20); #DL ändrade här ---------------------
+				end; 
+				#if there's a pulse, then let the MEG systen know when it occurs
+				
+
+				#@Niklas: ITI and jitter here!
+					myPostDuration = 2000; #DL ändrade här ---------------------
+						#waiting a minimum duration of 2000 msec post previous events for a 2 sec ITI
+					stimJitter = myPostDuration + random(1,500); #DL ändrade här --------------------- 
+					wait_interval(stimJitter); #DL ändrade här --------------------- 
+						#add a jitter on top of the ITI so there's a jittered (2000+)1-500 msec jitter period post events
+	
+			currTrial=currTrial+1;
+		end;
+
+
+	tr_break.present();	
+	currBlock = currBlock + 1;
+
+	end;
+
+	tr_endoftest.present();
+end;
