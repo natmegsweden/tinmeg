@@ -9,6 +9,7 @@ outpath = [cd '/Output/'];
 fs = 44100;         % Hz, samplerate
 lowpf = 18000;      %Lowpass filter cutoff
 
+% For pulse only:
 predur = 0.750;     %sec, pre-duration
 fallt = 0.000;      %sec, fall-time before
 gapdur = 0.000;     %sec, gap duration
@@ -17,14 +18,32 @@ ISI = 0.000;        %sec, Inter-stimulus interval (end of risetime to pulse)
 pulsedur = 0.020;   %sec, instantaneous rise and fall 
 postdur = 4;        %sec, post-duration
 
-filename = 'B_C70_P95.wav';
+filename = 'A_C60_P90.wav';
 
 bkglvl = 60;        %dB, level of carrier noise
-pulselvl = 80;      %dB, level of startle pulse
+pulselvl = 90;      %dB, level of startle pulse
 
 callvl = 95;        %Calibration (i.e maximum level to be presented)
                     %Magnitude = 1, dB = 0
                     %All other levels relative to this
+					
+%% For Gap+Pulse
+%predur = 0.750;     %sec, pre-duration
+%fallt = 0.002;      %sec, fall-time before
+%gapdur = 0.050;     %sec, gap duration
+%riset = 0.002;      %sec, rise-time after silent gap
+%ISI = 0.240;        %sec, Inter-stimulus interval (end of risetime to pulse)
+%pulsedur = 0.020;   %sec, instantaneous rise and fall 
+%postdur = 4;        %sec, post-duration
+%
+%filename = 'A_C60_i240.wav';
+%
+%bkglvl = 60;        %dB, level of carrier noise
+%pulselvl = 90;      %dB, level of startle pulse
+%
+%callvl = 95;        %Calibration (i.e maximum level to be presented)
+%                    %Magnitude = 1, dB = 0
+%                    %All other levels relative to this
 
 % Signal created from variables above
 pulsediff = db2mag((callvl - pulselvl)*-1); 
